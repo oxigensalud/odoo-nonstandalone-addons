@@ -45,8 +45,8 @@ Credits
 Authors
 -------
 
-* NuoBiT Solutions
-* S.L.
+* NuoBiT Solutions SL
+* Oxigen Salud SA
 
 Contributors
 ------------
