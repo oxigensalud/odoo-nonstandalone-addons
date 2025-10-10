@@ -6,7 +6,7 @@
     "version": "14.0.1.0.0",
     "category": "Sales Management",
     "author": "NuoBiT Solutions, S.L.",
-    "website": "https://github.com/oxigensalud/odoo-community-addons",
+    "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
     "license": "AGPL-3",
     "depends": ["l10n_pt_sale_spms", "l10n_pt_invoice_spms"],
     "autoinstall": True,
