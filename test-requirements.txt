@@ -1,0 +1,1 @@
+odoo-addon-l10n_pt_spms@git+https://github.com/oxigensalud/odoo-community-addons.git@18.0#subdirectory=l10n_pt_spms
