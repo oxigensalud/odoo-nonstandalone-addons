@@ -31,18 +31,20 @@ class TestSpmsCompany(SpmsInvoiceCase):
     def test_spanish_invoice_cannot_create_spms_exchange(self):
         invoice = self._create_invoice(self.spanish_company)
         invoice.action_post()
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             invoice.edi_create_exchange_record(self.exchange_type.id)
         self.assertFalse(invoice._has_exchange_record(self.exchange_type))
 
     def test_direct_create_cannot_bypass_company_check(self):
         invoice = self._create_invoice(self.spanish_company)
         invoice.action_post()
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             self.env["edi.exchange.record"].create(
                 {
                     "backend_id": self.backend.id,
@@ -59,9 +61,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         spanish_invoice.action_post()
         action = portuguese_invoice.edi_create_exchange_record(self.exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             exchange.write({"res_id": spanish_invoice.id})
         self.assertEqual(exchange.record, portuguese_invoice)
 
@@ -69,9 +72,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         invoice = self._create_invoice(self.spanish_company)
         invoice.action_post()
         invoice = invoice.with_company(self.company)
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             invoice.edi_create_exchange_record(self.exchange_type.id)
 
     def test_spms_button_uses_the_invoice_company(self):
@@ -103,9 +107,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         invoice = self._create_invoice()
         invoice.action_post()
         self.company.country_id = False
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             invoice.edi_create_exchange_record(self.exchange_type.id)
 
     def test_other_exchange_type_allows_spanish_invoice(self):
@@ -122,9 +127,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         exchange_type = self.other_exchange_type
         action = invoice.edi_create_exchange_record(exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             exchange.write({"type_id": self.exchange_type.id})
         self.assertEqual(exchange.type_id, exchange_type)
 
@@ -133,9 +139,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         invoice.action_post()
         exchange_type = self.other_exchange_type
         action = invoice.edi_create_exchange_record(exchange_type.id)
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             self.backend.create_record("l10n_pt_spms", {"parent_id": action["res_id"]})
 
     def test_parent_relink_cannot_change_spms_child_company(self):
@@ -149,9 +156,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         parent = self.env["edi.exchange.record"].browse(action["res_id"])
         child = self.backend.create_record("l10n_pt_spms", {"parent_id": parent.id})
         self.assertEqual(child.record, portuguese_invoice)
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             parent.write({"res_id": spanish_invoice.id})
         self.assertEqual(parent.record, portuguese_invoice)
         self.assertEqual(child.record, portuguese_invoice)
@@ -170,9 +178,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         )
         child = self.backend.create_record("l10n_pt_spms", {"parent_id": middle.id})
         self.assertEqual(child.record, portuguese_invoice)
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             parent.write({"res_id": spanish_invoice.id})
         self.assertEqual(child.record, portuguese_invoice)
 
@@ -193,9 +202,10 @@ class TestSpmsCompany(SpmsInvoiceCase):
         second = self.env["edi.exchange.record"].browse(second_action["res_id"])
         child = self.backend.create_record("l10n_pt_spms", {"parent_id": second.id})
         parents = first + second
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             parents.write({"res_id": spanish_invoice.id})
         self.assertEqual(first.record, first_invoice)
         self.assertEqual(second.record, second_invoice)
@@ -258,15 +268,16 @@ class TestSpmsCompany(SpmsInvoiceCase):
         self.env["ir.rule"].create(
             {
                 "name": "Hide SPMS exchanges in company rule test",
-                "model_id": self.env.ref("edi_oca.model_edi_exchange_record").id,
+                "model_id": self.env.ref("edi_core_oca.model_edi_exchange_record").id,
                 "domain_force": "[('type_id.code', '!=', 'l10n_pt_spms')]",
             }
         )
         visible = self.env["edi.exchange.record"].with_user(user)
         self.assertEqual(visible.search([("id", "=", parent.id)]).ids, [parent.id])
         self.assertFalse(visible.search([("id", "=", child.id)]))
-        with self.assertRaisesRegex(
-            ValidationError, "Portuguese company"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(ValidationError, "Portuguese company"),
+            self.cr.savepoint(),
+        ):
             parent.with_user(user).write({"res_id": spanish_invoice.id})
         self.assertEqual(child.record, portuguese_invoice)

@@ -42,7 +42,9 @@ class TestSpmsDocument(SpmsInvoiceCase):
         reference = document.find(
             CAC + "BillingReference/" + CAC + "InvoiceDocumentReference"
         )
-        self.assertEqual(reference.findtext(CBC + "ID"), "TSPMS202605-1")
+        self.assertEqual(
+            reference.findtext(CBC + "ID"), invoice._get_spms_invoice_number()
+        )
         self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-31")
 
     def test_credit_note_document_names_the_invoice_by_its_invoice_date(self):
@@ -66,8 +68,8 @@ class TestSpmsDocument(SpmsInvoiceCase):
         document = self._document(credit_note)
         self.assertEqual(
             document.findtext(CBC + "Note"),
-            "Nota de Crédito RTSPMS202606-1 para rectificação à fatura "
-            "TSPMS202605-1 de 2026-05-31",
+            f"Nota de Crédito {credit_note._get_spms_invoice_number()} para "
+            f"rectificação à fatura {invoice._get_spms_invoice_number()} de 2026-05-31",
         )
 
     def test_credit_note_document_has_only_the_blocks_of_its_profile(self):
@@ -99,9 +101,11 @@ class TestSpmsDocument(SpmsInvoiceCase):
         invoice.action_post()
         credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
         credit_note.action_post()
-        (invoice + credit_note).line_ids.filtered(
-            lambda line: line.account_id.internal_type == "receivable"
-        ).reconcile()
+        receivable = (invoice + credit_note).line_ids.filtered(
+            lambda line: line.account_id.account_type == "asset_receivable"
+        )
+        # posting the note reconciles it with the invoice
+        self.assertTrue(all(receivable.mapped("reconciled")))
         document = self._document(credit_note)
         total = document.find(CAC + "LegalMonetaryTotal")
         self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
@@ -140,7 +144,9 @@ class TestSpmsDocument(SpmsInvoiceCase):
         reference = document.find(
             CAC + "BillingReference/" + CAC + "InvoiceDocumentReference"
         )
-        self.assertEqual(reference.findtext(CBC + "ID"), "TSPMS202605-1")
+        self.assertEqual(
+            reference.findtext(CBC + "ID"), invoice._get_spms_invoice_number()
+        )
         self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-31")
 
     def test_debit_note_document_note_names_the_rectified_invoice(self):
@@ -151,8 +157,8 @@ class TestSpmsDocument(SpmsInvoiceCase):
         document = self._document(debit_note)
         self.assertEqual(
             document.findtext(CBC + "Note"),
-            "Nota de Débito TSPMS202606-1 para rectificação à fatura "
-            "TSPMS202605-1 de 2026-05-31",
+            f"Nota de Débito {debit_note._get_spms_invoice_number()} para "
+            f"rectificação à fatura {invoice._get_spms_invoice_number()} de 2026-05-31",
         )
 
     def test_debit_note_document_names_the_invoice_by_its_invoice_date(self):
@@ -169,8 +175,8 @@ class TestSpmsDocument(SpmsInvoiceCase):
         self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-30")
         self.assertEqual(
             document.findtext(CBC + "Note"),
-            "Nota de Débito TSPMS202606-1 para rectificação à fatura "
-            "TSPMS202605-1 de 2026-05-30",
+            f"Nota de Débito {debit_note._get_spms_invoice_number()} para "
+            f"rectificação à fatura {invoice._get_spms_invoice_number()} de 2026-05-30",
         )
 
     def test_debit_note_document_has_only_the_blocks_of_its_profile(self):
@@ -305,9 +311,9 @@ class TestSpmsDocument(SpmsInvoiceCase):
         # the cent the verification module writes on the tax item to match the CCF
         tax_line = credit_note.line_ids.filtered("tax_line_id")
         receivable_line = credit_note.line_ids.filtered(
-            lambda line: line.account_id.internal_type == "receivable"
+            lambda line: line.account_id.account_type == "asset_receivable"
         )
-        credit_note.with_context(check_move_validity=False).write(
+        credit_note.with_context(skip_invoice_sync=True).write(
             {
                 "line_ids": [
                     (1, tax_line.id, {"debit": 23.01}),
@@ -337,9 +343,9 @@ class TestSpmsDocument(SpmsInvoiceCase):
         # the cent the verification module writes on the tax item to match the CCF
         tax_line = debit_note.line_ids.filtered("tax_line_id")
         receivable_line = debit_note.line_ids.filtered(
-            lambda line: line.account_id.internal_type == "receivable"
+            lambda line: line.account_id.account_type == "asset_receivable"
         )
-        debit_note.with_context(check_move_validity=False).write(
+        debit_note.with_context(skip_invoice_sync=True).write(
             {
                 "line_ids": [
                     (1, tax_line.id, {"credit": 23.01}),
@@ -473,6 +479,7 @@ class TestSpmsDocument(SpmsInvoiceCase):
         credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
         credit_note.action_post()
         debit_note = self._create_debit_note(credit_note, date(2026, 6, 20))
+        debit_note.action_post()
         with self.assertRaisesRegex(UserError, "itself a note"):
             self._document(debit_note)
 

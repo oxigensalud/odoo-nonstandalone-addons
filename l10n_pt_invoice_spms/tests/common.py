@@ -5,10 +5,10 @@ from datetime import date
 
 from lxml import etree
 
-from odoo.addons.component.tests.common import SavepointComponentCase
+from odoo.tests.common import TransactionCase
 
 
-class SpmsInvoiceCase(SavepointComponentCase):
+class SpmsInvoiceCase(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -48,25 +48,24 @@ class SpmsInvoiceCase(SavepointComponentCase):
         )
         cls.journals = {}
         cls.income_accounts = {}
+        cls.tax_groups = {}
         for company in cls.company + cls.spanish_company:
             accounts = cls.env["account.account"].with_company(company)
             income = accounts.create(
                 {
                     "name": "SPMS test revenue",
                     "code": "SPREV",
-                    "company_id": company.id,
-                    "user_type_id": cls.env.ref("account.data_account_type_revenue").id,
+                    "account_type": "income",
+                    "company_ids": [(6, 0, company.ids)],
                 }
             )
             receivable = accounts.create(
                 {
                     "name": "SPMS test receivable",
                     "code": "SPREC",
-                    "company_id": company.id,
+                    "account_type": "asset_receivable",
                     "reconcile": True,
-                    "user_type_id": cls.env.ref(
-                        "account.data_account_type_receivable"
-                    ).id,
+                    "company_ids": [(6, 0, company.ids)],
                 }
             )
             cls.partner.with_company(
@@ -82,15 +81,37 @@ class SpmsInvoiceCase(SavepointComponentCase):
                         "type": "sale",
                         "company_id": company.id,
                         "default_account_id": income.id,
-                        "edi_format_ids": [(5, 0, 0)],
                     }
                 )
             )
             cls.journals[company.id] = journal
             cls.income_accounts[company.id] = income
+            cls.tax_groups[company.id] = (
+                cls.env["account.tax.group"]
+                .with_company(company)
+                .create({"name": "SPMS test taxes", "company_id": company.id})
+            )
         cls.journal = cls.journals[cls.company.id]
         cls.backend = cls.env.ref("l10n_pt_invoice_spms.spms_backend")
         cls.exchange_type = cls.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
+
+    @classmethod
+    def _sales_tax(cls, company, rate):
+        # Odoo refuses a second tax of the same name: invoices at one rate share it
+        name = f"SPMS test sales tax {rate}%"
+        taxes = cls.env["account.tax"].with_company(company)
+        return taxes.search(
+            [("company_id", "=", company.id), ("name", "=", name)]
+        ) or taxes.create(
+            {
+                "name": name,
+                "type_tax_use": "sale",
+                "amount_type": "percent",
+                "amount": rate,
+                "company_id": company.id,
+                "tax_group_id": cls.tax_groups[company.id].id,
+            }
+        )
 
     @classmethod
     def _create_invoice(
@@ -108,19 +129,7 @@ class SpmsInvoiceCase(SavepointComponentCase):
         )
         price_unit = price_unit if price_unit is not None else 100.0
         tax_rate = tax_rate if tax_rate is not None else 23
-        tax = (
-            cls.env["account.tax"]
-            .with_company(company)
-            .create(
-                {
-                    "name": "SPMS test sales tax",
-                    "type_tax_use": "sale",
-                    "amount_type": "percent",
-                    "amount": tax_rate,
-                    "company_id": company.id,
-                }
-            )
-        )
+        tax = cls._sales_tax(company, tax_rate)
         move = (
             cls.env["account.move"]
             .with_company(company)
@@ -180,8 +189,7 @@ class SpmsInvoiceCase(SavepointComponentCase):
         wizard = cls.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, invoice.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
+                "journal_id": invoice.journal_id.id,
                 "date": note_date,
                 "reason": "SPMS test reversal",
                 "company_id": invoice.company_id.id,
@@ -209,8 +217,7 @@ class SpmsInvoiceCase(SavepointComponentCase):
         )
 
     def _document(self, move):
-        edi_format = self.env.ref("l10n_pt_invoice_spms.spms_edi_format")
-        builder = edi_format._get_xml_builder(move.company_id)
+        builder = self.env["account.edi.xml.spms_cius_pt_211"]
         xml_content, errors = builder._export_invoice(move)
         self.assertEqual(errors, set())
         return etree.fromstring(xml_content)

@@ -1,13 +1,14 @@
 # Copyright 2026 Dixmit
 # @author: Enric Tobella
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2025 NuoBiT Solutions - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 import base64
 
 import xmlsig
+from cryptography.hazmat.primitives.serialization import pkcs12
 from lxml import etree
-from OpenSSL import crypto
 
 from odoo import _
 from odoo.exceptions import UserError
@@ -23,8 +24,9 @@ class EdiOutputGenerateL10nPtSpms(Component):
 
     def generate(self):
         invoice = self.exchange_record.record
-        edi_format = self.env.ref("l10n_pt_invoice_spms.spms_edi_format")
-        builder = edi_format._get_xml_builder(invoice.company_id)
+        if not invoice.company_id._is_spms_company():
+            raise UserError(_("SPMS invoices must belong to a Portuguese company."))
+        builder = self.env["account.edi.xml.spms_cius_pt_211"]
         xml_content, errors = builder._export_invoice(invoice)
         if errors:
             raise UserError(_("Errors while generating XML: %s") % errors)
@@ -67,13 +69,23 @@ class EdiOutputGenerateL10nPtSpms(Component):
         x509_data = xmlsig.template.add_x509_data(key_info)
         xmlsig.template.x509_data_add_certificate(x509_data)
         ctx = xmlsig.SignatureContext()
-        key = crypto.load_pkcs12(
-            base64.b64decode(invoice.company_id.sudo().spms_certificate),
-            invoice.company_id.sudo().spms_certificate_password,
+        company = invoice.company_id.sudo()
+        password = company.spms_certificate_password
+        private_key, certificate, _chain = pkcs12.load_key_and_certificates(
+            base64.b64decode(company.spms_certificate),
+            password.encode() if password else None,
         )
-        ctx.x509 = key.get_certificate().to_cryptography()
-        ctx.public_key = ctx.x509.public_key()
-        ctx.private_key = key.get_privatekey().to_cryptography_key()
+        if private_key is None or certificate is None:
+            raise UserError(
+                _(
+                    "The SPMS certificate of %(company)s must contain its private "
+                    "key and its certificate."
+                )
+                % {"company": company.display_name}
+            )
+        ctx.x509 = certificate
+        ctx.public_key = certificate.public_key()
+        ctx.private_key = private_key
 
         # In order to make it work, we sign in the root and we move later on
         # the signature to the right place. This is because the signature must

@@ -1,5 +1,6 @@
 # Copyright 2025 Dixmit
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2025 NuoBiT Solutions - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 from collections import defaultdict
 from datetime import timedelta
@@ -11,31 +12,20 @@ from odoo.tools import frozendict
 RECTIFICATION_NOTE = (
     "%(document)s %(note)s para rectificação à fatura %(invoice)s de %(date)s"
 )
-# the core builder renders no DebitNote, the module's templates do
 INVOICE_TEMPLATE_VALS = {
     "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
     "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
 }
 CREDIT_NOTE_TEMPLATE_VALS = {
     "main_template": "account_edi_ubl_cii.ubl_20_CreditNote",
-    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
+    "CreditNoteType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
     "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteLine",
 }
 DEBIT_NOTE_TEMPLATE_VALS = {
-    "main_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNote",
-    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
+    "main_template": "account_edi_ubl_cii.ubl_20_DebitNote",
+    "DebitNoteType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
     "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteLine",
 }
-
-
-class AccountEdiFormat(models.Model):
-    _inherit = "account.edi.format"
-
-    def _get_xml_builder(self, company):
-        """Override to return the SPMS XML builder."""
-        if self.code == "spms_cius_pt_211" and company._is_spms_company():
-            return self.env["account.edi.xml.spms_cius_pt_211"]
-        return super()._get_xml_builder(company)
 
 
 class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
@@ -73,10 +63,18 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
 
         vals.update(
             {
-                "InvoiceExtension_spms": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms",  # noqa: B950
-                "PartyType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_PartyType",
-                "AddressType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_AddressType",
-                "TaxCategoryType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType",  # noqa: B950
+                "InvoiceExtension_spms": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms"
+                ),
+                "PartyType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_PartyType"
+                ),
+                "AddressType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_AddressType"
+                ),
+                "TaxCategoryType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType"
+                ),
             }
         )
         vals["vals"].update(
@@ -86,14 +84,14 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         )
         aggregated_vals = {}
         unmerged_vals = []
-        for line in vals["vals"]["invoice_line_vals"]:
+        for line in vals["vals"]["line_vals"]:
             if line["price_vals"]["spms_tipo"]:
                 if line["price_vals"]["spms_tipo"] not in aggregated_vals:
                     aggregated_vals[line["price_vals"]["spms_tipo"]] = line
                 else:
                     aggregated_vals[line["price_vals"]["spms_tipo"]][
-                        "invoiced_quantity"
-                    ] += line["invoiced_quantity"]
+                        "line_quantity"
+                    ] += line["line_quantity"]
                     aggregated_vals[line["price_vals"]["spms_tipo"]][
                         "line_extension_amount"
                     ] += line["line_extension_amount"]
@@ -112,19 +110,19 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                             j += 1
                         i += 1
             else:
-                unmerged_vals.append(line["price_vals"])
+                unmerged_vals.append(line)
         line_vals = list(aggregated_vals.values()) + unmerged_vals
         i = 1
         for line in line_vals:
             line["id"] = str(i)
             i += 1
-        vals["vals"]["invoice_line_vals"] = line_vals
+        vals["vals"]["line_vals"] = line_vals
         lots = invoice.invoice_line_ids.product_id.spms_lot_id
         lotes = []
         lot_number = 1
         for lot in lots:
             lines = invoice.invoice_line_ids.filtered(
-                lambda l: l.product_id.spms_lot_id == lot
+                lambda line, lot=lot: line.product_id.spms_lot_id == lot
             )
             lotes.append(
                 {
@@ -168,7 +166,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 "ubl_version_id": "UBL 2.0 CS (2006.10) + SIC (2007.03)",
                 "customization_id": "1.0",
                 "due_date": False,
-                "invoice_type_code": "FF",
+                "document_type_code": "FF",
                 "customer_assigned_account_id": invoice.partner_id.spms_assigned_id,
             }
         )
@@ -183,7 +181,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             template_vals = DEBIT_NOTE_TEMPLATE_VALS
             document_vals = self._get_note_vals(invoice, vals, "Nota de Débito")
         else:
-            raise ValueError("unknown SPMS note type %r" % (note_type,))
+            raise ValueError(f"unknown SPMS note type {note_type!r}")
         vals.update(template_vals)
         # the note templates name their elements after the kind of note
         vals["spms_note_type"] = note_type
@@ -217,9 +215,9 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 }
             ],
             "tax_total_vals": tax_total_vals_list,
-            "invoice_line_vals": [
+            "line_vals": [
                 self._get_note_line_vals(
-                    vals["vals"]["legal_monetary_total_vals"], tax_total_vals_list
+                    vals["vals"]["monetary_total_vals"], tax_total_vals_list
                 )
             ],
         }
@@ -243,9 +241,12 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         tax_lines = invoice.line_ids.filtered(
             lambda line: line.tax_line_id and line.tax_line_id.amount_type != "fixed"
         )
+        # the parties the base builder takes the subtotal categories from
+        customer = invoice.commercial_partner_id
+        supplier = invoice.company_id.partner_id.commercial_partner_id
         for tax_line in tax_lines:
             tax_category_vals = self._get_tax_category_list(
-                invoice, tax_line.tax_line_id
+                customer, supplier, tax_line.tax_line_id
             )[0]
             posted_tax_amounts[frozendict(tax_category_vals)] += (
                 balance_sign * tax_line.amount_currency
@@ -279,5 +280,5 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
     def _get_partner_party_tax_scheme_vals_list(self, partner, role):
         result = super()._get_partner_party_tax_scheme_vals_list(partner, role)
         for line in result:
-            line["tax_scheme_id"] = "PT IVA"
+            line["tax_scheme_vals"]["id"] = "PT IVA"
         return result
