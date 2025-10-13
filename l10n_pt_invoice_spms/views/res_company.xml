@@ -2,7 +2,6 @@
 <!-- Copyright 2025 Dixmit
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
-
     <record model="ir.ui.view" id="res_company_form_view">
         <field name="model">res.company</field>
         <field name="inherit_id" ref="base.view_company_form" />
@@ -21,9 +20,6 @@
                     </group>
                 </page>
             </notebook>
-            </field>
+        </field>
     </record>
-
-
-
 </odoo>

@@ -14,7 +14,9 @@ from odoo.addons.component.core import Component
 _logger = logging.getLogger(__name__)
 
 
-WSDL = "https://www.spms.min-saude.pt/wp-content/uploads/2020/01/Facturacao-CRD-2.11.wsdl"  # noqa: disable=B950
+WSDL = (
+    "https://www.spms.min-saude.pt/wp-content/uploads/2020/01/Facturacao-CRD-2.11.wsdl"  # noqa: disable=B950
+)
 
 
 class EdiOutputSendL10nPtSpms(Component):

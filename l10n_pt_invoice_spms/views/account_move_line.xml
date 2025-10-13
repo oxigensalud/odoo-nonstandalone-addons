@@ -2,7 +2,6 @@
 <!-- Copyright 2025 Dixmit
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
-
     <record model="ir.ui.view" id="account_move_line_form_view">
         <field name="model">account.move.line</field>
         <field name="arch" type="xml">
@@ -30,7 +29,6 @@
         </field>
     </record>
 
-
     <record model="ir.actions.act_window" id="spms_account_move_line_act_window">
         <field name="name">SPMS data</field>
         <field name="res_model">account.move.line</field>
@@ -40,7 +38,4 @@
         <field name="domain">[]</field>
         <field name="context">{}</field>
     </record>
-
-
-
 </odoo>

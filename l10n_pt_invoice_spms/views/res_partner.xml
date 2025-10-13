@@ -2,7 +2,6 @@
 <!-- Copyright 2025 Dixmit
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
-
     <record model="ir.ui.view" id="res_partner_form_view">
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="account.view_partner_property_form" />
@@ -12,7 +11,4 @@
             </group>
         </field>
     </record>
-
-
-
 </odoo>
