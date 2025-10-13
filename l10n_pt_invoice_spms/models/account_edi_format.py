@@ -7,7 +7,6 @@ from odoo import models
 
 
 class AccountEdiFormat(models.Model):
-
     _inherit = "account.edi.format"
 
     def _get_xml_builder(self, company):
