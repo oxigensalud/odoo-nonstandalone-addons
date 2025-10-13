@@ -10,7 +10,7 @@
                 <page
                     name="spms"
                     string="SPMS"
-                    attrs="{'invisible': [('country_id', '!=', %(base.pt)s)]}"
+                    invisible="country_id != %(base.pt)s"
                     groups="base.group_system"
                 >
                     <group>

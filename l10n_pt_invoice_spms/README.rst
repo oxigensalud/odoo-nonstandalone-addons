@@ -46,11 +46,16 @@ Authors
 -------
 
 * Dixmit
+* NuoBiT Solutions SL
+* Oxigen Salud SA
 
 Contributors
 ------------
 
 - Enric Tobella
+- `NuoBiT <https://www.nuobit.com>`__:
+
+  - Deniz Gallo dgallo@nuobit.com
 
 Maintainers
 -----------

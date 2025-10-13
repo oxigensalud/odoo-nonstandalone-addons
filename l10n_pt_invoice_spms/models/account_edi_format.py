@@ -1,19 +1,10 @@
 # Copyright 2025 Dixmit
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2025 NuoBiT Solutions - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 from datetime import timedelta
 
 from odoo import models
-
-
-class AccountEdiFormat(models.Model):
-    _inherit = "account.edi.format"
-
-    def _get_xml_builder(self, company):
-        """Override to return the SPMS XML builder."""
-        if self.code == "spms_cius_pt_211" and company.country_id.code == "PT":
-            return self.env["account.edi.xml.spms_cius_pt_211"]
-        return super()._get_xml_builder(company)
 
 
 class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
@@ -50,12 +41,12 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
 
         vals.update(
             {
-                "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
-                "InvoiceExtension_spms": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms",  # noqa: B950
-                "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
-                "PartyType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_PartyType",
-                "AddressType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_AddressType",
-                "TaxCategoryType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType",  # noqa: B950
+                "InvoiceType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType"
+                ),
+                "InvoiceExtension_spms": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms"
+                ),  # noqa: disable=B950
             }
         )
         vals["vals"].update(
@@ -103,7 +94,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         lot_number = 1
         for lot in lots:
             lines = invoice.invoice_line_ids.filtered(
-                lambda l: l.product_id.spms_lot_id == lot
+                lambda line, lot=lot: line.product_id.spms_lot_id == lot
             )
             lotes.append(
                 {

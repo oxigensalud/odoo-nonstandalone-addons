@@ -1,6 +1,7 @@
 # Copyright 2026 Dixmit
 # @author: Enric Tobella
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2025 NuoBiT Solutions - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 import base64
@@ -23,8 +24,7 @@ class EdiOutputGenerateL10nPtSpms(Component):
 
     def generate(self):
         invoice = self.exchange_record.record
-        edi_format = self.env.ref("l10n_pt_invoice_spms.spms_edi_format")
-        builder = edi_format._get_xml_builder(invoice.company_id)
+        builder = self.env["account.edi.xml.spms_cius_pt_211"]
         xml_content, errors = builder._export_invoice(invoice)
         if errors:
             raise UserError(_("Errors while generating XML: %s") % errors)

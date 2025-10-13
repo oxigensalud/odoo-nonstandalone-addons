@@ -2,10 +2,6 @@
 <!-- Copyright 2025 Dixmit
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
-    <record id="spms_edi_format" model="account.edi.format">
-        <field name="name">SPMS CIUS-PT (File)</field>
-        <field name="code">spms_cius_pt_211</field>
-    </record>
     <record id="spms_backend_type" model="edi.backend.type">
         <field name="name">SPMS Backend type</field>
         <field name="code">l10n_pt_spms</field>

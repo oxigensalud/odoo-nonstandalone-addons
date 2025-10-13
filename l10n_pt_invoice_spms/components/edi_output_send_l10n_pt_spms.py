@@ -96,6 +96,7 @@ class EdiOutputSendL10nPtSpms(Component):
                 "Content-Type": "text/xml; charset=utf-8",
                 "SOAPAction": "submeterFacturaElectronicaCRD",
             },
+            timeout=60,
         )
         try:
             response.raise_for_status()
