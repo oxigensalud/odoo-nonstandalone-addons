@@ -29,7 +29,6 @@ DEBIT_NOTE_TEMPLATE_VALS = {
 
 
 class AccountEdiFormat(models.Model):
-
     _inherit = "account.edi.format"
 
     def _get_xml_builder(self, company):
