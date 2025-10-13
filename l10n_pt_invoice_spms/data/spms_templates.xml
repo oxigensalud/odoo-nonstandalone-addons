@@ -14,7 +14,7 @@
             <cbc:CorporateRegistrationScheme
                 xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
             >
-                <cbc:Name t-esc="foreach_vals.get('registration_name')" />
+                <cbc:Name t-out="foreach_vals.get('registration_name')" />
             </cbc:CorporateRegistrationScheme>
         </xpath>
         <xpath expr="//*[local-name()='TaxScheme']" position="inside">
@@ -32,7 +32,7 @@
             expr="//*[local-name()='TaxScheme']//*[local-name()='ID']"
             position="attributes"
         >
-            <attribute name="t-esc">'PT IVA'</attribute>
+            <attribute name="t-out">'PT IVA'</attribute>
         </xpath>
         <xpath expr="//*[local-name()='TaxScheme']" position="inside">
             <cbc:TaxTypeCode
@@ -63,7 +63,7 @@
             >
                 <cbc:Line
                     xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
-                    t-esc="vals.get('street_name')"
+                    t-out="vals.get('street_name')"
                 />
             </cac:AddressLine>
             <cac:AddressLine
@@ -71,7 +71,7 @@
             >
                 <cbc:Line
                     xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
-                    t-esc="vals.get('additional_street_name')"
+                    t-out="vals.get('additional_street_name')"
                 />
             </cac:AddressLine>
         </xpath>
@@ -86,7 +86,7 @@
             position="before"
         >
             <cbc:CustomerAssignedAccountID
-                t-esc="vals.get('customer_assigned_account_id')"
+                t-out="vals.get('customer_assigned_account_id')"
                 xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
             />
         </xpath>
@@ -114,14 +114,14 @@
                 xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
                 xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
             >
-                <cbc:ID t-esc="price_vals.get('spms_tipo')" />
+                <cbc:ID t-out="price_vals.get('spms_tipo')" />
             </cac:StandardItemIdentification>
             <cac:AdditionalItemProperty
                 xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
                 xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
             >
                 <cbc:Name>NUMERO DISPENSAS</cbc:Name>
-                <cbc:Value t-esc="int(vals.get('invoiced_quantity'))" />
+                <cbc:Value t-out="int(vals.get('line_quantity'))" />
             </cac:AdditionalItemProperty>
         </xpath>
     </template>
@@ -137,55 +137,55 @@
                 >
                     <t t-set="crd" t-value="vals.get('spms_crd_vals', {})" />
                     <crd:ValorTotalPrestacoes
-                        t-esc="format_float(crd.get('valor_total_prestacoes'), crd.get('currency_dp'))"
+                        t-out="format_float(crd.get('valor_total_prestacoes'), crd.get('currency_dp'))"
                     />
                     <crd:QuantidadeTotalPrestacoes
-                        t-esc="crd.get('quantidade_total_prestacoes', 0)"
+                        t-out="crd.get('quantidade_total_prestacoes', 0)"
                     />
-                    <crd:NumeroLotes t-esc="crd.get('numero_lotes', 0)" />
+                    <crd:NumeroLotes t-out="crd.get('numero_lotes', 0)" />
                     <crd:Lote t-foreach="crd.get('lotes', [])" t-as="lote">
-                        <crd:Numero t-esc="lote.get('numero', '')" />
-                        <crd:Tipo t-esc="lote.get('tipo', '')" />
+                        <crd:Numero t-out="lote.get('numero', '')" />
+                        <crd:Tipo t-out="lote.get('tipo', '')" />
                         <crd:ValorTotal
-                            t-esc="format_float(lote.get('amount', 0), crd.get('currency_dp'))"
+                            t-out="format_float(lote.get('amount', 0), crd.get('currency_dp'))"
                         />
-                        <crd:NumeroDispensas t-esc="lote.get('total')" />
+                        <crd:NumeroDispensas t-out="lote.get('total')" />
                         <crd:Dispensa
                             t-foreach="lote.get('dispensas', [])"
                             t-as="dispensa"
                         >
                             <crd:NumeroPrescricao
-                                t-esc="dispensa.get('prescription', '')"
+                                t-out="dispensa.get('prescription', '')"
                             />
-                            <crd:NumeroUtente t-esc="dispensa.get('user_number', '')" />
+                            <crd:NumeroUtente t-out="dispensa.get('user_number', '')" />
                             <crd:NumeroBenef
-                                t-esc="dispensa.get('beneficiary_number', '')"
+                                t-out="dispensa.get('beneficiary_number', '')"
                             />
                             <crd:TipoPrescricao
-                                t-esc="dispensa.get('prescription_type', '')"
+                                t-out="dispensa.get('prescription_type', '')"
                             />
-                            <crd:AreaTratamento t-esc="lote.get('tipo', '')" />
-                            <crd:DataInicio t-esc="dispensa.get('start_date')" />
-                            <crd:DataFim t-esc="dispensa.get('end_date')" />
+                            <crd:AreaTratamento t-out="lote.get('tipo', '')" />
+                            <crd:DataInicio t-out="dispensa.get('start_date')" />
+                            <crd:DataFim t-out="dispensa.get('end_date')" />
                             <crd:ValorPrestado
-                                t-esc="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
+                                t-out="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
                             />
                             <crd:LinhaDispensa>
                                 <crd:NumeroLinha
-                                    t-esc="dispensa.get('line_number', '')"
+                                    t-out="dispensa.get('line_number', '')"
                                 />
-                                <crd:Sistema t-esc="dispensa.get('system', '')" />
-                                <crd:Contexto t-esc="dispensa.get('context', '')" />
+                                <crd:Sistema t-out="dispensa.get('system', '')" />
+                                <crd:Contexto t-out="dispensa.get('context', '')" />
                                 <crd:ValorUnitario
-                                    t-esc="format_float(dispensa.get('price_unit', 0), crd.get('currency_dp'))"
+                                    t-out="format_float(dispensa.get('price_unit', 0), crd.get('currency_dp'))"
                                 />
-                                <crd:Quantidade t-esc="dispensa.get('quantity', 0)" />
+                                <crd:Quantidade t-out="dispensa.get('quantity', 0)" />
                                 <crd:ValorTotal
-                                    t-esc="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
+                                    t-out="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
                                 />
                             </crd:LinhaDispensa>
                             <crd:MotivoSuspensao
-                                t-esc="dispensa.get('suspension_reason')"
+                                t-out="dispensa.get('suspension_reason')"
                             />
                         </crd:Dispensa>
                     </crd:Lote>

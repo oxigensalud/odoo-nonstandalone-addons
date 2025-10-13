@@ -3,10 +3,10 @@
 
 from datetime import date
 
-from odoo.tests.common import SavepointCase
+from odoo.tests.common import TransactionCase
 
 
-class SpmsInvoiceCase(SavepointCase):
+class SpmsInvoiceCase(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -35,19 +35,17 @@ class SpmsInvoiceCase(SavepointCase):
                 {
                     "name": "SPMS test revenue",
                     "code": "SPREV",
-                    "company_id": company.id,
-                    "user_type_id": cls.env.ref("account.data_account_type_revenue").id,
+                    "account_type": "income",
+                    "company_ids": [(6, 0, company.ids)],
                 }
             )
             receivable = accounts.create(
                 {
                     "name": "SPMS test receivable",
                     "code": "SPREC",
-                    "company_id": company.id,
+                    "account_type": "asset_receivable",
                     "reconcile": True,
-                    "user_type_id": cls.env.ref(
-                        "account.data_account_type_receivable"
-                    ).id,
+                    "company_ids": [(6, 0, company.ids)],
                 }
             )
             cls.partner.with_company(
@@ -63,12 +61,16 @@ class SpmsInvoiceCase(SavepointCase):
                         "type": "sale",
                         "company_id": company.id,
                         "default_account_id": income.id,
-                        "edi_format_ids": [(5, 0, 0)],
                     }
                 )
             )
             cls.journals[company.id] = journal
             cls.income_accounts[company.id] = income
+            tax_group = (
+                cls.env["account.tax.group"]
+                .with_company(company)
+                .create({"name": "SPMS test taxes", "company_id": company.id})
+            )
             cls.taxes[company.id] = (
                 cls.env["account.tax"]
                 .with_company(company)
@@ -79,6 +81,7 @@ class SpmsInvoiceCase(SavepointCase):
                         "amount_type": "percent",
                         "amount": 23,
                         "company_id": company.id,
+                        "tax_group_id": tax_group.id,
                     }
                 )
             )
