@@ -20,6 +20,8 @@
                             string="Prescription type"
                         />
                         <field name="spms_context_id" string="Context" />
+                        <field name="spms_start_date" />
+                        <field name="spms_end_date" />
                         <field
                             name="spms_suspension_reason_id"
                             string="Suspension reason"

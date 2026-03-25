@@ -10,3 +10,5 @@ class ResCompany(models.Model):
     spms_identifier = fields.Char(groups="base.group_system")
     spms_certificate = fields.Binary(groups="base.group_system")
     spms_certificate_password = fields.Char(groups="base.group_system")
+    spms_username = fields.Char(groups="base.group_system")
+    spms_password = fields.Char(groups="base.group_system")

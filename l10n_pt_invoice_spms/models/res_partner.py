@@ -7,4 +7,4 @@ from odoo import fields, models
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
-    spms_send_invoice = fields.Boolean()
+    spms_assigned_id = fields.Char()

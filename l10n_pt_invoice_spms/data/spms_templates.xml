@@ -1,12 +1,89 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
-
     <template
-        id="spms_cius_pt_211_InvoiceType"
-        inherit_id="ptplus_edi.cius_pt_211_InvoiceType"
+        id="spms_cius_pt_211_PartyType"
+        inherit_id="account_edi_ubl_cii.ubl_20_PartyType"
         primary="True"
     >
-        <xpath expr="//*[local-name()='CustomizationID']" position="before">
+        <xpath
+            expr="//*[local-name()='PartyLegalEntity']//*[local-name()='RegistrationAddress']"
+            position="inside"
+        >
+            <cbc:CorporateRegistrationScheme
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >
+                <cbc:Name t-esc="foreach_vals.get('registration_name')" />
+            </cbc:CorporateRegistrationScheme>
+        </xpath>
+    </template>
+    <template
+        id="spms_cius_pt_211_TaxCategoryType"
+        inherit_id="account_edi_ubl_cii.ubl_20_TaxCategoryType"
+        primary="True"
+    >
+        <xpath
+            expr="//*[local-name()='TaxScheme']//*[local-name()='ID']"
+            position="attributes"
+        >
+            <attribute name="t-esc">'PT IVA'</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='TaxScheme']" position="inside">
+            <cbc:TaxTypeCode
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >IVA</cbc:TaxTypeCode>
+        </xpath>
+    </template>
+    <template
+        id="spms_cius_pt_211_AddressType"
+        inherit_id="account_edi_ubl_cii.ubl_20_AddressType"
+        primary="True"
+    >
+        <xpath expr="//*[local-name()='StreetName']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='AdditionalStreetName']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='CountrySubentity']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='CountrySubentityCode']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='PostalZone']" position="after">
+            <cac:AddressLine
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            >
+                <cbc:Line
+                    xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+                    t-esc="vals.get('street_name')"
+                />
+            </cac:AddressLine>
+            <cac:AddressLine
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            >
+                <cbc:Line
+                    xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+                    t-esc="vals.get('additional_street_name')"
+                />
+            </cac:AddressLine>
+        </xpath>
+    </template>
+    <template
+        id="spms_cius_pt_211_InvoiceType"
+        inherit_id="account_edi_ubl_cii.ubl_21_InvoiceType"
+        primary="True"
+    >
+        <xpath
+            expr="//*[local-name()='AccountingSupplierParty']/*[local-name()='Party']"
+            position="before"
+        >
+            <cbc:CustomerAssignedAccountID
+                t-esc="vals.get('customer_assigned_account_id')"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            />
+        </xpath>
+        <xpath expr="//*[local-name()='UBLVersionID']" position="before">
             <ext:UBLExtensions
                 xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"
             >
@@ -16,6 +93,29 @@
                     />
                 </ext:UBLExtension>
             </ext:UBLExtensions>
+        </xpath>
+    </template>
+
+    <template
+        id="spms_cius_pt_211_InvoiceLine"
+        inherit_id="account_edi_ubl_cii.ubl_20_InvoiceLineType"
+        primary="True"
+    >
+        <xpath expr="//*[local-name()='Item']" position="inside">
+            <t t-set="price_vals" t-value="vals.get('price_vals', {})" />
+            <cac:StandardItemIdentification
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >
+                <cbc:ID t-esc="price_vals.get('spms_tipo')" />
+            </cac:StandardItemIdentification>
+            <cac:AdditionalItemProperty
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >
+                <cbc:Name>NUMERO DISPENSAS</cbc:Name>
+                <cbc:Value t-esc="int(vals.get('invoiced_quantity'))" />
+            </cac:AdditionalItemProperty>
         </xpath>
     </template>
 
@@ -59,7 +159,7 @@
                             />
                             <crd:AreaTratamento t-esc="lote.get('tipo', '')" />
                             <crd:DataInicio t-esc="dispensa.get('start_date')" />
-                            <crd:DataFin t-esc="dispensa.get('end_date')" />
+                            <crd:DataFim t-esc="dispensa.get('end_date')" />
                             <crd:ValorPrestado
                                 t-esc="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
                             />
