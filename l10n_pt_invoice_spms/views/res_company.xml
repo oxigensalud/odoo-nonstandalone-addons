@@ -18,6 +18,8 @@
                         <field name="spms_certificate" />
                         <field name="spms_certificate_password" password="1" />
                         <field name="spms_identifier" />
+                        <field name="spms_username" />
+                        <field name="spms_password" password="1" />
                     </group>
                 </page>
             </notebook>

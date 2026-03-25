@@ -6,7 +6,7 @@
     "summary": """Send invoices to SPMS""",
     "version": "14.0.1.0.0",
     "license": "AGPL-3",
-    "author": "Dixmit,Odoo Community Association (OCA)",
+    "author": "Dixmit",
     "website": "https://github.com/oxigensalud/odoo-community-addons",
     "depends": [
         "ptplus_edi",

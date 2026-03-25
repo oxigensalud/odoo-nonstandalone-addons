@@ -1,4 +1,4 @@
-# Copyright 2020 Creu Blanca
+# Copyright 2026 Dixmit
 # @author: Enric Tobella
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
@@ -27,9 +27,7 @@ class EdiOutputGenerateL10nPtSpms(Component):
         xml_content, errors = builder._export_invoice(invoice)
         if errors:
             raise UserError(_("Errors while generating XML: %s" % errors))
-
         einvoice = etree.fromstring(xml_content)
-
         extensions = einvoice.find(
             "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtensions"  # noqa: disable=B950
         )
