@@ -1,5 +1,6 @@
 # Copyright 2025 Dixmit
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+import re
 from datetime import timedelta
 
 from odoo import models
@@ -57,6 +58,13 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 "TaxCategoryType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType",  # noqa: disable=B950
             }
         )
+        order_reference = re.sub(r"[A-Z\ a-z]+", "", invoice.name).replace("/", "-")
+        vals["vals"].update(
+            {
+                "id": order_reference,
+            }
+        )
+
         lots = invoice.invoice_line_ids.product_id.spms_lot_id
         lotes = []
         lot_number = 1
