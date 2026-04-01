@@ -59,13 +59,14 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         )
         lots = invoice.invoice_line_ids.product_id.spms_lot_id
         lotes = []
+        lot_number = 1
         for lot in lots:
             lines = invoice.invoice_line_ids.filtered(
                 lambda l: l.product_id.spms_lot_id == lot
             )
             lotes.append(
                 {
-                    "numero": lot.name,
+                    "numero": lot_number,
                     "tipo": lot.code,
                     "amount": sum(lines.mapped("price_subtotal")),
                     "total": len(lines),
@@ -91,6 +92,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                     ],
                 }
             )
+            lot_number += 1
         vals["vals"].update(
             {
                 "spms_crd_vals": {
