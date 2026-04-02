@@ -77,7 +77,9 @@ class EdiOutputSendL10nPtSpms(Component):
             invoice.invoice_date
         )
         etree.SubElement(factura, "nif").text = vat
-        etree.SubElement(factura, "numeroFactura").text = invoice.name
+        etree.SubElement(
+            factura, "numeroFactura"
+        ).text = invoice._get_spms_invoice_number()
         etree.SubElement(factura, "documento").text = base64.b64encode(data).decode(
             "ascii"
         )
