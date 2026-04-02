@@ -15,6 +15,11 @@
                 <cbc:Name t-esc="foreach_vals.get('registration_name')" />
             </cbc:CorporateRegistrationScheme>
         </xpath>
+        <xpath expr="//*[local-name()='TaxScheme']" position="inside">
+            <cbc:TaxTypeCode
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >IVA</cbc:TaxTypeCode>
+        </xpath>
     </template>
     <template
         id="spms_cius_pt_211_TaxCategoryType"
