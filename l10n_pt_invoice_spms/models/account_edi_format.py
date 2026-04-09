@@ -113,7 +113,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 "customization_id": "1.0",
                 "due_date": False,
                 "invoice_type_code": "FF",
-                "customer_assigned_account_id": invoice.company_id.spms_identifier,
+                "customer_assigned_account_id": invoice.partner_id.spms_assigned_id,
             }
         )
 
@@ -135,8 +135,3 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         for line in result:
             line["tax_scheme_id"] = "PT IVA"
         return result
-
-    def _ubl_get_customer_assigned_id(self, partner):
-        return partner.spms_assigned_id or super()._ubl_get_customer_assigned_id(
-            partner
-        )
