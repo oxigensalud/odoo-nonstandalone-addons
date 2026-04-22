@@ -72,7 +72,7 @@ class EdiOutputSendL10nPtSpms(Component):
         etree.SubElement(factura, "areaConferencia").text = "3"
         etree.SubElement(
             factura, "codigoPrestador"
-        ).text = invoice.partner_id.sudo().spms_identifier
+        ).text = invoice.partner_id.sudo().spms_assigned_id
         etree.SubElement(factura, "dataFactura").text = fields.Date.to_string(
             invoice.invoice_date
         )
