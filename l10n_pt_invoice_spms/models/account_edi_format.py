@@ -62,7 +62,41 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 "id": invoice._get_spms_invoice_number(),
             }
         )
-
+        aggregated_vals = {}
+        unmerged_vals = []
+        for line in vals["vals"]["invoice_line_vals"]:
+            if line["price_vals"]["spms_tipo"]:
+                if line["price_vals"]["spms_tipo"] not in aggregated_vals:
+                    aggregated_vals[line["price_vals"]["spms_tipo"]] = line
+                else:
+                    aggregated_vals[line["price_vals"]["spms_tipo"]][
+                        "invoiced_quantity"
+                    ] += line["invoiced_quantity"]
+                    aggregated_vals[line["price_vals"]["spms_tipo"]][
+                        "line_extension_amount"
+                    ] += line["line_extension_amount"]
+                    i = 0
+                    for tax in line["tax_total_vals"]:
+                        aggregated_vals[line["price_vals"]["spms_tipo"]][
+                            "tax_total_vals"
+                        ][i]["tax_amount"] += tax["tax_amount"]
+                        j = 0
+                        for tax_subtotal in tax["tax_subtotal_vals"]:
+                            aggregated_vals[line["price_vals"]["spms_tipo"]][
+                                "tax_total_vals"
+                            ][i]["tax_subtotal_vals"][j]["tax_amount"] += tax_subtotal[
+                                "tax_amount"
+                            ]  # noqa: disable=B950
+                            j += 1
+                        i += 1
+            else:
+                unmerged_vals.append(line["price_vals"])
+        line_vals = list(aggregated_vals.values()) + unmerged_vals
+        i = 1
+        for line in line_vals:
+            line["id"] = str(i)
+            i += 1
+        vals["vals"]["invoice_line_vals"] = line_vals
         lots = invoice.invoice_line_ids.product_id.spms_lot_id
         lotes = []
         lot_number = 1
