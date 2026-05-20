@@ -23,6 +23,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
 
     def _get_invoice_period_vals_list(self, invoice):
         start_date = min(invoice.invoice_line_ids.mapped("spms_start_date"))
+        start_date = start_date.replace(day=1)
         if start_date:
             start_date = start_date.isoformat()
         end_date = max(invoice.invoice_line_ids.mapped("spms_end_date"))
