@@ -44,13 +44,13 @@ repos:
       # update the NOT INSTALLABLE ADDONS section above
       - id: oca-update-pre-commit-excluded-addons
       - id: oca-fix-manifest-website
-        args: ["https://github.com/oxigensalud/odoo-community-addons"]
+        args: ["https://github.com/oxigensalud/odoo-nonstandalone-addons"]
       # Use each script's `--help` to understand the args
       - id: oca-gen-addon-readme
         args:
           - --addons-dir=.
           - --org-name=oxigensalud
-          - --repo-name=odoo-community-addons
+          - --repo-name=odoo-nonstandalone-addons
           - --if-source-changed
           - --keep-source-digest
           - --branch=14.0
