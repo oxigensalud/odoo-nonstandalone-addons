@@ -9,5 +9,5 @@
     "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
     "license": "AGPL-3",
     "depends": ["l10n_pt_sale_spms", "l10n_pt_invoice_spms"],
-    "autoinstall": True,
+    "auto_install": True,
 }
