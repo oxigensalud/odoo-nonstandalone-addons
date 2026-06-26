@@ -1,6 +1,13 @@
 # OxigenSalud Odoo Non-standalone Addons
+<!-- /!\ Non OCA Context : Set here the badge of your runbot / runboat instance. -->
+[![Pre-commit Status](https://github.com/oxigensalud/odoo-nonstandalone-addons/actions/workflows/pre-commit.yml/badge.svg?branch=14.0)](https://github.com/oxigensalud/odoo-nonstandalone-addons/actions/workflows/pre-commit.yml?query=branch%3A14.0)
+[![Build Status](https://github.com/oxigensalud/odoo-nonstandalone-addons/actions/workflows/test.yml/badge.svg?branch=14.0)](https://github.com/oxigensalud/odoo-nonstandalone-addons/actions/workflows/test.yml?query=branch%3A14.0)
+[![codecov](https://codecov.io/gh/oxigensalud/odoo-nonstandalone-addons/branch/14.0/graph/badge.svg)](https://codecov.io/gh/oxigensalud/odoo-nonstandalone-addons)
+<!-- /!\ Non OCA Context : Set here the badge of your translation instance. -->
 
-Non-standalone Odoo addons by OxigenSalud.
+<!-- /!\ do not modify above this line -->
+
+Non-standalone addons for OxigenSalud.
 
 This repository contains free and open-source Odoo modules developed by OxigenSalud.
 However, these modules **depend on private, non-free modules** that are not included here.
