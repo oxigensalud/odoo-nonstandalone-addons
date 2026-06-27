@@ -1,1 +1,1 @@
-Generate invocie for SPMS
+Generate invoice for SPMS
