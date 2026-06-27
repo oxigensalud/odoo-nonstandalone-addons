@@ -1,4 +1,5 @@
 # Copyright 2025 Dixmit
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 {
@@ -13,7 +14,7 @@
         "edi_account_oca",
         "l10n_pt_spms",
     ],
-    "external_dependencies": {"python": ["zeep", "xmlsig"]},
+    "external_dependencies": {"python": ["OpenSSL", "xmlsig"]},
     "data": [
         "views/menu.xml",
         "views/account_move.xml",
