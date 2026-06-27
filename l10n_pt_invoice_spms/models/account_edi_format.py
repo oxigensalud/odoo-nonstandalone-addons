@@ -1,4 +1,5 @@
 # Copyright 2025 Dixmit
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 from datetime import timedelta
 
@@ -51,11 +52,11 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         vals.update(
             {
                 "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
-                "InvoiceExtension_spms": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms",  # noqa: disable=B950
+                "InvoiceExtension_spms": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms",  # noqa: B950
                 "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
                 "PartyType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_PartyType",
                 "AddressType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_AddressType",
-                "TaxCategoryType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType",  # noqa: disable=B950
+                "TaxCategoryType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType",  # noqa: B950
             }
         )
         vals["vals"].update(
@@ -87,7 +88,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                                 "tax_total_vals"
                             ][i]["tax_subtotal_vals"][j]["tax_amount"] += tax_subtotal[
                                 "tax_amount"
-                            ]  # noqa: disable=B950
+                            ]
                             j += 1
                         i += 1
             else:

@@ -1,5 +1,6 @@
 # Copyright 2026 Dixmit
 # @author: Enric Tobella
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 import base64
@@ -29,29 +30,29 @@ class EdiOutputGenerateL10nPtSpms(Component):
             raise UserError(_("Errors while generating XML: %s" % errors))
         einvoice = etree.fromstring(xml_content)
         extensions = einvoice.find(
-            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtensions"  # noqa: disable=B950
+            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtensions"  # noqa: B950
         )
         if extensions is None:
             extensions = etree.Element(
-                "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtensions"  # noqa: disable=B950
+                "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtensions"  # noqa: B950
             )
             einvoice.insert(0, extensions)
 
         extension = etree.Element(
-            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtension"  # noqa: disable=B950
+            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtension"  # noqa: B950
         )
         extensions.insert(0, extension)
         etree.SubElement(
             extension,
-            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}ExtensionURI",  # noqa: disable=B950
+            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}ExtensionURI",  # noqa: B950
         ).text = "urn:oasis:names:specification:ubl:dsig:enveloped"
         extension_content = etree.SubElement(
             extension,
-            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}ExtensionContent",  # noqa: disable=B950
+            "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}ExtensionContent",  # noqa: B950
         )
         signature_information = etree.SubElement(
             extension_content,
-            "{urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2}UBLDocumentSignatures",  # noqa: disable=B950d
+            "{urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2}UBLDocumentSignatures",  # noqa: B950
         )
         sign = xmlsig.template.create(
             c14n_method=xmlsig.constants.TransformExclC14NWithComments,
