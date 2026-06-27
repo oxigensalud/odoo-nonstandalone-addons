@@ -27,7 +27,7 @@ class EdiOutputGenerateL10nPtSpms(Component):
         builder = edi_format._get_xml_builder(invoice.company_id)
         xml_content, errors = builder._export_invoice(invoice)
         if errors:
-            raise UserError(_("Errors while generating XML: %s" % errors))
+            raise UserError(_("Errors while generating XML: %s") % errors)
         einvoice = etree.fromstring(xml_content)
         extensions = einvoice.find(
             "{urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2}UBLExtensions"  # noqa: B950
