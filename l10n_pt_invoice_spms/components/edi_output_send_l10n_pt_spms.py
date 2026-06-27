@@ -10,7 +10,8 @@ from uuid import uuid4
 import requests
 from lxml import etree
 
-from odoo import fields
+from odoo import _, fields
+from odoo.exceptions import UserError
 
 from odoo.addons.component.core import Component
 
@@ -100,7 +101,7 @@ class EdiOutputSendL10nPtSpms(Component):
         response_xml = etree.fromstring(response.content)
         aceite = response_xml.xpath("//aceite")
         if not aceite or aceite[0].text != "S":
-            raise Exception(
-                "Invoice not accepted: %s" % response.content.decode("utf-8")
+            raise UserError(
+                _("Invoice not accepted: %s") % response.content.decode("utf-8")
             )
         return response.content.decode("utf-8")
