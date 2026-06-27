@@ -7,7 +7,7 @@
     "version": "14.0.1.0.0",
     "license": "AGPL-3",
     "author": "Dixmit",
-    "website": "https://github.com/oxigensalud/odoo-community-addons",
+    "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
     "depends": [
         "ptplus_edi",
         "edi_account_oca",
