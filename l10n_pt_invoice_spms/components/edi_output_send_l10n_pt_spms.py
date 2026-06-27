@@ -1,5 +1,6 @@
 # Copyright 2026 Dixmit
 # @author: Enric Tobella
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 import base64
@@ -25,8 +26,10 @@ SOAPENV_NS = "http://schemas.xmlsoap.org/soap/envelope/"
 FACTURA_NS = "http://facturaElectronica.service.cc.ccf/"
 
 
-WSDL = "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDWS"  # noqa: disable=B950
-WSDL_TEST = "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDServiceDEV"  # noqa: disable=B950
+WSDL = "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDWS"
+WSDL_TEST = (
+    "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDServiceDEV"
+)
 
 
 class EdiOutputSendL10nPtSpms(Component):
@@ -61,7 +64,7 @@ class EdiOutputSendL10nPtSpms(Component):
         password = etree.SubElement(username_token, f"{{{WSSE_NS}}}Password")
         password.set(
             "Type",
-            "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText",  # noqa: disable=B950
+            "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText",  # noqa: B950
         )
         password.text = invoice.company_id.spms_password
         body = etree.SubElement(root, f"{{{SOAPENV_NS}}}Body")
