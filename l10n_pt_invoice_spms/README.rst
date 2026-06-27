@@ -26,7 +26,7 @@ L10n Pt Invoice Spms
 
 |badge1| |badge2| |badge3|
 
-Generate invocie for SPMS
+Generate invoice for SPMS
 
 **Table of contents**
 
