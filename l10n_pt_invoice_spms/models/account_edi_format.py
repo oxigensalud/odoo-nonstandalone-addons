@@ -144,7 +144,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                     "numero_lotes": len(lots),
                     "lotes": lotes,
                 },
-                "is_spms_invoice": not invoice.spms_reference_invoice_id,
+                "is_spms_invoice": not invoice.reversed_entry_id,
                 "profile_id": False,
                 "ubl_version_id": "UBL 2.0 CS (2006.10) + SIC (2007.03)",
                 "customization_id": "1.0",
@@ -157,8 +157,8 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             vals["vals"].update(
                 {
                     "billing_reference_vals": {
-                        "id": invoice.spms_reference_invoice_id.name,
-                        "issue_date": invoice.spms_reference_invoice_id.date.isoformat(),
+                        "id": invoice.reversed_entry_id.name,
+                        "issue_date": invoice.reversed_entry_id.date.isoformat(),
                     }
                 }
             )

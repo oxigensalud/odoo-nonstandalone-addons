@@ -22,12 +22,6 @@
             <field name="move_type" position="after">
                 <field name="spms_send_invoice" invisible="1" />
             </field>
-            <field name="partner_id" position="after">
-                <field
-                    name="spms_reference_invoice_id"
-                    attrs="{'invisible': [('spms_reference_invoice_id', '=', False)}"
-                />
-            </field>
         </field>
     </record>
 
