@@ -144,6 +144,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                     "numero_lotes": len(lots),
                     "lotes": lotes,
                 },
+                "is_spms_invoice": not invoice.spms_reference_invoice_id,
                 "profile_id": False,
                 "ubl_version_id": "UBL 2.0 CS (2006.10) + SIC (2007.03)",
                 "customization_id": "1.0",
@@ -152,7 +153,15 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 "customer_assigned_account_id": invoice.partner_id.spms_assigned_id,
             }
         )
-
+        if not vals["vals"]["is_spms_invoice"]:
+            vals["vals"].update(
+                {
+                    "billing_reference_vals": {
+                        "id": invoice.spms_reference_invoice_id.name,
+                        "issue_date": invoice.spms_reference_invoice_id.date.isoformat(),
+                    }
+                }
+            )
         return vals
 
     def _get_invoice_line_price_vals(self, line):
