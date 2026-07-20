@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="spms_return_invoice_line_form_view" model="ir.ui.view">
+        <field name="name">spms.return.invoice.line.form</field>
+        <field name="model">spms.return.invoice.line</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <group name="main">
+                        <field name="return_invoice_id" />
+                        <field name="prescription" />
+                        <field name="move_line_id" />
+                        <field name="state" />
+                        <field name="previous_line_id" />
+                        <field name="resolution" />
+                    </group>
+                    <group name="amounts">
+                        <field name="amount_billed" />
+                        <field name="amount_allowed" />
+                        <field name="amount_allowed_taxed" />
+                        <field name="amount_difference" />
+                        <field name="amount_credit_taxed" />
+                        <field name="days_billed" />
+                        <field name="days_paid" />
+                        <field name="currency_id" invisible="1" />
+                    </group>
+                </group>
+                <field name="error_ids" readonly="1">
+                    <tree>
+                        <field name="excel_row" />
+                        <field name="code" />
+                        <field name="description" />
+                        <field name="provider_system_ref" optional="hide" />
+                    </tree>
+                </field>
+            </form>
+        </field>
+    </record>
+</odoo>

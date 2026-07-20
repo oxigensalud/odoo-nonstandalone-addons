@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="spms_return_invoice_tree_view" model="ir.ui.view">
+        <field name="name">spms.return.invoice.tree</field>
+        <field name="model">spms.return.invoice</field>
+        <field name="arch" type="xml">
+            <tree
+                decoration-danger="state == 'not_found'"
+                decoration-warning="state == 'mismatch'"
+                decoration-info="state == 'awaiting_official'"
+                decoration-success="state in ('ready', 'done')"
+                decoration-muted="state == 'already_done'"
+            >
+                <field name="name" />
+                <field name="move_id" />
+                <field name="credit_note_move_id" optional="hide" />
+                <field name="line_count" optional="hide" />
+                <field name="error_codes" />
+                <field name="credit_estimated" />
+                <field name="credit_official" />
+                <field name="official_confirmed" />
+                <field name="currency_id" invisible="1" />
+                <field name="state" />
+                <button
+                    name="action_view_credit_note"
+                    type="object"
+                    icon="fa-external-link"
+                    title="Credit Note"
+                    attrs="{'invisible': [('credit_note_move_id', '=', False)]}"
+                />
+            </tree>
+        </field>
+    </record>
+
+    <record id="spms_return_invoice_form_view" model="ir.ui.view">
+        <field name="name">spms.return.invoice.form</field>
+        <field name="model">spms.return.invoice</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="awaiting_official,ready,done"
+                    />
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" /></h1>
+                    </div>
+                    <group>
+                        <group name="links">
+                            <field name="return_id" />
+                            <field name="move_id" />
+                            <field name="credit_note_move_id" />
+                            <field
+                                name="company_id"
+                                groups="base.group_multi_company"
+                            />
+                        </group>
+                        <group name="official">
+                            <field name="credit_estimated" />
+                            <field name="amount_lines_untaxed" />
+                            <field name="credit_official" />
+                            <field name="official_confirmed" />
+                            <field name="official_source" />
+                            <field name="official_date" />
+                            <field name="currency_id" invisible="1" />
+                        </group>
+                    </group>
+                    <field name="line_ids">
+                        <tree
+                            editable="bottom"
+                            create="false"
+                            delete="false"
+                            decoration-danger="state in ('not_found', 'ambiguous', 'data_error')"
+                            decoration-muted="state == 'zero_diff'"
+                            decoration-warning="previous_line_id and not resolution"
+                        >
+                            <field name="prescription" />
+                            <field name="amount_billed" />
+                            <field name="amount_allowed" />
+                            <field name="amount_allowed_taxed" optional="hide" />
+                            <field name="amount_difference" />
+                            <field name="amount_credit_taxed" />
+                            <field name="days_billed" optional="hide" />
+                            <field name="days_paid" optional="hide" />
+                            <field name="error_codes" />
+                            <field name="previous_line_id" optional="hide" />
+                            <field name="resolution" />
+                            <field name="currency_id" invisible="1" />
+                            <field name="state" />
+                            <button
+                                name="action_show_errors"
+                                type="object"
+                                icon="fa-search-plus"
+                                title="Errors"
+                            />
+                        </tree>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="spms_return_invoice_search_view" model="ir.ui.view">
+        <field name="name">spms.return.invoice.search</field>
+        <field name="model">spms.return.invoice</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" />
+                <field name="move_id" />
+                <filter
+                    name="filter_awaiting_official"
+                    string="Awaiting Official Value"
+                    domain="[('state', '=', 'awaiting_official')]"
+                />
+                <filter
+                    name="filter_ready"
+                    string="Ready"
+                    domain="[('state', '=', 'ready')]"
+                />
+                <filter
+                    name="filter_not_found"
+                    string="Not Found"
+                    domain="[('state', '=', 'not_found')]"
+                />
+                <filter
+                    name="filter_already_done"
+                    string="Already Done"
+                    domain="[('state', '=', 'already_done')]"
+                />
+                <filter
+                    name="filter_mismatch"
+                    string="Mismatch"
+                    domain="[('state', '=', 'mismatch')]"
+                />
+                <filter
+                    name="filter_done"
+                    string="Done"
+                    domain="[('state', '=', 'done')]"
+                />
+                <group expand="0" string="Group By">
+                    <filter
+                        name="groupby_return"
+                        string="SPMS Return"
+                        context="{'group_by': 'return_id'}"
+                    />
+                    <filter
+                        name="groupby_state"
+                        string="State"
+                        context="{'group_by': 'state'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

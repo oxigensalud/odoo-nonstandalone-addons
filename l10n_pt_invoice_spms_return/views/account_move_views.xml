@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="account_move_form_view" model="ir.ui.view">
+        <field name="name">account.move.form</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form" />
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button
+                    name="action_view_spms_return_invoices"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-exclamation-circle"
+                    attrs="{'invisible': [('spms_return_invoice_count', '=', 0)]}"
+                    groups="l10n_pt_invoice_spms_return.spms_return_group_consultation"
+                >
+                    <field
+                        name="spms_return_invoice_count"
+                        widget="statinfo"
+                        string="SPMS Returns"
+                    />
+                </button>
+            </div>
+        </field>
+    </record>
+</odoo>

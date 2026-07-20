@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="res_company_form_view" model="ir.ui.view">
+        <field name="name">res.company.form</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="l10n_pt_invoice_spms.res_company_form_view" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='spms']" position="inside">
+                <group>
+                    <field name="spms_adjustment_product_id" />
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

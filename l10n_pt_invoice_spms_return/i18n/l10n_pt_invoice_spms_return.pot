@@ -1,0 +1,942 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_pt_invoice_spms_return
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 14.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-27 09:39+0000\n"
+"PO-Revision-Date: 2026-07-27 09:39+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__error_count
+msgid "# Errors"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__invoice_count
+msgid "# Invoices"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__line_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__line_count
+msgid "# Prescriptions"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_bank_statement_line__spms_return_invoice_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__spms_return_invoice_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_payment__spms_return_invoice_count
+msgid "# SPMS Returns"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "%d draft credit note(s) created."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid ""
+"%d invoice(s) could not be generated:\n"
+"%s"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.constraint,message:l10n_pt_invoice_spms_return.constraint_spms_return_invoice_line_return_invoice_prescription_uniq
+msgid "A prescription can only appear once in the same return invoice."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_allowed
+msgid "Allowed Amount"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_allowed_taxed
+msgid "Allowed Amount (Taxed)"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_allowed_taxed
+msgid ""
+"Allowed value with VAT as rounded by the conference (Excel "
+"VALORTOTALAPURADOIVA). Their per-row rounding drives the per-invoice "
+"estimate."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_allowed
+msgid ""
+"Allowed value, untaxed (Excel VALORTOTALAPURADO). Read from the report, "
+"never recomputed."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__days_paid
+msgid ""
+"Allowed/paid days (Excel 'Numero de dias pagos'); may be empty in the "
+"report."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__already_done
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Already Done"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__ambiguous
+msgid "Ambiguous Match"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.constraint,message:l10n_pt_invoice_spms_return.constraint_spms_return_invoice_return_move_uniq
+msgid "An invoice can only appear once in the same SPMS return."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__awaiting_official
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Awaiting Official Value"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_billed
+msgid "Billed Amount"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__days_billed
+msgid "Billed Days"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__days_billed
+msgid "Billed quantity in days (Excel QUANTIDADETOTAL)."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_billed
+msgid ""
+"Billed value, untaxed (Excel VALORTOTAL). Read from the report, never "
+"recomputed."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Cancel"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__cancel
+msgid "Cancelled"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Cannot read the error file as an Excel workbook: %s"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model,name:l10n_pt_invoice_spms_return.model_res_company
+msgid "Companies"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__company_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__company_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__company_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__company_id
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Company"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"Configure the SPMS adjustment line product on company %s before generating "
+"credit notes that require an adjustment line."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:res.groups,name:l10n_pt_invoice_spms_return.spms_return_group_consultation
+msgid "Consultation"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Create Credit Notes"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__create_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__create_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__create_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__create_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__create_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__create_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_credit_taxed
+msgid "Credit (Taxed)"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_note_move_id
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_tree_view
+#, python-format
+msgid "Credit Note"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Credit notes can only be generated from a processed SPMS return."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__refund_move_line_id
+msgid "Credit-note line generated from this line (audit only)."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__currency_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__currency_id
+msgid "Currency"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__data_error
+msgid "Data Error"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__date
+msgid "Date"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return__date
+msgid "Date the error report was received."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_difference
+msgid "Difference"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_codes
+msgid "Distinct error codes reported for this invoice."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__done
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__done
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Done"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__draft
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Draft"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_note_move_id
+msgid ""
+"Draft credit note generated for this invoice, or the pre-existing one "
+"detected by the duplicate check."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid ""
+"Draft credit notes will be created for every ready (green) invoice of this "
+"return. Continue?"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__resolution__duplicate
+msgid "Duplicate"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__code
+msgid "Error Code"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_codes
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__error_codes
+msgid "Error Codes"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__description
+msgid "Error Description"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__file
+msgid "Error File"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__file_name
+msgid "Error File Name"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__code
+msgid ""
+"Error code reported by the conference (Excel COD_ERRO), e.g. C010, C313, "
+"A004."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__error_codes
+msgid "Error codes reported for this prescription, concatenated."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__description
+msgid "Error description as reported (Excel DESC_ERRO)."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__error_ids
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_form_view
+msgid "Errors"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_estimated
+msgid "Estimated Credit"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__excel_row
+msgid "Excel Row"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"Expected exactly one receivable/payable line on the draft credit note "
+"%(move)s, found %(count)d."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"Expected exactly one tax line for tax %(tax)s on the draft credit note "
+"%(move)s, found %(count)d."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_estimated
+msgid ""
+"Formula estimate of the credit, taxes included: round(sum(billed x 1.06 - "
+"allowed-with-VAT)) over unique prescriptions, excluding lines resolved as "
+"duplicates. Informational preview and cross-check; the official value is "
+"authoritative."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Group By"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__id
+msgid "ID"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_credit_taxed
+msgid ""
+"Informative per-line credit contribution with VAT: billed x 1.06 - allowed-"
+"with-VAT (their rounding). The per-invoice estimate sums these before "
+"rounding once."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Invalid SPMS period '%s': expected YYYYMM format."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__name
+msgid "Invoice Number"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__name
+msgid "Invoice number as reported by SPMS (NUMFACTURA), e.g. FT2026-416."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__invoice_ids
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Invoices"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model,name:l10n_pt_invoice_spms_return.model_account_move
+msgid "Journal Entry"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error____last_update
+msgid "Last Modified on"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__write_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__write_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__write_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__write_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__write_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__write_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__previous_line_id
+msgid ""
+"Line of a previous return claiming the same (invoice, prescription). While "
+"set and unresolved, the invoice cannot be generated."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__amount_lines_untaxed
+msgid "Lines Amount (Untaxed)"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__official_source__manual
+msgid "Manual"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__matched
+msgid "Matched"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__mismatch
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Mismatch"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Missing expected columns in the error file: %s"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__name
+msgid "Name"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__resolution__new
+msgid "New Claim"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__zero_diff
+msgid "No Difference"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid ""
+"No credit note could be generated:\n"
+"%s"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__not_found
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__not_found
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Not Found"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"Nothing to credit on invoice %(invoice)s: the confirmed official value is "
+"%(value)s."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__official_confirmed
+msgid "Official Confirmed"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_official
+msgid "Official Credit"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__official_date
+msgid "Official Value Date"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__official_source
+msgid "Official Value Source"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_official
+msgid ""
+"Official credit-note value for this invoice, taxes included, as communicated"
+" by the CCMSNS conference result. The generated credit note must carry "
+"exactly this value."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Only SPMS Responsible users can perform this action."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Only draft or processed SPMS returns can be cancelled."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Only processed or cancelled SPMS returns can be set back to draft."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__move_id
+msgid "Original Invoice"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__move_line_id
+msgid "Original Invoice Line"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__move_id
+msgid "Original customer invoice matched by the SPMS invoice number."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__move_line_id
+msgid ""
+"Original invoice line matched by prescription number within the matched "
+"invoice."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_difference
+msgid ""
+"Over-billed base, untaxed: billed minus allowed. This is the base the "
+"credit-note line will carry; VAT is applied by the line's taxes."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__days_paid
+msgid "Paid Days"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__period
+msgid "Period"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__official_source__portal
+msgid "Portal Results"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__prescription
+msgid "Prescription"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"Prescription %s cannot be mapped to a single line of the credit-note draft."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice_line.py:0
+#, python-format
+msgid "Prescription Errors"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__prescription
+msgid ""
+"Prescription number (NUMEROPRESCRICAO), the billing-line key. Patient-"
+"linked: treat as an opaque identifier."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__line_ids
+msgid "Prescriptions"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid "Prescriptions not matched to an original invoice line: %s."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__previous_line_id
+msgid "Previous Claim Line"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Process"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__processed
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Processed"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__provider_system_ref
+msgid "Provider System Ref"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__provider_system_ref
+msgid ""
+"Provider-system reference (Excel SISTEMAPRESTADOCRD). Informed only on "
+"C010/C012 rows; kept as audit of which row came flagged, never used as a "
+"dedup key."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__ready
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Ready"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__refund_move_line_id
+msgid "Refund Line"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__resolution
+msgid "Resolution"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:res.groups,name:l10n_pt_invoice_spms_return.spms_return_group_responsible
+msgid "Responsible"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__resolution
+msgid ""
+"Responsible's decision for a prescription reappearing from a previous "
+"period: 'Duplicate' excludes it from this return's credit and links it to "
+"the previous claim; 'New Claim' includes it."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Row %d of the error file has no invoice number."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__excel_row
+msgid ""
+"Row number in the source Excel attached to the SPMS return, for forensic "
+"cross-checking."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return__file
+msgid "SNS/CCMSNS conference error report (Excel), as received."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.module.category,name:l10n_pt_invoice_spms_return.module_category_spms
+msgid "SPMS"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "SPMS %s"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company__spms_adjustment_product_id
+msgid "SPMS Adjustment Line Product"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.actions.act_window,name:l10n_pt_invoice_spms_return.spms_return_act_window
+#: model:ir.ui.menu,name:l10n_pt_invoice_spms_return.spms_return_menu
+msgid "SPMS Issues"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model,name:l10n_pt_invoice_spms_return.model_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__return_id
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "SPMS Return"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model,name:l10n_pt_invoice_spms_return.model_spms_return_invoice
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__return_invoice_id
+msgid "SPMS Return Invoice"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model,name:l10n_pt_invoice_spms_return.model_spms_return_invoice_line
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__line_id
+msgid "SPMS Return Invoice Line"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model,name:l10n_pt_invoice_spms_return.model_spms_return_invoice_line_error
+msgid "SPMS Return Invoice Line Error"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_bank_statement_line__spms_return_invoice_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__spms_return_invoice_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_payment__spms_return_invoice_ids
+#, python-format
+msgid "SPMS Return Invoices"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/account_move.py:0
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.account_move_form_view
+#, python-format
+msgid "SPMS Returns"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid "SPMS conference %s"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return__period
+msgid "SPMS conference period, in YYYYMM format (e.g. 202605)."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "SPMS credit notes"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "SPMS return %s cannot be processed in its current state."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_res_company__spms_adjustment_product_id
+msgid ""
+"Service product used for the adjustment line appended to a generated credit "
+"note when the official value differs from the prescription lines total."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Set to Draft"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__official_confirmed
+msgid ""
+"Set when the official credit-note value has been confirmed. Credit-note "
+"generation is gated on this flag."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__state
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__state
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__state
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "State"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__amount_lines_untaxed
+msgid ""
+"Sum of the per-prescription credit bases, without taxes: what the generated "
+"credit-note lines will add up to. Excludes lines resolved as duplicates."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The adjustment line product %(product)s must carry exactly one percentage "
+"customer tax for company %(company)s."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The credit note total %(total).2f still differs from the official value "
+"%(official).2f after imposing the tax amount."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The draft tax amount (%(draft).2f) differs from the expected tax "
+"(%(expected).2f) for the taxes on its lines; review the tax configuration "
+"before retrying."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The draft untaxed total (%(draft).2f) differs from the prescription lines "
+"total (%(expected).2f); review the draft lines before retrying."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "The error file contains no data rows."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "The error file is empty."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid "The invoice is no longer ready (current state: %s)."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid "The original invoice %s is not posted."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The remaining difference %(difference).2f between the official value "
+"%(official).2f and the credit note total %(total).2f exceeds one rounding "
+"step (%(step).2f); it cannot be absorbed by the imposed tax amount."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The standard reversal did not create a single draft credit note for %s."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid "There is no prescription with a positive difference."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "There is no ready (green) invoice to generate a credit note for."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "Upload the error file before processing %s."
+msgstr ""
