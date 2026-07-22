@@ -75,7 +75,7 @@ class EdiOutputSendL10nPtSpms(Component):
             )
             factura = etree.SubElement(action, "factura")
         else:
-            action = etree.SubElement(body, f"{{{FACTURA_NS}}}submeterNotaCredDeb")
+            action = etree.SubElement(body, f"{{{FACTURA_NS}}}submeterNotaCredDebCRD")
             factura = etree.SubElement(action, "nota")
 
         etree.SubElement(factura, "areaConferencia").text = "3"
