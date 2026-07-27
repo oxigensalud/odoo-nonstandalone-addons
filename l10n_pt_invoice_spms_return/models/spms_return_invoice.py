@@ -194,10 +194,17 @@ class SpmsReturnInvoice(models.Model):
 
         Called after processing, after an official value is written and
         after a line resolution changes. Never downgrades a generated
-        invoice (state 'done').
+        invoice (state 'done') while its credit note is alive; once that
+        credit note is cancelled or deleted, the regular evaluation below
+        reopens the invoice (the official value is kept) and drops its
+        'done' return back to 'processed' so generation stays reachable.
         """
         for rec in self:
-            if rec.state == "done":
+            if (
+                rec.state == "done"
+                and rec.credit_note_move_id
+                and rec.credit_note_move_id.state != "cancel"
+            ):
                 continue
             if not rec.move_id:
                 rec.state = "not_found"
@@ -228,6 +235,13 @@ class SpmsReturnInvoice(models.Model):
                 rec.state = "mismatch"
                 continue
             rec.state = "ready" if rec.official_confirmed else "awaiting_official"
+        stale_returns = self.mapped("return_id").filtered(
+            lambda ret: ret.state == "done"
+            and ret.invoice_ids.filtered(
+                lambda inv: inv.state not in ("done", "already_done")
+            )
+        )
+        stale_returns.write({"state": "processed"})
 
     def _generate_credit_note(self):
         """Create the draft credit note for a ready (green) invoice.

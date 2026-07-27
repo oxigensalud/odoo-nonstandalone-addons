@@ -579,6 +579,70 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(pending.state, "awaiting_official")
         self.assertFalse(pending.official_confirmed)
 
+    def _reopen_setup(self):
+        """Return with a generated invoice plus a pending one.
+
+        The pending invoice keeps the return in 'processed', mirroring the
+        real files where not_found invoices never let it close.
+        """
+        self._standard_invoice()
+        self._create_invoice("FT 2026/00124", [("TESTP004", 10, 1.0)])
+        rows = self._standard_rows() + [
+            {
+                "invoice_number": "FT2026-124",
+                "prescription": "TESTP004",
+                "billed": 10.0,
+                "allowed": 5.0,
+                "allowed_taxed": 5.3,
+                "days_billed": 10.0,
+            }
+        ]
+        rec = self._create_return(rows)
+        generated = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
+        generated.write({"credit_official": 38.16})
+        rec.action_create_credit_notes()
+        return rec, generated
+
+    def test_credit_note_cancelled_reopens_invoice(self):
+        # a cancelled credit note must not leave a stale 'done': the next
+        # evaluation reopens the invoice keeping the official value
+        rec, generated = self._reopen_setup()
+        generated.credit_note_move_id.button_cancel()
+        rec.action_process()
+        generated = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
+        self.assertEqual(generated.state, "ready")
+        self.assertFalse(generated.credit_note_move_id)
+        self.assertAlmostEqual(generated.credit_official, 38.16)
+        self.assertTrue(generated.official_confirmed)
+
+    def test_credit_note_deleted_reopens_invoice(self):
+        rec, generated = self._reopen_setup()
+        generated.credit_note_move_id.unlink()
+        rec.action_process()
+        generated = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
+        self.assertEqual(generated.state, "ready")
+        self.assertFalse(generated.credit_note_move_id)
+        self.assertAlmostEqual(generated.credit_official, 38.16)
+
+    def test_credit_note_cancelled_regenerates_in_batch(self):
+        # single-invoice return: generation closes it to 'done'; cancelling
+        # the credit note and running the batch again must reopen the
+        # return, regenerate and close it back
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        invoice.write({"credit_official": 38.16})
+        rec.action_create_credit_notes()
+        self.assertEqual(rec.state, "done")
+        first_draft = invoice.credit_note_move_id
+        first_draft.button_cancel()
+        rec.action_create_credit_notes()
+        self.assertEqual(invoice.state, "done")
+        self.assertNotEqual(invoice.credit_note_move_id, first_draft)
+        self.assertEqual(invoice.credit_note_move_id.state, "draft")
+        self.assertEqual(first_draft.state, "cancel")
+        self.assertEqual(rec.state, "done")
+
     def test_preexisting_credit_note_state(self):
         move = self._create_invoice("FT 2026/00125", [("TESTP005", 10, 10.0)])
         wizard = self.env["account.move.reversal"].create(

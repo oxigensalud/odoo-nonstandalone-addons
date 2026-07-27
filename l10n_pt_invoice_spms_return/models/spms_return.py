@@ -188,6 +188,10 @@ class SpmsReturn(models.Model):
     def action_create_credit_notes(self):
         self.ensure_one()
         self._check_responsible()
+        # re-evaluate first so invoices whose credit note was cancelled or
+        # deleted re-enter the batch (and reopen a 'done' return) instead
+        # of keeping a stale 'done'
+        self.invoice_ids._update_state()
         if self.state != "processed":
             raise UserError(
                 _("Credit notes can only be generated from a processed " "SPMS return.")
