@@ -942,6 +942,16 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
 #, python-format
 msgid ""
+"The confirmed official value %(value)s exceeds the total of the original "
+"invoice %(invoice)s (%(total)s)."
+msgstr ""
+"El valor oficial confirmado %(value)s supera el total de la factura "
+"original %(invoice)s (%(total)s)."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
 "The credit note total %(total).2f still differs from the official value "
 "%(official).2f after imposing the tax amount."
 msgstr ""

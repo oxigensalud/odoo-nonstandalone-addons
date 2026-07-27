@@ -387,6 +387,36 @@ class TestSpmsReturn(SavepointCase):
             rec.action_create_credit_notes()
         self.assertFalse(invoice.credit_note_move_id)
 
+    def test_generate_official_exceeds_total_blocks(self):
+        # an official value above the original invoice total can only be a
+        # data-entry error: the guard fires before the draft, even with the
+        # adjustment product configured
+        self.company.spms_adjustment_product_id = self.adjustment_product
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        invoice.write({"credit_official": 200.0})
+        self.assertEqual(invoice.state, "ready")
+        with self.assertRaisesRegex(
+            UserError, "exceeds the total of the original invoice"
+        ):
+            rec.action_create_credit_notes()
+        self.assertFalse(invoice.credit_note_move_id)
+
+    def test_generate_official_equals_total_allowed(self):
+        # a full rejection is legitimate: official == invoice total must
+        # generate (the guard is strictly greater-than)
+        self.company.spms_adjustment_product_id = self.adjustment_product
+        move = self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        invoice.write({"credit_official": move.amount_total})
+        rec.action_create_credit_notes()
+        self.assertEqual(invoice.state, "done")
+        self.assertAlmostEqual(
+            invoice.credit_note_move_id.amount_total, move.amount_total
+        )
+
     def test_generate_adjustment_line_direct_base(self):
         self.company.spms_adjustment_product_id = self.adjustment_product
         self._standard_invoice()

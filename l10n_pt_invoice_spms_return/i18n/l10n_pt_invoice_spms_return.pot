@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-27 09:39+0000\n"
-"PO-Revision-Date: 2026-07-27 09:39+0000\n"
+"POT-Creation-Date: 2026-07-27 13:14+0000\n"
+"PO-Revision-Date: 2026-07-27 13:14+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -856,6 +856,14 @@ msgstr ""
 msgid ""
 "The adjustment line product %(product)s must carry exactly one percentage "
 "customer tax for company %(company)s."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The confirmed official value %(value)s exceeds the total of the original "
+"invoice %(invoice)s (%(total)s)."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return

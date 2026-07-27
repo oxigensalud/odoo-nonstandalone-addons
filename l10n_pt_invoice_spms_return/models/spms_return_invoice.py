@@ -266,6 +266,31 @@ class SpmsReturnInvoice(models.Model):
                     ),
                 }
             )
+        if (
+            float_compare(
+                self.credit_official,
+                self.move_id.amount_total,
+                precision_rounding=rounding,
+            )
+            > 0
+        ):
+            raise UserError(
+                _(
+                    "The confirmed official value %(value)s exceeds the "
+                    "total of the original invoice %(invoice)s (%(total)s)."
+                )
+                % {
+                    "value": formatLang(
+                        self.env, self.credit_official, currency_obj=self.currency_id
+                    ),
+                    "invoice": self.move_id.display_name,
+                    "total": formatLang(
+                        self.env,
+                        self.move_id.amount_total,
+                        currency_obj=self.currency_id,
+                    ),
+                }
+            )
         lines = self._get_creditable_lines()
         draft = self._create_reversal_draft()
         self._edit_reversal_draft(draft, lines)
