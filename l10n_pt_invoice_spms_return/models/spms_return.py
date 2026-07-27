@@ -346,6 +346,11 @@ class SpmsReturn(models.Model):
             )
             != 0
         )
+        # an empty amount cell is missing data, not a real 0.00
+        missing_amount = any(
+            _cell_value(row, col_index, header) in (None, "")
+            for header in ("VALORTOTAL", "VALORTOTALAPURADO", "VALORTOTALAPURADOIVA")
+        )
         return {
             "invoice_number": invoice_number,
             "prescription": prescription,
@@ -363,6 +368,7 @@ class SpmsReturn(models.Model):
             ),
             "excel_row": row_number,
             "diverged": diverged,
+            "missing_amount": missing_amount,
         }
 
     def _snapshot_children(self):
@@ -516,7 +522,7 @@ class SpmsReturn(models.Model):
                     if move and prescription
                     else []
                 )
-                if incoherent:
+                if incoherent or any(row["missing_amount"] for row in group_rows):
                     state = "data_error"
                 elif not candidate_ids:
                     state = "not_found"

@@ -286,6 +286,17 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(len(line.error_ids), 2)
         self.assertEqual(line.error_codes, "C010 / C313")
 
+    def test_process_empty_amount_marks_data_error(self):
+        self._standard_invoice()
+        rows = self._standard_rows()[:2]
+        rows[1]["allowed_taxed"] = None
+        rec = self._create_return(rows)
+        lines = rec.invoice_ids.line_ids
+        intact = lines.filtered(lambda line: line.prescription == "TESTP001")
+        broken = lines.filtered(lambda line: line.prescription == "TESTP002")
+        self.assertEqual(intact.state, "matched")
+        self.assertEqual(broken.state, "data_error")
+
     def test_official_manual_write_autostamps(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
