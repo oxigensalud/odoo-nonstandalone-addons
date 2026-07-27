@@ -624,6 +624,21 @@ class TestSpmsReturn(SavepointCase):
         self.assertFalse(generated.credit_note_move_id)
         self.assertAlmostEqual(generated.credit_official, 38.16)
 
+    def test_done_return_with_live_notes_stays_closed(self):
+        # the button is also visible on done returns (to regenerate after a
+        # cancelled/deleted credit note); with every credit note alive the
+        # batch must keep the return closed and block
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        invoice.write({"credit_official": 38.16})
+        rec.action_create_credit_notes()
+        self.assertEqual(rec.state, "done")
+        with self.assertRaisesRegex(UserError, "processed SPMS return"):
+            rec.action_create_credit_notes()
+        self.assertEqual(rec.state, "done")
+        self.assertEqual(invoice.state, "done")
+
     def test_credit_note_cancelled_regenerates_in_batch(self):
         # single-invoice return: generation closes it to 'done'; cancelling
         # the credit note and running the batch again must reopen the
