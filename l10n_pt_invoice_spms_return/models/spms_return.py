@@ -30,6 +30,20 @@ ERROR_FILE_HEADERS = (
     "DESC_ERRO",
 )
 
+AMOUNT_HEADERS = (
+    "VALORTOTAL",
+    "VALORTOTALAPURADO",
+    "VALORTOTALAPURADOIVA",
+    "QUANTIDADETOTAL",
+    "Numero de dias pagos",
+)
+# money columns; the day counts may legitimately come empty
+REQUIRED_AMOUNT_HEADERS = (
+    "VALORTOTAL",
+    "VALORTOTALAPURADO",
+    "VALORTOTALAPURADOIVA",
+)
+
 
 def _cell_value(row, col_index, header):
     index = col_index.get(header)
@@ -47,7 +61,26 @@ def _cell_text(value):
 
 
 def _cell_amount(value):
-    return float(value or 0.0)
+    """None when the cell value cannot be read as an amount."""
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return None
+
+
+def _row_amounts(row, col_index):
+    """Read the amount cells of a row, flagging empty or unconvertible ones."""
+    amounts = {}
+    missing = False
+    for header in AMOUNT_HEADERS:
+        raw = _cell_value(row, col_index, header)
+        value = _cell_amount(raw)
+        # an empty required cell or an unconvertible cell (text, date...)
+        # is missing data, not a real amount
+        if value is None or (header in REQUIRED_AMOUNT_HEADERS and raw in (None, "")):
+            missing = True
+        amounts[header] = value or 0.0
+    return amounts, missing
 
 
 class SpmsReturn(models.Model):
@@ -351,10 +384,9 @@ class SpmsReturn(models.Model):
             raise UserError(
                 _("Row %d of the error file has no invoice number.") % row_number
             )
-        amount_allowed = _cell_amount(_cell_value(row, col_index, "VALORTOTALAPURADO"))
-        amount_allowed_taxed = _cell_amount(
-            _cell_value(row, col_index, "VALORTOTALAPURADOIVA")
-        )
+        amounts, missing_amount = _row_amounts(row, col_index)
+        amount_allowed = amounts["VALORTOTALAPURADO"]
+        amount_allowed_taxed = amounts["VALORTOTALAPURADOIVA"]
         diverged = (
             float_compare(
                 amount_allowed_taxed,
@@ -363,21 +395,14 @@ class SpmsReturn(models.Model):
             )
             != 0
         )
-        # an empty amount cell is missing data, not a real 0.00
-        missing_amount = any(
-            _cell_value(row, col_index, header) in (None, "")
-            for header in ("VALORTOTAL", "VALORTOTALAPURADO", "VALORTOTALAPURADOIVA")
-        )
         return {
             "invoice_number": invoice_number,
             "prescription": prescription,
-            "amount_billed": _cell_amount(_cell_value(row, col_index, "VALORTOTAL")),
+            "amount_billed": amounts["VALORTOTAL"],
             "amount_allowed": amount_allowed,
             "amount_allowed_taxed": amount_allowed_taxed,
-            "days_billed": _cell_amount(_cell_value(row, col_index, "QUANTIDADETOTAL")),
-            "days_paid": _cell_amount(
-                _cell_value(row, col_index, "Numero de dias pagos")
-            ),
+            "days_billed": amounts["QUANTIDADETOTAL"],
+            "days_paid": amounts["Numero de dias pagos"],
             "error_code": error_code,
             "error_description": _cell_text(_cell_value(row, col_index, "DESC_ERRO")),
             "provider_system_ref": _cell_text(

@@ -317,6 +317,28 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(len(line), 1)
         self.assertEqual(line.state, "data_error")
 
+    def test_process_text_amount_marks_data_error(self):
+        self._standard_invoice()
+        rows = self._standard_rows()[:2]
+        rows[1]["allowed_taxed"] = "1,50"
+        rec = self._create_return(rows)
+        lines = rec.invoice_ids.line_ids
+        intact = lines.filtered(lambda line: line.prescription == "TESTP001")
+        broken = lines.filtered(lambda line: line.prescription == "TESTP002")
+        self.assertEqual(intact.state, "matched")
+        self.assertEqual(broken.state, "data_error")
+
+    def test_process_date_amount_marks_data_error(self):
+        self._standard_invoice()
+        rows = self._standard_rows()[:2]
+        rows[1]["billed"] = date(2026, 5, 31)
+        rec = self._create_return(rows)
+        lines = rec.invoice_ids.line_ids
+        intact = lines.filtered(lambda line: line.prescription == "TESTP001")
+        broken = lines.filtered(lambda line: line.prescription == "TESTP002")
+        self.assertEqual(intact.state, "matched")
+        self.assertEqual(broken.state, "data_error")
+
     def test_processed_return_file_and_period_locked(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
