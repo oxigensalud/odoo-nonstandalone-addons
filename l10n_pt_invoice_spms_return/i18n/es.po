@@ -612,6 +612,13 @@ msgstr "Solo los usuarios Responsable SPMS pueden realizar esta acción."
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
+msgid "Only draft or cancelled SPMS returns can be deleted."
+msgstr ""
+"Solo se pueden eliminar retornos SPMS en borrador o cancelados."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
 msgid "Only draft or processed SPMS returns can be cancelled."
 msgstr ""
 "Solo se pueden cancelar retornos SPMS en borrador o procesados."
@@ -980,6 +987,14 @@ msgstr ""
 "La base imponible del borrador (%(draft).2f) difiere del total de las "
 "líneas de prescripciones (%(expected).2f); revise las líneas del borrador "
 "antes de reintentar."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "The error file and period can only be changed on a draft SPMS return."
+msgstr ""
+"El fichero de errores y el periodo solo se pueden cambiar en un retorno "
+"SPMS en borrador."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0

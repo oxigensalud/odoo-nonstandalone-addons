@@ -317,6 +317,27 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(len(line), 1)
         self.assertEqual(line.state, "data_error")
 
+    def test_processed_return_file_and_period_locked(self):
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        with self.assertRaisesRegex(UserError, "draft SPMS return"):
+            rec.period = "202601"
+        with self.assertRaisesRegex(UserError, "draft SPMS return"):
+            rec.file = self._make_excel(self._standard_rows())
+
+    def test_processed_return_cannot_be_deleted(self):
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        with self.assertRaisesRegex(UserError, "can be deleted"):
+            rec.unlink()
+
+    def test_draft_return_edit_and_delete_allowed(self):
+        rec = self._create_return(self._standard_rows(), process=False)
+        rec.period = "202601"
+        rec.file = self._make_excel(self._standard_rows())
+        rec.unlink()
+        self.assertFalse(rec.exists())
+
     def test_official_manual_write_autostamps(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())

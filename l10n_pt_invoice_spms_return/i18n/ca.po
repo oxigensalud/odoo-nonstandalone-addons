@@ -610,6 +610,13 @@ msgstr "Només els usuaris Responsable SPMS poden fer aquesta acció."
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
+msgid "Only draft or cancelled SPMS returns can be deleted."
+msgstr ""
+"Només es poden eliminar retorns SPMS en esborrany o cancel·lats."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
 msgid "Only draft or processed SPMS returns can be cancelled."
 msgstr ""
 "Només es poden cancel·lar retorns SPMS en esborrany o processats."
@@ -977,6 +984,14 @@ msgstr ""
 "La base imposable de l'esborrany (%(draft).2f) difereix del total de les "
 "línies de prescripcions (%(expected).2f); reviseu les línies de "
 "l'esborrany abans de reintentar."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "The error file and period can only be changed on a draft SPMS return."
+msgstr ""
+"El fitxer d'errors i el període només es poden canviar en un retorn SPMS "
+"en esborrany."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0

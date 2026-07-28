@@ -185,12 +185,29 @@ class SpmsReturn(models.Model):
             rec.state = "cancel"
         return True
 
+    def write(self, vals):
+        if "file" in vals or "period" in vals:
+            for rec in self:
+                if rec.state != "draft":
+                    raise UserError(
+                        _(
+                            "The error file and period can only be changed on "
+                            "a draft SPMS return."
+                        )
+                    )
+        return super().write(vals)
+
+    def unlink(self):
+        for rec in self:
+            if rec.state not in ("draft", "cancel"):
+                raise UserError(
+                    _("Only draft or cancelled SPMS returns can be deleted.")
+                )
+        return super().unlink()
+
     def action_create_credit_notes(self):
         self.ensure_one()
         self._check_responsible()
-        # re-evaluate first so invoices whose credit note was cancelled or
-        # deleted re-enter the batch (and reopen a 'done' return) instead
-        # of keeping a stale 'done'
         self.invoice_ids._update_state()
         if self.state != "processed":
             raise UserError(
