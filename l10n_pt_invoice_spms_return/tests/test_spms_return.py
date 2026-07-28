@@ -360,6 +360,27 @@ class TestSpmsReturn(SavepointCase):
         rec.unlink()
         self.assertFalse(rec.exists())
 
+    def test_processed_return_invoice_cannot_be_deleted(self):
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        with self.assertRaisesRegex(UserError, "draft or cancelled"):
+            rec.invoice_ids.unlink()
+        rec.action_process()
+        self.assertTrue(rec.invoice_ids)
+
+    def test_done_invoice_official_locked_while_credit_note_alive(self):
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        invoice.write({"credit_official": 38.16})
+        rec.action_create_credit_notes()
+        with self.assertRaisesRegex(UserError, "cancel that credit note"):
+            invoice.credit_official = 40.0
+        invoice.credit_note_move_id.button_cancel()
+        invoice._update_state()
+        invoice.credit_official = 40.0
+        self.assertEqual(invoice.state, "ready")
+
     def test_official_manual_write_autostamps(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())

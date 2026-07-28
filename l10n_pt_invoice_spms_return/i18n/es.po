@@ -464,6 +464,16 @@ msgid "Invoices"
 msgstr "Facturas"
 
 #. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"Invoices of an SPMS return can only be deleted while the return is draft or "
+"cancelled."
+msgstr ""
+"Las facturas de un retorno SPMS solo se pueden eliminar mientras el retorno "
+"está en borrador o cancelado."
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model,name:l10n_pt_invoice_spms_return.model_account_move
 msgid "Journal Entry"
 msgstr "Asiento contable"
@@ -1013,6 +1023,16 @@ msgstr "El fichero de errores está vacío."
 #, python-format
 msgid "The invoice is no longer ready (current state: %s)."
 msgstr "La factura ya no está preparada (estado actual: %s)."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
+msgid ""
+"The official value of %s is already carried by a credit note; cancel that "
+"credit note first to change it."
+msgstr ""
+"El valor oficial de %s ya está recogido en una factura rectificativa; "
+"cancele antes esa factura rectificativa para cambiarlo."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0

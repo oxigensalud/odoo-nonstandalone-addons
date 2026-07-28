@@ -189,7 +189,7 @@ class SpmsReturn(models.Model):
             rec._check_can_process()
             rows = rec._parse_error_file()
             snapshot = rec._snapshot_children()
-            rec.invoice_ids.unlink()
+            rec.invoice_ids.with_context(spms_return_reprocess=True).unlink()
             rec._create_children(rows, snapshot)
             rec.invoice_ids._update_state()
             rec.state = "processed"

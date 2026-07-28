@@ -170,6 +170,22 @@ class SpmsReturnInvoice(models.Model):
             rec.error_codes = " / ".join(codes)
 
     def write(self, vals):
+        official_touched = "credit_official" in vals or "official_confirmed" in vals
+        if official_touched:
+            for rec in self:
+                if (
+                    rec.state == "done"
+                    and rec.credit_note_move_id
+                    and rec.credit_note_move_id.state != "cancel"
+                ):
+                    raise UserError(
+                        _(
+                            "The official value of %s is already carried by a "
+                            "credit note; cancel that credit note first to "
+                            "change it."
+                        )
+                        % rec.display_name
+                    )
         if "credit_official" in vals and not any(
             field in vals
             for field in (
@@ -185,9 +201,21 @@ class SpmsReturnInvoice(models.Model):
                 official_date=fields.Date.context_today(self),
             )
         res = super().write(vals)
-        if "credit_official" in vals or "official_confirmed" in vals:
+        if official_touched:
             self._update_state()
         return res
+
+    def unlink(self):
+        if not self.env.context.get("spms_return_reprocess"):
+            for rec in self:
+                if rec.return_id.state not in ("draft", "cancel"):
+                    raise UserError(
+                        _(
+                            "Invoices of an SPMS return can only be deleted "
+                            "while the return is draft or cancelled."
+                        )
+                    )
+        return super().unlink()
 
     def _update_state(self):
         """Single source of truth for the invoice state (semaphore).
