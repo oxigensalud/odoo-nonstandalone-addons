@@ -308,6 +308,15 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(intact.state, "matched")
         self.assertEqual(broken.state, "data_error")
 
+    def test_process_duplicate_rows_taxed_contradiction_marks_data_error(self):
+        self._standard_invoice()
+        rows = self._standard_rows()[:1]
+        duplicate = dict(rows[0], allowed_taxed=33.0, code="C313")
+        rec = self._create_return(rows + [duplicate])
+        line = rec.invoice_ids.line_ids
+        self.assertEqual(len(line), 1)
+        self.assertEqual(line.state, "data_error")
+
     def test_official_manual_write_autostamps(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
