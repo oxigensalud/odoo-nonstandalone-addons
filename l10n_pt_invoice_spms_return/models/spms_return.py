@@ -295,7 +295,7 @@ class SpmsReturn(models.Model):
             vals = self._parse_error_file_row(row, row_number, col_index)
             if vals is None:
                 continue
-            if vals.pop("diverged"):
+            if vals["diverged"]:
                 divergence_count += 1
             rows.append(vals)
         if not rows:
@@ -522,7 +522,11 @@ class SpmsReturn(models.Model):
                     if move and prescription
                     else []
                 )
-                if incoherent or any(row["missing_amount"] for row in group_rows):
+                if (
+                    incoherent
+                    or any(row["missing_amount"] for row in group_rows)
+                    or any(row["diverged"] for row in group_rows)
+                ):
                     state = "data_error"
                 elif not candidate_ids:
                     state = "not_found"
