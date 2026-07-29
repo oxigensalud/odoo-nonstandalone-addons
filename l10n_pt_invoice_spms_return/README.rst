@@ -51,6 +51,11 @@ Configuration
 - Assign the *SPMS / Consultation* group to users who can read the SPMS
   returns, and *SPMS / Responsible* to the users allowed to process
   files and generate credit notes.
+- Set the *SPMS Adjustment Line Product* on the company (SPMS page,
+  visible to *Technical Settings* users): a sale service product
+  required to append the adjustment line when an official value differs
+  from the itemised total. Credit notes that need it are skipped with a
+  clear message until it is configured.
 - The importer requires the ``openpyxl`` Python library on the server.
 
 Usage
@@ -86,6 +91,21 @@ Monthly flow, from the *SPMS Issues* menu (Accounting → Customers):
 while human input (official values, resolutions, generated invoices) is
 preserved.
 
+A processed return is locked: the error file, the period and the date
+can only be changed while the return is draft, and neither the return
+nor its invoices can be deleted once processed (cancel the return
+first).
+
+An invoice with rows the module could not fully use — unreadable amounts
+(the *Data Error Reason* column tells why), a prescription the matched
+invoice does not carry, or a prescription matching several original
+lines — is held in *Mismatch* and will not generate a credit note until
+a corrected file is processed.
+
+Once a credit note is generated and alive, the official value and the
+line resolutions of its invoice are locked; cancel the credit note first
+to change them.
+
 Known issues / Roadmap
 ======================
 
@@ -99,6 +119,10 @@ Known issues / Roadmap
 - Reprocessing an *old* return rebuilds its lines, which releases the
   previous-claim links (``previous_line_id``) of newer returns without a
   human decision. Documented limitation, covered by tests.
+- A prescription the matched invoice does not carry (line *Not Found*)
+  has no resolution lever: the invoice stays in *Mismatch* until a
+  corrected file is processed. If a real case ever needs it, a manual
+  exclusion mechanism will be added.
 
 Bug Tracker
 ===========

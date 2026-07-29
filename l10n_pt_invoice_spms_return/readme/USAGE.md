@@ -26,3 +26,17 @@ Monthly flow, from the *SPMS Issues* menu (Accounting → Customers):
 *Process* can be run again at any time: the log is rebuilt from the file
 while human input (official values, resolutions, generated invoices) is
 preserved.
+
+A processed return is locked: the error file, the period and the date can
+only be changed while the return is draft, and neither the return nor its
+invoices can be deleted once processed (cancel the return first).
+
+An invoice with rows the module could not fully use — unreadable amounts
+(the *Data Error Reason* column tells why), a prescription the matched
+invoice does not carry, or a prescription matching several original lines —
+is held in *Mismatch* and will not generate a credit note until a corrected
+file is processed.
+
+Once a credit note is generated and alive, the official value and the line
+resolutions of its invoice are locked; cancel the credit note first to
+change them.
