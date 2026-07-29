@@ -278,7 +278,10 @@ class SpmsReturnInvoice(models.Model):
             pending_lines = rec.line_ids.filtered(
                 lambda line: line.previous_line_id and not line.resolution
             )
-            if pending_lines:
+            broken_lines = rec.line_ids.filtered(
+                lambda line: line.state in ("data_error", "not_found", "ambiguous")
+            )
+            if pending_lines or broken_lines:
                 rec.state = "mismatch"
                 continue
             rec.state = "ready" if rec.official_confirmed else "awaiting_official"

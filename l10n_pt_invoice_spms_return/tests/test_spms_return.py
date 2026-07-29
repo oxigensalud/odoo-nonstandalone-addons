@@ -345,6 +345,51 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(broken.state, "data_error")
         self.assertEqual(broken.data_error_reason, "unconvertible")
 
+    def test_data_error_holds_invoice_back_from_ready(self):
+        self._standard_invoice()
+        rows = self._standard_rows()
+        rows[1]["allowed_taxed"] = "1,50"
+        rec = self._create_return(rows)
+        invoice = rec.invoice_ids
+        self.assertEqual(invoice.state, "mismatch")
+        invoice.credit_official = 38.16
+        self.assertTrue(invoice.official_confirmed)
+        self.assertEqual(invoice.state, "mismatch")
+        rec.action_back_to_draft()
+        rec.file = self._make_excel(self._standard_rows())
+        rec.action_process()
+        invoice = rec.invoice_ids
+        self.assertEqual(invoice.state, "ready")
+        self.assertAlmostEqual(invoice.credit_official, 38.16)
+
+    def test_broken_lines_hold_invoice_back_from_ready(self):
+        self._standard_invoice()
+        self._create_invoice(
+            "FT 2026/00124",
+            [("TESTP009", 5, 1.0), ("TESTP009", 5, 1.0)],
+        )
+        rows = self._standard_rows()[:1]
+        rows[0]["prescription"] = "TESTMISSING"
+        rows.append(
+            {
+                "invoice_number": "FT2026-124",
+                "prescription": "TESTP009",
+                "billed": 10.0,
+                "allowed": 5.0,
+                "allowed_taxed": 5.3,
+                "days_billed": 10.0,
+            }
+        )
+        rec = self._create_return(rows)
+        not_found = rec.invoice_ids.filtered(lambda inv: inv.name == "FT2026-123")
+        ambiguous = rec.invoice_ids.filtered(lambda inv: inv.name == "FT2026-124")
+        self.assertEqual(not_found.line_ids.state, "not_found")
+        self.assertEqual(ambiguous.line_ids.state, "ambiguous")
+        (not_found + ambiguous).write({"credit_official": 10.6})
+        self.assertTrue(not_found.official_confirmed)
+        self.assertEqual(not_found.state, "mismatch")
+        self.assertEqual(ambiguous.state, "mismatch")
+
     def test_processed_return_file_and_period_locked(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
