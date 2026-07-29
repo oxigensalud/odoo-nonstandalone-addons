@@ -174,6 +174,7 @@ class SpmsReturn(models.Model):
         for rec in self:
             rec._check_can_process()
             rows = rec._parse_error_file()
+            # keep human input before rebuilding the children
             snapshot = rec._snapshot_children()
             rec.invoice_ids.with_context(spms_return_reprocess=True).unlink()
             rec._create_children(rows, snapshot)
@@ -334,6 +335,7 @@ class SpmsReturn(models.Model):
             if vals["diverged"]:
                 divergence_count += 1
             rows.append(vals)
+        workbook.close()
         if not rows:
             raise UserError(_("The error file contains no data rows."))
         if divergence_count:
@@ -399,6 +401,7 @@ class SpmsReturn(models.Model):
             "amount_reason": amount_reason,
         }
 
+    @api.model
     def _row_amounts(self, row, col_index):
         """Read the amount cells of a row, flagging empty or unconvertible
         ones."""
@@ -416,6 +419,7 @@ class SpmsReturn(models.Model):
             amounts[header] = value or 0.0
         return amounts, reason
 
+    @api.model
     def _group_data_error_reason(self, group_rows, incoherent):
         """Why this line group is a data error, or False if it is not.
 
@@ -431,6 +435,23 @@ class SpmsReturn(models.Model):
         if incoherent:
             return "incoherent"
         return False
+
+    @api.model
+    def _line_state(self, data_error_reason, candidate_ids, first):
+        # worst state wins:
+        # data_error > not_found > ambiguous > zero_diff > matched
+        if data_error_reason:
+            return "data_error"
+        if not candidate_ids:
+            return "not_found"
+        if len(candidate_ids) > 1:
+            return "ambiguous"
+        if float_is_zero(
+            first["amount_billed"] - first["amount_allowed"],
+            precision_digits=2,
+        ):
+            return "zero_diff"
+        return "matched"
 
     def _snapshot_children(self):
         self.ensure_one()
@@ -554,6 +575,7 @@ class SpmsReturn(models.Model):
                 vals["state"] = "done"
                 vals["credit_note_move_id"] = snap.get("credit_note_move_id", False)
             invoice_vals_list.append(vals)
+        # create() returns records in the same order as vals
         invoices = self.env["spms.return.invoice"].create(invoice_vals_list)
 
         line_vals_list = []
@@ -586,19 +608,7 @@ class SpmsReturn(models.Model):
                 data_error_reason = self._group_data_error_reason(
                     group_rows, incoherent
                 )
-                if data_error_reason:
-                    state = "data_error"
-                elif not candidate_ids:
-                    state = "not_found"
-                elif len(candidate_ids) > 1:
-                    state = "ambiguous"
-                elif float_is_zero(
-                    first["amount_billed"] - first["amount_allowed"],
-                    precision_digits=2,
-                ):
-                    state = "zero_diff"
-                else:
-                    state = "matched"
+                state = self._line_state(data_error_reason, candidate_ids, first)
                 line_snap = snapshot["lines"].get((invoice_number, prescription), {})
                 line_vals_list.append(
                     {

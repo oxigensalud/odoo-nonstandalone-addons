@@ -3,7 +3,7 @@
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
     <record id="res_company_form_view" model="ir.ui.view">
-        <field name="name">res.company.form</field>
+        <field name="name">res.company.form.inherit.l10n_pt_invoice_spms_return</field>
         <field name="model">res.company</field>
         <field name="inherit_id" ref="l10n_pt_invoice_spms.res_company_form_view" />
         <field name="arch" type="xml">
