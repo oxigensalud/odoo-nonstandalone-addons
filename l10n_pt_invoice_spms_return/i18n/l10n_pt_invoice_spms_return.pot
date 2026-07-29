@@ -406,6 +406,11 @@ msgid "Has Data Error"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__has_reappearance
+msgid "Has Reappearance"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__id

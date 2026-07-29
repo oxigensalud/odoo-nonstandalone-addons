@@ -100,6 +100,9 @@ class SpmsReturnInvoice(models.Model):
     has_data_error = fields.Boolean(
         compute="_compute_has_data_error",
     )
+    has_reappearance = fields.Boolean(
+        compute="_compute_has_reappearance",
+    )
     credit_estimated = fields.Monetary(
         string="Estimated Credit",
         compute="_compute_credit_estimated",
@@ -144,6 +147,11 @@ class SpmsReturnInvoice(models.Model):
             rec.has_data_error = any(
                 line.state == "data_error" for line in rec.line_ids
             )
+
+    @api.depends("line_ids.previous_line_id")
+    def _compute_has_reappearance(self):
+        for rec in self:
+            rec.has_reappearance = any(line.previous_line_id for line in rec.line_ids)
 
     @api.depends(
         "line_ids.amount_billed",

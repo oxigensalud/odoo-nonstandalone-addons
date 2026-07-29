@@ -18,7 +18,10 @@
                             attrs="{'invisible': [('data_error_reason', '=', False)]}"
                         />
                         <field name="previous_line_id" />
-                        <field name="resolution" />
+                        <field
+                            name="resolution"
+                            attrs="{'invisible': [('previous_line_id', '=', False)]}"
+                        />
                     </group>
                     <group name="amounts">
                         <field name="amount_billed" />
