@@ -63,8 +63,15 @@
                         <group name="official">
                             <field name="credit_estimated" />
                             <field name="amount_lines_untaxed" />
-                            <field name="credit_official" />
-                            <field name="official_confirmed" />
+                            <field name="official_locked" invisible="1" />
+                            <field
+                                name="credit_official"
+                                attrs="{'readonly': [('official_locked', '=', True)]}"
+                            />
+                            <field
+                                name="official_confirmed"
+                                attrs="{'readonly': [('official_locked', '=', True)]}"
+                            />
                             <field name="official_source" />
                             <field name="official_date" />
                             <field name="currency_id" invisible="1" />

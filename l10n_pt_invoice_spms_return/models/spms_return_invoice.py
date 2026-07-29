@@ -103,6 +103,9 @@ class SpmsReturnInvoice(models.Model):
     has_reappearance = fields.Boolean(
         compute="_compute_has_reappearance",
     )
+    official_locked = fields.Boolean(
+        compute="_compute_official_locked",
+    )
     credit_estimated = fields.Monetary(
         string="Estimated Credit",
         compute="_compute_credit_estimated",
@@ -152,6 +155,15 @@ class SpmsReturnInvoice(models.Model):
     def _compute_has_reappearance(self):
         for rec in self:
             rec.has_reappearance = any(line.previous_line_id for line in rec.line_ids)
+
+    @api.depends("state", "credit_note_move_id.state")
+    def _compute_official_locked(self):
+        for rec in self:
+            rec.official_locked = (
+                rec.state == "done"
+                and bool(rec.credit_note_move_id)
+                and rec.credit_note_move_id.state != "cancel"
+            )
 
     @api.depends(
         "line_ids.amount_billed",

@@ -570,6 +570,11 @@ msgid "Official Credit"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__official_locked
+msgid "Official Locked"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__official_date
 msgid "Official Value Date"
 msgstr ""
