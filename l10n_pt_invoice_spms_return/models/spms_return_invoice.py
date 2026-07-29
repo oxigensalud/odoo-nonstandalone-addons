@@ -211,9 +211,10 @@ class SpmsReturnInvoice(models.Model):
                 if rec.return_id.state not in ("draft", "cancel"):
                     raise UserError(
                         _(
-                            "Invoices of an SPMS return can only be deleted "
-                            "while the return is draft or cancelled."
+                            "Invoices of %s can only be deleted while it is "
+                            "draft or cancelled."
                         )
+                        % rec.return_id.display_name
                     )
         return super().unlink()
 

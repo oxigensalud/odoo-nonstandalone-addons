@@ -466,12 +466,10 @@ msgstr "Facturas"
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
 #, python-format
-msgid ""
-"Invoices of an SPMS return can only be deleted while the return is draft or "
-"cancelled."
+msgid "Invoices of %s can only be deleted while it is draft or cancelled."
 msgstr ""
-"Las facturas de un retorno SPMS solo se pueden eliminar mientras el retorno "
-"está en borrador o cancelado."
+"Las facturas de %s solo se pueden eliminar mientras esté en borrador o "
+"cancelado."
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model,name:l10n_pt_invoice_spms_return.model_account_move
