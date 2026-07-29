@@ -283,6 +283,7 @@ class TestSpmsReturn(SavepointCase):
         line = rec.invoice_ids.line_ids
         self.assertEqual(len(line), 1)
         self.assertEqual(line.state, "data_error")
+        self.assertEqual(line.data_error_reason, "incoherent")
         self.assertEqual(len(line.error_ids), 2)
         self.assertEqual(line.error_codes, "C010 / C313")
 
@@ -296,6 +297,7 @@ class TestSpmsReturn(SavepointCase):
         broken = lines.filtered(lambda line: line.prescription == "TESTP002")
         self.assertEqual(intact.state, "matched")
         self.assertEqual(broken.state, "data_error")
+        self.assertEqual(broken.data_error_reason, "missing")
 
     def test_process_diverged_amounts_marks_data_error(self):
         self._standard_invoice()
@@ -307,6 +309,7 @@ class TestSpmsReturn(SavepointCase):
         broken = lines.filtered(lambda line: line.prescription == "TESTP002")
         self.assertEqual(intact.state, "matched")
         self.assertEqual(broken.state, "data_error")
+        self.assertEqual(broken.data_error_reason, "diverged")
 
     def test_process_duplicate_rows_taxed_contradiction_marks_data_error(self):
         self._standard_invoice()
@@ -316,6 +319,7 @@ class TestSpmsReturn(SavepointCase):
         line = rec.invoice_ids.line_ids
         self.assertEqual(len(line), 1)
         self.assertEqual(line.state, "data_error")
+        self.assertEqual(line.data_error_reason, "diverged")
 
     def test_process_text_amount_marks_data_error(self):
         self._standard_invoice()
@@ -327,6 +331,7 @@ class TestSpmsReturn(SavepointCase):
         broken = lines.filtered(lambda line: line.prescription == "TESTP002")
         self.assertEqual(intact.state, "matched")
         self.assertEqual(broken.state, "data_error")
+        self.assertEqual(broken.data_error_reason, "unconvertible")
 
     def test_process_date_amount_marks_data_error(self):
         self._standard_invoice()
@@ -338,6 +343,7 @@ class TestSpmsReturn(SavepointCase):
         broken = lines.filtered(lambda line: line.prescription == "TESTP002")
         self.assertEqual(intact.state, "matched")
         self.assertEqual(broken.state, "data_error")
+        self.assertEqual(broken.data_error_reason, "unconvertible")
 
     def test_processed_return_file_and_period_locked(self):
         self._standard_invoice()

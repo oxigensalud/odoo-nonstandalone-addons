@@ -193,6 +193,11 @@ msgid "Consultation"
 msgstr "Consulta"
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__data_error_reason__incoherent
+msgid "Contradictory duplicate rows"
+msgstr "Filas duplicadas contradictorias"
+
+#. module: l10n_pt_invoice_spms_return
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
 msgid "Create Credit Notes"
 msgstr "Crear rectificativas"
@@ -249,6 +254,11 @@ msgstr "Moneda"
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__data_error
 msgid "Data Error"
 msgstr "Error de datos"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__data_error_reason
+msgid "Data Error Reason"
+msgstr "Motivo del error de datos"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__date
@@ -316,6 +326,11 @@ msgstr ""
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__resolution__duplicate
 msgid "Duplicate"
 msgstr "Duplicado"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__data_error_reason__missing
+msgid "Empty amount cells"
+msgstr "Celdas de importe vacías"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__code
@@ -417,6 +432,11 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
 msgid "Group By"
 msgstr "Agrupar por"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__has_data_error
+msgid "Has Data Error"
+msgstr "Tiene error de datos"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__id
@@ -944,6 +964,11 @@ msgstr ""
 "resueltas como duplicadas."
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__data_error_reason__diverged
+msgid "Taxed amount inconsistent with the allowed amount"
+msgstr "Importe con IVA incoherente con el importe aprobado"
+
+#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
 #, python-format
 msgid ""
@@ -1074,7 +1099,20 @@ msgstr ""
 "rectificativa."
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__data_error_reason__unconvertible
+msgid "Unconvertible amount value"
+msgstr "Valor de importe no convertible"
+
+#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
 msgid "Upload the error file before processing %s."
 msgstr "Suba el fichero de errores antes de procesar %s."
+
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__data_error_reason
+msgid "Why this line was marked as a data error when parsing the error file."
+msgstr ""
+"Por qué esta línea se marcó como error de datos al procesar el fichero de "
+"errores."

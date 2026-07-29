@@ -13,6 +13,10 @@
                         <field name="prescription" />
                         <field name="move_line_id" />
                         <field name="state" />
+                        <field
+                            name="data_error_reason"
+                            attrs="{'invisible': [('data_error_reason', '=', False)]}"
+                        />
                         <field name="previous_line_id" />
                         <field name="resolution" />
                     </group>

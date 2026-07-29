@@ -68,21 +68,6 @@ def _cell_amount(value):
         return None
 
 
-def _row_amounts(row, col_index):
-    """Read the amount cells of a row, flagging empty or unconvertible ones."""
-    amounts = {}
-    missing = False
-    for header in AMOUNT_HEADERS:
-        raw = _cell_value(row, col_index, header)
-        value = _cell_amount(raw)
-        # an empty required cell or an unconvertible cell (text, date...)
-        # is missing data, not a real amount
-        if value is None or (header in REQUIRED_AMOUNT_HEADERS and raw in (None, "")):
-            missing = True
-        amounts[header] = value or 0.0
-    return amounts, missing
-
-
 class SpmsReturn(models.Model):
     _name = "spms.return"
     _description = "SPMS Return"
@@ -384,7 +369,7 @@ class SpmsReturn(models.Model):
             raise UserError(
                 _("Row %d of the error file has no invoice number.") % row_number
             )
-        amounts, missing_amount = _row_amounts(row, col_index)
+        amounts, amount_reason = self._row_amounts(row, col_index)
         amount_allowed = amounts["VALORTOTALAPURADO"]
         amount_allowed_taxed = amounts["VALORTOTALAPURADOIVA"]
         diverged = (
@@ -410,8 +395,41 @@ class SpmsReturn(models.Model):
             ),
             "excel_row": row_number,
             "diverged": diverged,
-            "missing_amount": missing_amount,
+            "amount_reason": amount_reason,
         }
+
+    def _row_amounts(self, row, col_index):
+        """Read the amount cells of a row, flagging empty or unconvertible
+        ones."""
+        amounts = {}
+        reason = None
+        for header in AMOUNT_HEADERS:
+            raw = _cell_value(row, col_index, header)
+            value = _cell_amount(raw)
+            # an unconvertible cell (text, date...) or an empty required cell
+            # is missing data, not a real amount
+            if value is None:
+                reason = "unconvertible"
+            elif header in REQUIRED_AMOUNT_HEADERS and raw in (None, "") and not reason:
+                reason = "missing"
+            amounts[header] = value or 0.0
+        return amounts, reason
+
+    def _group_data_error_reason(self, group_rows, incoherent):
+        """Why this line group is a data error, or False if it is not.
+
+        Unreadable cells come first: a divergence or a contradiction
+        computed over unreadable amounts is derived noise.
+        """
+        if any(row["amount_reason"] == "unconvertible" for row in group_rows):
+            return "unconvertible"
+        if any(row["amount_reason"] == "missing" for row in group_rows):
+            return "missing"
+        if any(row["diverged"] for row in group_rows):
+            return "diverged"
+        if incoherent:
+            return "incoherent"
+        return False
 
     def _snapshot_children(self):
         self.ensure_one()
@@ -564,11 +582,10 @@ class SpmsReturn(models.Model):
                     if move and prescription
                     else []
                 )
-                if (
-                    incoherent
-                    or any(row["missing_amount"] for row in group_rows)
-                    or any(row["diverged"] for row in group_rows)
-                ):
+                data_error_reason = self._group_data_error_reason(
+                    group_rows, incoherent
+                )
+                if data_error_reason:
                     state = "data_error"
                 elif not candidate_ids:
                     state = "not_found"
@@ -592,6 +609,7 @@ class SpmsReturn(models.Model):
                         "days_billed": first["days_billed"],
                         "days_paid": first["days_paid"],
                         "state": state,
+                        "data_error_reason": data_error_reason,
                         "move_line_id": (
                             candidate_ids[0] if len(candidate_ids) == 1 else False
                         ),

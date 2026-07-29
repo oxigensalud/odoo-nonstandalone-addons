@@ -109,6 +109,18 @@ class SpmsReturnInvoiceLine(models.Model):
         readonly=True,
         copy=False,
     )
+    data_error_reason = fields.Selection(
+        selection=[
+            ("missing", "Empty amount cells"),
+            ("unconvertible", "Unconvertible amount value"),
+            ("diverged", "Taxed amount inconsistent with the allowed amount"),
+            ("incoherent", "Contradictory duplicate rows"),
+        ],
+        string="Data Error Reason",
+        readonly=True,
+        copy=False,
+        help="Why this line was marked as a data error when parsing the error file.",
+    )
     previous_line_id = fields.Many2one(
         comodel_name="spms.return.invoice.line",
         string="Previous Claim Line",

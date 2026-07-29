@@ -97,6 +97,9 @@ class SpmsReturnInvoice(models.Model):
         string="# Prescriptions",
         compute="_compute_line_count",
     )
+    has_data_error = fields.Boolean(
+        compute="_compute_has_data_error",
+    )
     credit_estimated = fields.Monetary(
         string="Estimated Credit",
         compute="_compute_credit_estimated",
@@ -134,6 +137,13 @@ class SpmsReturnInvoice(models.Model):
     def _compute_line_count(self):
         for rec in self:
             rec.line_count = len(rec.line_ids)
+
+    @api.depends("line_ids.state")
+    def _compute_has_data_error(self):
+        for rec in self:
+            rec.has_data_error = any(
+                line.state == "data_error" for line in rec.line_ids
+            )
 
     @api.depends(
         "line_ids.amount_billed",

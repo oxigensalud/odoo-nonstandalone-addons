@@ -70,6 +70,7 @@
                             <field name="currency_id" invisible="1" />
                         </group>
                     </group>
+                    <field name="has_data_error" invisible="1" />
                     <field name="line_ids">
                         <tree
                             editable="bottom"
@@ -92,6 +93,10 @@
                             <field name="resolution" />
                             <field name="currency_id" invisible="1" />
                             <field name="state" />
+                            <field
+                                name="data_error_reason"
+                                attrs="{'column_invisible': [('parent.has_data_error', '=', False)]}"
+                            />
                             <button
                                 name="action_show_errors"
                                 type="object"
