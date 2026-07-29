@@ -106,6 +106,11 @@ msgid "An invoice can only appear once in the same SPMS return."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.constraint,message:l10n_pt_invoice_spms_return.constraint_spms_return_invoice_return_name_uniq
+msgid "An invoice number can only appear once in the same SPMS return."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__awaiting_official
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
 msgid "Awaiting Official Value"
@@ -949,7 +954,8 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "The error file and period can only be changed on a draft SPMS return."
+msgid ""
+"The error file, period and date can only be changed on a draft SPMS return."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return

@@ -30,6 +30,7 @@ class SpmsReturnInvoiceLine(models.Model):
     )
     currency_id = fields.Many2one(
         related="company_id.currency_id",
+        store=True,
         readonly=True,
     )
     prescription = fields.Char(
@@ -43,6 +44,7 @@ class SpmsReturnInvoiceLine(models.Model):
         comodel_name="account.move.line",
         string="Original Invoice Line",
         readonly=True,
+        check_company=True,
         help="Original invoice line matched by prescription number within "
         "the matched invoice.",
     )
@@ -50,6 +52,7 @@ class SpmsReturnInvoiceLine(models.Model):
         comodel_name="account.move.line",
         string="Refund Line",
         readonly=True,
+        check_company=True,
         help="Credit-note line generated from this line (audit only).",
     )
     amount_billed = fields.Monetary(

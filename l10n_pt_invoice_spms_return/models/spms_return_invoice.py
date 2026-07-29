@@ -26,6 +26,7 @@ class SpmsReturnInvoice(models.Model):
     )
     currency_id = fields.Many2one(
         related="company_id.currency_id",
+        store=True,
         readonly=True,
     )
     name = fields.Char(
@@ -38,12 +39,14 @@ class SpmsReturnInvoice(models.Model):
         comodel_name="account.move",
         string="Original Invoice",
         readonly=True,
+        check_company=True,
         help="Original customer invoice matched by the SPMS invoice number.",
     )
     credit_note_move_id = fields.Many2one(
         comodel_name="account.move",
         string="Credit Note",
         readonly=True,
+        check_company=True,
         help="Draft credit note generated for this invoice, or the "
         "pre-existing one detected by the duplicate check.",
     )
@@ -136,6 +139,11 @@ class SpmsReturnInvoice(models.Model):
             "return_move_uniq",
             "unique(return_id, move_id)",
             "An invoice can only appear once in the same SPMS return.",
+        ),
+        (
+            "return_name_uniq",
+            "unique(return_id, name)",
+            "An invoice number can only appear once in the same SPMS return.",
         ),
     ]
 
@@ -684,6 +692,7 @@ class SpmsReturnInvoice(models.Model):
             )
 
     def _is_official_total_reached(self, draft):
+        self.ensure_one()
         return (
             float_compare(
                 draft.amount_total,
@@ -695,6 +704,8 @@ class SpmsReturnInvoice(models.Model):
 
     def action_view_credit_note(self):
         self.ensure_one()
+        if not self.credit_note_move_id:
+            return False
         return {
             "type": "ir.actions.act_window",
             "name": _("Credit Note"),

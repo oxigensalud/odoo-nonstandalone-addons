@@ -10,7 +10,8 @@ class ResCompany(models.Model):
     spms_adjustment_product_id = fields.Many2one(
         comodel_name="product.product",
         string="SPMS Adjustment Line Product",
-        domain="[('sale_ok', '=', True), ('type', '=', 'service')]",
+        domain="['&', '&', ('sale_ok', '=', True), ('type', '=', 'service'),"
+        " '|', ('company_id', '=', False), ('company_id', '=', id)]",
         help="Service product used for the adjustment line appended to a "
         "generated credit note when the official value differs from the "
         "prescription lines total.",

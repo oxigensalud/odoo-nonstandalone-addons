@@ -107,6 +107,7 @@ class SpmsReturn(models.Model):
         ],
         string="State",
         required=True,
+        readonly=True,
         default="draft",
         copy=False,
     )
@@ -204,13 +205,13 @@ class SpmsReturn(models.Model):
         return True
 
     def write(self, vals):
-        if "file" in vals or "period" in vals:
+        if "file" in vals or "period" in vals or "date" in vals:
             for rec in self:
                 if rec.state != "draft":
                     raise UserError(
                         _(
-                            "The error file and period can only be changed on "
-                            "a draft SPMS return."
+                            "The error file, period and date can only be "
+                            "changed on a draft SPMS return."
                         )
                     )
         return super().write(vals)
