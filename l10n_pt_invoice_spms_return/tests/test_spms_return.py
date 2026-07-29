@@ -404,6 +404,40 @@ class TestSpmsReturn(SavepointCase):
         line.resolution = "duplicate"
         self.assertEqual(invoice.state, "ready")
 
+    def test_spms_number_collision_leaves_invoice_unmatched(self):
+        self._standard_invoice()
+        self._create_invoice("FT 2026/0123", [("TESTP009", 5, 1.0)])
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        self.assertFalse(invoice.move_id)
+        self.assertEqual(invoice.state, "not_found")
+
+    def test_responsible_user_natural_flow(self):
+        self._standard_invoice()
+        user = new_test_user(
+            self.env,
+            login="spms_responsible_user",
+            groups="l10n_pt_invoice_spms_return.spms_return_group_responsible",
+        )
+        rec = (
+            self.env["spms.return"]
+            .with_user(user)
+            .create(
+                {
+                    "period": "202605",
+                    "file": self._make_excel(self._standard_rows()),
+                    "file_name": "OXIGEN 202605.xlsx",
+                    "company_id": self.company.id,
+                }
+            )
+        )
+        rec.action_process()
+        invoice = rec.invoice_ids
+        invoice.credit_official = 38.16
+        rec.action_create_credit_notes()
+        self.assertEqual(invoice.state, "done")
+        self.assertEqual(invoice.credit_note_move_id.state, "draft")
+
     def test_processed_return_file_and_period_locked(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
@@ -442,7 +476,8 @@ class TestSpmsReturn(SavepointCase):
         with self.assertRaisesRegex(UserError, "cancel that credit note"):
             invoice.credit_official = 40.0
         invoice.credit_note_move_id.button_cancel()
-        invoice._update_state()
+        rec.action_process()
+        invoice = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
         invoice.credit_official = 40.0
         self.assertEqual(invoice.state, "ready")
 
