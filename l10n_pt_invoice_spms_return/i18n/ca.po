@@ -1029,6 +1029,16 @@ msgstr ""
 "l'esborrany abans de reintentar."
 
 #. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice_line.py:0
+#, python-format
+msgid ""
+"The credit of %s is already carried by a credit note; cancel that credit "
+"note first to change a resolution."
+msgstr ""
+"L'abonament de %s ja està recollit en una factura rectificativa; cancel·leu "
+"abans aquesta factura rectificativa per canviar una resolució."
+
+#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
 msgid "The error file and period can only be changed on a draft SPMS return."

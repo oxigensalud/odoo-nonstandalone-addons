@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 from odoo.tools import float_compare, float_is_zero
 
 # Portuguese reduced health VAT applied by the SPMS conference (6%). Used by
@@ -184,6 +185,22 @@ class SpmsReturnInvoiceLine(models.Model):
             rec.error_codes = " / ".join(codes)
 
     def write(self, vals):
+        if "resolution" in vals:
+            for rec in self:
+                invoice = rec.return_invoice_id
+                if (
+                    invoice.state == "done"
+                    and invoice.credit_note_move_id
+                    and invoice.credit_note_move_id.state != "cancel"
+                ):
+                    raise UserError(
+                        _(
+                            "The credit of %s is already carried by a credit "
+                            "note; cancel that credit note first to change a "
+                            "resolution."
+                        )
+                        % invoice.display_name
+                    )
         res = super().write(vals)
         if "resolution" in vals:
             self.mapped("return_invoice_id")._update_state()

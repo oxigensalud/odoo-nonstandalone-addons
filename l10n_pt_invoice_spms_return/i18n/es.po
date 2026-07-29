@@ -1032,6 +1032,16 @@ msgstr ""
 "antes de reintentar."
 
 #. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice_line.py:0
+#, python-format
+msgid ""
+"The credit of %s is already carried by a credit note; cancel that credit "
+"note first to change a resolution."
+msgstr ""
+"El abono de %s ya está recogido en una factura rectificativa; cancele antes "
+"esa factura rectificativa para cambiar una resolución."
+
+#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
 msgid "The error file and period can only be changed on a draft SPMS return."

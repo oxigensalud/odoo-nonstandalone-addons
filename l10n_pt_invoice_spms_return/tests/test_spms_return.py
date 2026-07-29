@@ -390,6 +390,20 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(not_found.state, "mismatch")
         self.assertEqual(ambiguous.state, "mismatch")
 
+    def test_resolution_locked_while_credit_note_alive(self):
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        invoice.credit_official = 38.16
+        rec.action_create_credit_notes()
+        self.assertEqual(invoice.state, "done")
+        line = invoice.line_ids.filtered(lambda line: line.prescription == "TESTP001")
+        with self.assertRaisesRegex(UserError, "cancel that credit note"):
+            line.resolution = "duplicate"
+        invoice.credit_note_move_id.button_cancel()
+        line.resolution = "duplicate"
+        self.assertEqual(invoice.state, "ready")
+
     def test_processed_return_file_and_period_locked(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
