@@ -476,8 +476,6 @@ class TestSpmsReturn(SavepointCase):
         with self.assertRaisesRegex(UserError, "cancel that credit note"):
             invoice.credit_official = 40.0
         invoice.credit_note_move_id.button_cancel()
-        rec.action_process()
-        invoice = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
         invoice.credit_official = 40.0
         self.assertEqual(invoice.state, "ready")
 
