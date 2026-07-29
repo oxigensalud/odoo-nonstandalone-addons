@@ -23,11 +23,12 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
     _description = "SPMS CIUS PT 2.11 XML Builder"
 
     def _get_invoice_period_vals_list(self, invoice):
-        start_date = min(invoice.invoice_line_ids.mapped("spms_start_date"))
+        origin_invoice = invoice.reversed_entry_id or invoice.debit_origin_id or invoice
+        start_date = min(origin_invoice.invoice_line_ids.mapped("spms_start_date"))
         start_date = start_date.replace(day=1)
         if start_date:
             start_date = start_date.isoformat()
-        end_date = max(invoice.invoice_line_ids.mapped("spms_end_date"))
+        end_date = max(origin_invoice.invoice_line_ids.mapped("spms_end_date"))
         end_date = end_date.replace(day=28)
         end_date += timedelta(days=4)
         end_date = end_date - timedelta(days=end_date.day)
@@ -157,7 +158,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             vals["vals"].update(
                 {
                     "billing_reference_vals": {
-                        "id": invoice.reversed_entry_id.name,
+                        "id": invoice.reversed_entry_id._get_spms_invoice_number(),
                         "issue_date": invoice.reversed_entry_id.date.isoformat(),
                     }
                 }
