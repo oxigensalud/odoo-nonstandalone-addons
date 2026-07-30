@@ -92,9 +92,9 @@ class EdiOutputSendL10nPtSpms(Component):
         if not invoice.reversed_entry_id:
             etree.SubElement(factura, "ficheiroComprimido").text = "N"
         else:
-            etree.SubElement(factura, "TipoNota").text = "C"
+            etree.SubElement(factura, "tipoNota").text = "C"
             etree.SubElement(
-                factura, "NumeroNota"
+                factura, "numeroNota"
             ).text = invoice._get_spms_invoice_number()
         etree.SubElement(factura, "documento").text = base64.b64encode(data).decode(
             "ascii"
