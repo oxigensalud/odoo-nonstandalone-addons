@@ -12,6 +12,7 @@ class SpmsReturnInvoice(models.Model):
     _name = "spms.return.invoice"
     _description = "SPMS Return Invoice"
     _order = "return_id desc, name"
+    _check_company_auto = True
 
     return_id = fields.Many2one(
         comodel_name="spms.return",
