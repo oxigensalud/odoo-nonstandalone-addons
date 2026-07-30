@@ -412,6 +412,12 @@ visible to <em>Technical Settings</em> users): a sale service product
 required to append the adjustment line when an official value differs
 from the itemised total. Credit notes that need it are skipped with a
 clear message until it is configured.</li>
+<li>Set the <em>SPMS Estimation Tax</em> on the same company page: the sales VAT
+the SPMS conference applies in its error file (currently the
+Portuguese 6% health rate). It drives the with-VAT credit estimate and
+the coherence check of the file’s own amounts; processing stops with a
+clear message until it is configured. The credit-note taxes still come
+from the original invoice lines, never from this setting.</li>
 <li>The importer requires the <tt class="docutils literal">openpyxl</tt> Python library on the server.</li>
 </ul>
 </div>
