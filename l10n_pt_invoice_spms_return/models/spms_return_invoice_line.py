@@ -5,11 +5,6 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_compare, float_is_zero
 
-# Portuguese reduced health VAT applied by the SPMS conference (6%). Used by
-# the per-line credit contribution and the per-invoice estimate; the actual
-# credit-note taxes come from the original line's taxes, never from here.
-SPMS_TAX_FACTOR = 1.06
-
 
 class SpmsReturnInvoiceLine(models.Model):
     _name = "spms.return.invoice.line"
@@ -98,9 +93,10 @@ class SpmsReturnInvoiceLine(models.Model):
         string="Credit (Taxed)",
         compute="_compute_amount_credit_taxed",
         digits=(16, 2),
-        help="Informative per-line credit contribution with VAT: "
-        "billed x 1.06 - allowed-with-VAT (their rounding). The "
-        "per-invoice estimate sums these before rounding once.",
+        help="Informative per-line credit contribution with VAT: billed "
+        "with the estimation tax applied minus allowed-with-VAT (their "
+        "rounding). The per-invoice estimate sums these before rounding "
+        "once.",
     )
     state = fields.Selection(
         selection=[
@@ -176,7 +172,8 @@ class SpmsReturnInvoiceLine(models.Model):
     def _compute_amount_credit_taxed(self):
         for rec in self:
             rec.amount_credit_taxed = (
-                rec.amount_billed * SPMS_TAX_FACTOR - rec.amount_allowed_taxed
+                rec.amount_billed * rec.company_id._get_spms_tax_factor()
+                - rec.amount_allowed_taxed
             )
 
     @api.depends("error_ids.code")

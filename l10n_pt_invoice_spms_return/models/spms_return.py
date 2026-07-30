@@ -12,8 +12,6 @@ from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools import float_compare, float_is_zero, float_round
 
-from .spms_return_invoice_line import SPMS_TAX_FACTOR
-
 _logger = logging.getLogger(__name__)
 
 # Error-report columns required by the import, by Excel header. The optional
@@ -341,8 +339,8 @@ class SpmsReturn(models.Model):
         if divergence_count:
             _logger.warning(
                 "SPMS return %s: %d rows where VALORTOTALAPURADOIVA differs "
-                "from round(VALORTOTALAPURADO x 1.06); keeping the reported "
-                "values.",
+                "from VALORTOTALAPURADO with the estimation tax applied; "
+                "keeping the reported values.",
                 self.display_name,
                 divergence_count,
             )
@@ -361,7 +359,6 @@ class SpmsReturn(models.Model):
             )
         return col_index
 
-    @api.model
     def _parse_error_file_row(self, row, row_number, col_index):
         invoice_number = _cell_text(_cell_value(row, col_index, "NUMFACTURA"))
         prescription = _cell_text(_cell_value(row, col_index, "NUMEROPRESCRICAO"))
@@ -375,10 +372,11 @@ class SpmsReturn(models.Model):
         amounts, amount_reason = self._row_amounts(row, col_index)
         amount_allowed = amounts["VALORTOTALAPURADO"]
         amount_allowed_taxed = amounts["VALORTOTALAPURADOIVA"]
+        factor = self.company_id._get_spms_tax_factor()
         diverged = (
             float_compare(
                 amount_allowed_taxed,
-                float_round(amount_allowed * SPMS_TAX_FACTOR, precision_digits=2),
+                float_round(amount_allowed * factor, precision_digits=2),
                 precision_digits=2,
             )
             != 0

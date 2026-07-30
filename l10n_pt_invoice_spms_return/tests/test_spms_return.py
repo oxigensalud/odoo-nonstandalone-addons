@@ -43,6 +43,7 @@ class TestSpmsReturn(SavepointCase):
                 "company_id": cls.company.id,
             }
         )
+        cls.company.spms_estimation_tax_id = cls.tax6
         cls.income_account = cls.env["account.account"].search(
             [
                 ("company_id", "=", cls.company.id),
@@ -218,6 +219,12 @@ class TestSpmsReturn(SavepointCase):
     def test_process_requires_file(self):
         rec = self.env["spms.return"].create({"period": "202605"})
         with self.assertRaisesRegex(UserError, "Upload the error file"):
+            rec.action_process()
+
+    def test_process_requires_estimation_tax(self):
+        self.company.spms_estimation_tax_id = False
+        rec = self._create_return(self._standard_rows(), process=False)
+        with self.assertRaisesRegex(UserError, "estimation tax"):
             rec.action_process()
 
     def test_process_requires_responsible(self):

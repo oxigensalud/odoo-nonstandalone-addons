@@ -5,8 +5,6 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_compare, float_round, formatLang
 
-from .spms_return_invoice_line import SPMS_TAX_FACTOR
-
 
 class SpmsReturnInvoice(models.Model):
     _name = "spms.return.invoice"
@@ -115,10 +113,10 @@ class SpmsReturnInvoice(models.Model):
         compute="_compute_credit_estimated",
         store=True,
         help="Formula estimate of the credit, taxes included: "
-        "round(sum(billed x 1.06 - allowed-with-VAT)) over unique "
-        "prescriptions, excluding lines resolved as duplicates. "
-        "Informational preview and cross-check; the official value is "
-        "authoritative.",
+        "round(sum(billed with the estimation tax applied - "
+        "allowed-with-VAT)) over unique prescriptions, excluding lines "
+        "resolved as duplicates. Informational preview and cross-check; "
+        "the official value is authoritative.",
     )
     amount_lines_untaxed = fields.Monetary(
         string="Lines Amount (Untaxed)",
@@ -181,10 +179,11 @@ class SpmsReturnInvoice(models.Model):
     )
     def _compute_credit_estimated(self):
         for rec in self:
+            factor = rec.company_id._get_spms_tax_factor()
             lines = rec.line_ids.filtered(lambda line: line.resolution != "duplicate")
             rec.credit_estimated = float_round(
                 sum(
-                    line.amount_billed * SPMS_TAX_FACTOR - line.amount_allowed_taxed
+                    line.amount_billed * factor - line.amount_allowed_taxed
                     for line in lines
                 ),
                 precision_rounding=rec.currency_id.rounding or 0.01,
