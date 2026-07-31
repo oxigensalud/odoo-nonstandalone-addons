@@ -411,13 +411,11 @@ class TestSpmsReturn(SavepointCase):
         line.resolution = "duplicate"
         self.assertEqual(invoice.state, "ready")
 
-    def test_spms_number_collision_leaves_invoice_unmatched(self):
+    def test_spms_number_collision_blocks_processing(self):
         self._standard_invoice()
         self._create_invoice("FT 2026/0123", [("TESTP009", 5, 1.0)])
-        rec = self._create_return(self._standard_rows())
-        invoice = rec.invoice_ids
-        self.assertFalse(invoice.move_id)
-        self.assertEqual(invoice.state, "not_found")
+        with self.assertRaisesRegex(UserError, "more than one posted invoice"):
+            self._create_return(self._standard_rows())
 
     def test_responsible_user_natural_flow(self):
         self._standard_invoice()

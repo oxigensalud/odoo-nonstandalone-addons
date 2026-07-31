@@ -472,7 +472,7 @@ class SpmsReturn(models.Model):
                     }
         return {"invoices": invoice_snapshot, "lines": line_snapshot}
 
-    def _get_spms_move_map(self):
+    def _get_spms_move_map(self, invoice_numbers):
         self.ensure_one()
         moves = self.env["account.move"].search(
             [
@@ -482,23 +482,32 @@ class SpmsReturn(models.Model):
             ]
         )
         move_map = {}
-        ambiguous = set()
+        collisions = {}
         for move in moves:
             number = move._get_spms_invoice_number()
             if number in move_map:
-                ambiguous.add(number)
+                collisions.setdefault(number, [move_map[number]]).append(move)
             else:
                 move_map[number] = move
-        for number in ambiguous:
-            move_map[number] = self.env["account.move"]
-        if ambiguous:
-            _logger.warning(
-                "SPMS return %s: %d SPMS invoice numbers resolve to more "
-                "than one invoice; left unmatched: %s",
-                self.display_name,
-                len(ambiguous),
-                ", ".join(sorted(ambiguous)),
+        blocked = sorted(set(collisions) & set(invoice_numbers))
+        if blocked:
+            raise UserError(
+                _(
+                    "The following SPMS invoice numbers match more than one "
+                    "posted invoice: %s. Fix the duplicated invoices before "
+                    "processing the return."
+                )
+                % "; ".join(
+                    "%s (%s)"
+                    % (
+                        number,
+                        ", ".join(move.display_name for move in collisions[number]),
+                    )
+                    for number in blocked
+                )
             )
+        for number in collisions:
+            move_map[number] = self.env["account.move"]
         return move_map
 
     def _get_previous_lines_map(self, invoice_numbers):
@@ -538,7 +547,7 @@ class SpmsReturn(models.Model):
             line_key = row["prescription"] or "__row_%d" % row["excel_row"]
             invoice_group.setdefault(line_key, []).append(row)
 
-        move_map = self._get_spms_move_map()
+        move_map = self._get_spms_move_map(list(grouped.keys()))
         matched_move_ids = [
             move.id for number, move in move_map.items() if move and number in grouped
         ]

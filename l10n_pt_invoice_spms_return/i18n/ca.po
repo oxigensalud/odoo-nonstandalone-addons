@@ -1095,6 +1095,16 @@ msgid "The error file is empty."
 msgstr "El fitxer d'errors és buit."
 
 #. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid ""
+"The following SPMS invoice numbers match more than one posted invoice: %s. "
+"Fix the duplicated invoices before processing the return."
+msgstr ""
+"Els següents números de factura SPMS coincideixen amb més d'una factura "
+"publicada: %s. Corregiu les factures duplicades abans de processar el retorn."
+
+#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
 #, python-format
 msgid "The invoice is no longer ready (current state: %s)."
