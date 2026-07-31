@@ -177,14 +177,6 @@ msgid ""
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
-#: code:addons/l10n_pt_invoice_spms_return/models/res_company.py:0
-#, python-format
-msgid ""
-"Configure the SPMS estimation tax on company %s before processing SPMS "
-"returns."
-msgstr ""
-
-#. module: l10n_pt_invoice_spms_return
 #: model:res.groups,name:l10n_pt_invoice_spms_return.spms_return_group_consultation
 msgid "Consultation"
 msgstr ""
@@ -401,10 +393,10 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_estimated
 msgid ""
-"Formula estimate of the credit, taxes included: round(sum(billed with the "
-"estimation tax applied - allowed-with-VAT)) over unique prescriptions, "
-"excluding lines resolved as duplicates. Informational preview and cross-"
-"check; the official value is authoritative."
+"Formula estimate of the credit, taxes included: round(sum(difference with "
+"the line tax applied)) over unique prescriptions, excluding lines resolved "
+"as duplicates. Matches the total the generated draft will compute. "
+"Informational preview and cross-check; the official value is authoritative."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -436,9 +428,10 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_credit_taxed
 msgid ""
-"Informative per-line credit contribution with VAT: billed with the "
-"estimation tax applied minus allowed-with-VAT (their rounding). The per-"
-"invoice estimate sums these before rounding once."
+"Informative per-line credit contribution with VAT: the difference with the "
+"matched original line's tax applied (the settings adjustment-product tax "
+"for unmatched lines). The per-invoice estimate sums these before rounding "
+"once."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -781,15 +774,6 @@ msgid ""
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_res_company__spms_estimation_tax_id
-msgid ""
-"Sales VAT the SPMS conference applies in its error file: used to compute "
-"the with-VAT credit estimate and to cross-check the file's own allowed-"
-"with-VAT column. The credit-note taxes always come from the original "
-"invoice lines, never from this tax."
-msgstr ""
-
-#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return__file
 msgid "SNS/CCMSNS conference error report (Excel), as received."
 msgstr ""
@@ -808,11 +792,6 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company__spms_adjustment_product_id
 msgid "SPMS Adjustment Line Product"
-msgstr ""
-
-#. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_res_company__spms_estimation_tax_id
-msgid "SPMS Estimation Tax"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return

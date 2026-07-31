@@ -113,10 +113,10 @@ class SpmsReturnInvoice(models.Model):
         compute="_compute_credit_estimated",
         store=True,
         help="Formula estimate of the credit, taxes included: "
-        "round(sum(billed with the estimation tax applied - "
-        "allowed-with-VAT)) over unique prescriptions, excluding lines "
-        "resolved as duplicates. Informational preview and cross-check; "
-        "the official value is authoritative.",
+        "round(sum(difference with the line tax applied)) over unique "
+        "prescriptions, excluding lines resolved as duplicates. Matches "
+        "the total the generated draft will compute. Informational "
+        "preview and cross-check; the official value is authoritative.",
     )
     amount_lines_untaxed = fields.Monetary(
         string="Lines Amount (Untaxed)",
@@ -173,17 +173,16 @@ class SpmsReturnInvoice(models.Model):
             )
 
     @api.depends(
-        "line_ids.amount_billed",
-        "line_ids.amount_allowed_taxed",
+        "line_ids.amount_difference",
+        "line_ids.move_line_id",
         "line_ids.resolution",
     )
     def _compute_credit_estimated(self):
         for rec in self:
-            factor = rec.company_id._get_spms_tax_factor()
             lines = rec.line_ids.filtered(lambda line: line.resolution != "duplicate")
             rec.credit_estimated = float_round(
                 sum(
-                    line.amount_billed * factor - line.amount_allowed_taxed
+                    line.amount_difference * line._get_estimation_tax_factor()
                     for line in lines
                 ),
                 precision_rounding=rec.currency_id.rounding or 0.01,

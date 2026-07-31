@@ -325,25 +325,14 @@ class SpmsReturn(models.Model):
             raise UserError(_("The error file is empty."))
         col_index = self._parse_error_file_headers(header_row)
         rows = []
-        divergence_count = 0
         for row_number, row in enumerate(rows_iter, start=2):
             vals = self._parse_error_file_row(row, row_number, col_index)
             if vals is None:
                 continue
-            if vals["diverged"]:
-                divergence_count += 1
             rows.append(vals)
         workbook.close()
         if not rows:
             raise UserError(_("The error file contains no data rows."))
-        if divergence_count:
-            _logger.warning(
-                "SPMS return %s: %d rows where VALORTOTALAPURADOIVA differs "
-                "from VALORTOTALAPURADO with the estimation tax applied; "
-                "keeping the reported values.",
-                self.display_name,
-                divergence_count,
-            )
         return rows
 
     @api.model
@@ -359,6 +348,7 @@ class SpmsReturn(models.Model):
             )
         return col_index
 
+    @api.model
     def _parse_error_file_row(self, row, row_number, col_index):
         invoice_number = _cell_text(_cell_value(row, col_index, "NUMFACTURA"))
         prescription = _cell_text(_cell_value(row, col_index, "NUMEROPRESCRICAO"))
@@ -370,23 +360,12 @@ class SpmsReturn(models.Model):
                 _("Row %d of the error file has no invoice number.") % row_number
             )
         amounts, amount_reason = self._row_amounts(row, col_index)
-        amount_allowed = amounts["VALORTOTALAPURADO"]
-        amount_allowed_taxed = amounts["VALORTOTALAPURADOIVA"]
-        factor = self.company_id._get_spms_tax_factor()
-        diverged = (
-            float_compare(
-                amount_allowed_taxed,
-                float_round(amount_allowed * factor, precision_digits=2),
-                precision_digits=2,
-            )
-            != 0
-        )
         return {
             "invoice_number": invoice_number,
             "prescription": prescription,
             "amount_billed": amounts["VALORTOTAL"],
-            "amount_allowed": amount_allowed,
-            "amount_allowed_taxed": amount_allowed_taxed,
+            "amount_allowed": amounts["VALORTOTALAPURADO"],
+            "amount_allowed_taxed": amounts["VALORTOTALAPURADOIVA"],
             "days_billed": amounts["QUANTIDADETOTAL"],
             "days_paid": amounts["Numero de dias pagos"],
             "error_code": error_code,
@@ -395,7 +374,7 @@ class SpmsReturn(models.Model):
                 _cell_value(row, col_index, "SISTEMAPRESTADOCRD")
             ),
             "excel_row": row_number,
-            "diverged": diverged,
+            "diverged": False,
             "amount_reason": amount_reason,
         }
 
@@ -408,8 +387,6 @@ class SpmsReturn(models.Model):
         for header in AMOUNT_HEADERS:
             raw = _cell_value(row, col_index, header)
             value = _cell_amount(raw)
-            # an unconvertible cell (text, date...) or an empty required cell
-            # is missing data, not a real amount
             if value is None:
                 reason = "unconvertible"
             elif header in REQUIRED_AMOUNT_HEADERS and raw in (None, "") and not reason:
@@ -587,6 +564,7 @@ class SpmsReturn(models.Model):
 
         line_vals_list = []
         line_rows = []
+        divergence_count = 0
         for invoice, invoice_number in zip(invoices, grouped):
             move = move_map.get(invoice_number)
             for group_rows in grouped[invoice_number].values():
@@ -612,6 +590,24 @@ class SpmsReturn(models.Model):
                     if move and prescription
                     else []
                 )
+                if len(candidate_ids) == 1:
+                    factor = self.env["spms.return.invoice.line"]._get_tax_factor(
+                        self.env["account.move.line"].browse(candidate_ids[0]).tax_ids
+                    )
+                    for row in group_rows:
+                        row["diverged"] = (
+                            float_compare(
+                                row["amount_allowed_taxed"],
+                                float_round(
+                                    row["amount_allowed"] * factor,
+                                    precision_digits=2,
+                                ),
+                                precision_digits=2,
+                            )
+                            != 0
+                        )
+                        if row["diverged"]:
+                            divergence_count += 1
                 data_error_reason = self._group_data_error_reason(
                     group_rows, incoherent
                 )
@@ -641,6 +637,14 @@ class SpmsReturn(models.Model):
                     }
                 )
                 line_rows.append(group_rows)
+        if divergence_count:
+            _logger.warning(
+                "SPMS return %s: %d rows where VALORTOTALAPURADOIVA differs "
+                "from VALORTOTALAPURADO with the invoice line tax applied; "
+                "keeping the reported values.",
+                self.display_name,
+                divergence_count,
+            )
         lines = self.env["spms.return.invoice.line"].create(line_vals_list)
 
         error_vals_list = []

@@ -43,7 +43,6 @@ class TestSpmsReturn(SavepointCase):
                 "company_id": cls.company.id,
             }
         )
-        cls.company.spms_estimation_tax_id = cls.tax6
         cls.income_account = cls.env["account.account"].search(
             [
                 ("company_id", "=", cls.company.id),
@@ -89,9 +88,9 @@ class TestSpmsReturn(SavepointCase):
     def _create_invoice(cls, name, lines):
         """Post an SPMS-like customer invoice.
 
-        lines: list of (prescription, days, price_unit) tuples; every line
-        carries the SPMS period dates so the total-rejection case can assert
-        they are preserved on the refund.
+        lines: list of (prescription, days, price_unit[, tax]) tuples; every
+        line carries the SPMS period dates so the total-rejection case can
+        assert they are preserved on the refund.
         """
         move = cls.env["account.move"].create(
             {
@@ -108,13 +107,13 @@ class TestSpmsReturn(SavepointCase):
                             "product_id": cls.product.id,
                             "quantity": days,
                             "price_unit": price_unit,
-                            "tax_ids": [(6, 0, cls.tax6.ids)],
+                            "tax_ids": [(6, 0, (extra[0] if extra else cls.tax6).ids)],
                             "spms_prescription": prescription,
                             "spms_start_date": date(2026, 5, 1),
                             "spms_end_date": date(2026, 5, 31),
                         },
                     )
-                    for prescription, days, price_unit in lines
+                    for prescription, days, price_unit, *extra in lines
                 ],
             }
         )
@@ -221,12 +220,6 @@ class TestSpmsReturn(SavepointCase):
         with self.assertRaisesRegex(UserError, "Upload the error file"):
             rec.action_process()
 
-    def test_process_requires_estimation_tax(self):
-        self.company.spms_estimation_tax_id = False
-        rec = self._create_return(self._standard_rows(), process=False)
-        with self.assertRaisesRegex(UserError, "estimation tax"):
-            rec.action_process()
-
     def test_process_requires_responsible(self):
         plain_user = new_test_user(self.env, login="spms_plain_user")
         rec = self._create_return(self._standard_rows(), process=False)
@@ -264,6 +257,83 @@ class TestSpmsReturn(SavepointCase):
         self.assertAlmostEqual(invoice.credit_estimated, 38.16)
         self.assertAlmostEqual(invoice.amount_lines_untaxed, 36.0)
         self.assertEqual(invoice.error_codes, "C010")
+
+    def test_estimate_uses_line_tax(self):
+        tax23 = self.env["account.tax"].create(
+            {
+                "name": "IVA 23% test",
+                "amount_type": "percent",
+                "amount": 23.0,
+                "type_tax_use": "sale",
+                "company_id": self.company.id,
+            }
+        )
+        self._create_invoice(
+            "FT 2026/00124",
+            [("TESTP004", 31, 1.0), ("TESTP005", 10, 1.0, tax23)],
+        )
+        rec = self._create_return(
+            [
+                {
+                    "invoice_number": "FT2026-124",
+                    "prescription": "TESTP004",
+                    "billed": 31.0,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                },
+                {
+                    "invoice_number": "FT2026-124",
+                    "prescription": "TESTP005",
+                    "billed": 10.0,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                },
+            ]
+        )
+        lines = rec.invoice_ids.line_ids
+        self.assertEqual(set(lines.mapped("state")), {"matched"})
+        line6 = lines.filtered(lambda line: line.prescription == "TESTP004")
+        line23 = lines.filtered(lambda line: line.prescription == "TESTP005")
+        self.assertAlmostEqual(line6.amount_credit_taxed, 32.86)
+        self.assertAlmostEqual(line23.amount_credit_taxed, 12.30)
+        self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 45.16)
+
+    def test_estimate_fallback_uses_adjustment_product_tax(self):
+        self.company.spms_adjustment_product_id = self.adjustment_product
+        rec = self._create_return(
+            [
+                {
+                    "invoice_number": "FT2026-999",
+                    "prescription": "TESTP009",
+                    "billed": 10.0,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                },
+            ]
+        )
+        line = rec.invoice_ids.line_ids
+        self.assertEqual(line.state, "not_found")
+        self.assertAlmostEqual(line.amount_credit_taxed, 10.60)
+        self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 10.60)
+
+    def test_estimate_without_tax_source_keeps_base(self):
+        # unmatched line and no adjustment product configured: the display
+        # degrades to the untaxed base instead of blocking reads
+        rec = self._create_return(
+            [
+                {
+                    "invoice_number": "FT2026-999",
+                    "prescription": "TESTP009",
+                    "billed": 10.0,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                },
+            ]
+        )
+        line = rec.invoice_ids.line_ids
+        self.assertEqual(line.state, "not_found")
+        self.assertAlmostEqual(line.amount_credit_taxed, 10.0)
+        self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 10.0)
 
     def test_process_not_found_and_zero_diff(self):
         rec = self._create_return(
@@ -317,6 +387,24 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(intact.state, "matched")
         self.assertEqual(broken.state, "data_error")
         self.assertEqual(broken.data_error_reason, "diverged")
+
+    def test_process_unmatched_diverged_left_not_found(self):
+        # without a matched line there is no tax to judge W against: the
+        # coherence check is deferred until the invoice exists
+        rec = self._create_return(
+            [
+                {
+                    "invoice_number": "FT2026-999",
+                    "prescription": "TESTP009",
+                    "billed": 62.0,
+                    "allowed": 58.0,
+                    "allowed_taxed": 60.0,
+                },
+            ]
+        )
+        line = rec.invoice_ids.line_ids
+        self.assertEqual(line.state, "not_found")
+        self.assertFalse(line.data_error_reason)
 
     def test_process_duplicate_rows_taxed_contradiction_marks_data_error(self):
         self._standard_invoice()
