@@ -61,8 +61,8 @@
                             />
                         </group>
                         <group name="official">
-                            <field name="credit_estimated" />
                             <field name="amount_lines_untaxed" />
+                            <field name="credit_estimated" />
                             <field name="official_locked" invisible="1" />
                             <field
                                 name="credit_official"
