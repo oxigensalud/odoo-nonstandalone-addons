@@ -78,7 +78,7 @@ class EdiOutputSendL10nPtSpms(Component):
             factura, "codigoPrestador"
         ).text = invoice.partner_id.sudo().spms_assigned_id
         etree.SubElement(factura, "dataFactura").text = fields.Date.to_string(
-            invoice.invoice_date
+            (invoice.reversed_entry_id or invoice).invoice_date
         )
         etree.SubElement(factura, "nif").text = vat
         etree.SubElement(
