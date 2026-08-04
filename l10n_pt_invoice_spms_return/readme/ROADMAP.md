@@ -9,6 +9,6 @@
   previous-claim links (`previous_line_id`) of newer returns without a
   human decision. Documented limitation, covered by tests.
 - A prescription the matched invoice does not carry (line *Not Found*) has
-  no resolution lever: the invoice stays in *Mismatch* until a corrected
+  no manual exclusion lever: the invoice stays in *Error* until a corrected
   file is processed. If a real case ever needs it, a manual exclusion
   mechanism will be added.

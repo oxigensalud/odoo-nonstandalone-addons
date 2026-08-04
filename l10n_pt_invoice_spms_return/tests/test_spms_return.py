@@ -482,10 +482,10 @@ class TestSpmsReturn(SavepointCase):
         rows[1]["allowed_taxed"] = "1,50"
         rec = self._create_return(rows)
         invoice = rec.invoice_ids
-        self.assertEqual(invoice.state, "mismatch")
+        self.assertEqual(invoice.state, "error")
         invoice.credit_official = 38.16
         self.assertTrue(invoice.official_confirmed)
-        self.assertEqual(invoice.state, "mismatch")
+        self.assertEqual(invoice.state, "error")
         rec.action_back_to_draft()
         rec.file = self._make_excel(self._standard_rows())
         rec.action_process()
@@ -518,8 +518,8 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(ambiguous.line_ids.state, "ambiguous")
         (not_found + ambiguous).write({"credit_official": 10.6})
         self.assertTrue(not_found.official_confirmed)
-        self.assertEqual(not_found.state, "mismatch")
-        self.assertEqual(ambiguous.state, "mismatch")
+        self.assertEqual(not_found.state, "error")
+        self.assertEqual(ambiguous.state, "error")
 
     def test_spms_number_collision_blocks_processing(self):
         self._standard_invoice()
@@ -991,8 +991,8 @@ class TestSpmsReturn(SavepointCase):
             ]
         )
         invoice = rec.invoice_ids
-        self.assertEqual(invoice.state, "already_done")
-        self.assertEqual(invoice.credit_note_move_id, wizard.new_move_ids)
+        self.assertEqual(invoice.state, "error")
+        self.assertFalse(invoice.credit_note_move_id)
 
     def test_cross_period_reappearance(self):
         self._standard_invoice()
@@ -1004,13 +1004,7 @@ class TestSpmsReturn(SavepointCase):
             line.previous_line_id,
             first.invoice_ids.line_ids.filtered(lambda r: r.prescription == "TESTP001"),
         )
-        self.assertEqual(invoice.state, "mismatch")
-        invoice.line_ids.filtered("previous_line_id").write({"resolution": "duplicate"})
-        self.assertEqual(invoice.state, "awaiting_official")
-        self.assertAlmostEqual(invoice.credit_estimated, 0.0)
-        self.assertAlmostEqual(invoice.amount_lines_untaxed, 0.0)
-        invoice.line_ids.filtered("previous_line_id").write({"resolution": "new"})
-        self.assertAlmostEqual(invoice.credit_estimated, 38.16)
+        self.assertEqual(invoice.state, "error")
 
     def test_same_period_reappearance(self):
         # SPMS report cuts are arbitrary (a file can span months), so a claim
@@ -1024,12 +1018,12 @@ class TestSpmsReturn(SavepointCase):
             line.previous_line_id,
             first.invoice_ids.line_ids.filtered(lambda r: r.prescription == "TESTP001"),
         )
-        self.assertEqual(invoice.state, "mismatch")
+        self.assertEqual(invoice.state, "error")
 
     def test_cross_period_link_lost_on_old_reprocess(self):
         """KNOWN LIMITATION: reprocessing the OLD return rebuilds its lines,
         so the new return's previous_line_id links are set to NULL (ondelete)
-        and its pending resolutions are released without a human decision."""
+        and its error block is released without a human decision."""
         self._standard_invoice()
         first = self._create_return(self._standard_rows(), period="202604")
         rec = self._create_return(self._standard_rows(), period="202605")
@@ -1037,26 +1031,6 @@ class TestSpmsReturn(SavepointCase):
         self.assertTrue(pending)
         first.action_process()
         self.assertFalse(rec.invoice_ids.line_ids.mapped("previous_line_id"))
-
-    def test_duplicate_resolution_excluded_from_generation(self):
-        self._standard_invoice()
-        self._create_return(self._standard_rows(), period="202604")
-        rec = self._create_return(self._standard_rows(), period="202605")
-        invoice = rec.invoice_ids
-        duplicates = invoice.line_ids.filtered(
-            lambda r: r.prescription in ("TESTP002", "TESTP003")
-        )
-        duplicates.write({"resolution": "duplicate"})
-        invoice.line_ids.filtered(lambda r: r.prescription == "TESTP001").write(
-            {"resolution": "new"}
-        )
-        self.assertAlmostEqual(invoice.credit_estimated, 32.86)
-        invoice.write({"credit_official": 32.86})
-        rec.action_create_credit_notes()
-        draft = invoice.credit_note_move_id
-        self.assertEqual(len(draft.invoice_line_ids), 1)
-        self.assertEqual(draft.invoice_line_ids.spms_prescription, "TESTP001")
-        self.assertAlmostEqual(draft.amount_total, 32.86)
 
     def test_cancel_and_back_to_draft(self):
         rec = self._create_return(self._standard_rows(), process=False)

@@ -102,12 +102,6 @@ msgstr ""
 "l'informe."
 
 #. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__already_done
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
-msgid "Already Done"
-msgstr "Ja realitzada"
-
-#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__ambiguous
 msgid "Ambiguous Match"
 msgstr "Coincidència ambigua"
@@ -312,12 +306,9 @@ msgstr "Esborrany"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_note_move_id
-msgid ""
-"Draft credit note generated for this invoice, or the pre-existing one "
-"detected by the duplicate check."
+msgid "Draft credit note generated for this invoice by this module."
 msgstr ""
-"Esborrany de rectificativa generat per a aquesta factura, o el preexistent "
-"detectat pel control de duplicats."
+"Esborrany de rectificativa generat per a aquesta factura per aquest mòdul."
 
 #. module: l10n_pt_invoice_spms_return
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
@@ -329,11 +320,6 @@ msgstr ""
 " d'aquest retorn. Continuar?"
 
 #. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__resolution__duplicate
-msgid "Duplicate"
-msgstr "Duplicat"
-
-#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__data_error_reason__missing
 msgid "Empty amount cells"
 msgstr "Cel·les d'import buides"
@@ -342,6 +328,12 @@ msgstr "Cel·les d'import buides"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__code
 msgid "Error Code"
 msgstr "Codi d'error"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__error
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Error"
+msgstr "Error"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_codes
@@ -424,16 +416,14 @@ msgstr ""
 msgid ""
 "Formula estimate of the credit, taxes included: sum of the matched lines' "
 "differences plus their taxes, each tax rounded once per tax group as Odoo "
-"does, excluding lines resolved as duplicates. Matches the total the "
-"generated draft will compute. Informational preview and cross-check; the "
-"official value is authoritative."
+"does. Matches the total the generated draft will compute. Informational "
+"preview and cross-check; the official value is authoritative."
 msgstr ""
 "Estimació per fórmula del crèdit, impostos inclosos: suma de les "
 "diferències de les línies casades més els seus impostos, cada impost "
-"arrodonit una sola vegada per grup d'impost com fa Odoo, excloent les "
-"línies resoltes com a duplicades. Coincideix amb el total que calcularà "
-"l'esborrany generat. Vista prèvia informativa i contrast; el valor oficial "
-"és el que mana."
+"arrodonit una sola vegada per grup d'impost com fa Odoo. Coincideix amb el "
+"total que calcularà l'esborrany generat. Vista prèvia informativa i "
+"contrast; el valor oficial és el que mana."
 
 #. module: l10n_pt_invoice_spms_return
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
@@ -534,10 +524,10 @@ msgstr "Darrera actualització el"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__previous_line_id
 msgid ""
 "Line of a previous return claiming the same (invoice, prescription). While "
-"set and unresolved, the invoice cannot be generated."
+"set, the invoice is held in error."
 msgstr ""
 "Línia d'un retorn anterior que reclama la mateixa (factura, prescripció). "
-"Mentre estigui enllaçada i sense resoldre, la factura no es pot generar."
+"Mentre estigui enllaçada, la factura queda retinguda en error."
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__amount_lines_untaxed
@@ -555,12 +545,6 @@ msgid "Matched"
 msgstr "Conciliada"
 
 #. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__mismatch
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
-msgid "Mismatch"
-msgstr "Discrepància"
-
-#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
 msgid "Missing expected columns in the error file: %s"
@@ -570,11 +554,6 @@ msgstr "Falten columnes esperades al fitxer d'errors: %s"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return__name
 msgid "Name"
 msgstr "Nom"
-
-#. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__resolution__new
-msgid "New Claim"
-msgstr "Nova reclamació"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__state__zero_diff
@@ -806,25 +785,9 @@ msgid "Refund Line"
 msgstr "Línia de la rectificativa"
 
 #. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__resolution
-msgid "Resolution"
-msgstr "Resolució"
-
-#. module: l10n_pt_invoice_spms_return
 #: model:res.groups,name:l10n_pt_invoice_spms_return.spms_return_group_responsible
 msgid "Responsible"
 msgstr "Responsable"
-
-#. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__resolution
-msgid ""
-"Responsible's decision for a prescription reappearing from a previous "
-"period: 'Duplicate' excludes it from this return's credit and links it to "
-"the previous claim; 'New Claim' includes it."
-msgstr ""
-"Decisió del Responsable per a una prescripció que reapareix d'un període "
-"anterior: 'Duplicat' l'exclou del crèdit d'aquest retorn i l'enllaça amb la"
-" reclamació anterior; 'Nova reclamació' la inclou."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
@@ -969,11 +932,10 @@ msgstr "Estat"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__amount_lines_untaxed
 msgid ""
 "Sum of the per-prescription credit bases, without taxes: what the generated "
-"credit-note lines will add up to. Excludes lines resolved as duplicates."
+"credit-note lines will add up to."
 msgstr ""
 "Suma de les bases de crèdit per prescripció, sense impostos: el que sumaran"
-" les línies de la rectificativa generada. Exclou les línies resoltes com a "
-"duplicades."
+" les línies de la rectificativa generada."
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice_line__data_error_reason__diverged

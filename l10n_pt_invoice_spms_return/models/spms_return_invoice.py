@@ -46,16 +46,14 @@ class SpmsReturnInvoice(models.Model):
         string="Credit Note",
         readonly=True,
         check_company=True,
-        help="Draft credit note generated for this invoice, or the "
-        "pre-existing one detected by the duplicate check.",
+        help="Draft credit note generated for this invoice by this module.",
     )
     state = fields.Selection(
         selection=[
             ("awaiting_official", "Awaiting Official Value"),
             ("ready", "Ready"),
             ("not_found", "Not Found"),
-            ("already_done", "Already Done"),
-            ("mismatch", "Mismatch"),
+            ("error", "Error"),
             ("done", "Done"),
         ],
         string="State",
@@ -111,18 +109,16 @@ class SpmsReturnInvoice(models.Model):
         store=True,
         help="Formula estimate of the credit, taxes included: sum of the "
         "matched lines' differences plus their taxes, each tax rounded "
-        "once per tax group as Odoo does, excluding lines resolved as "
-        "duplicates. Matches the total the generated draft will compute. "
-        "Informational preview and cross-check; the official value is "
-        "authoritative.",
+        "once per tax group as Odoo does. Matches the total the generated "
+        "draft will compute. Informational preview and cross-check; the "
+        "official value is authoritative.",
     )
     amount_lines_untaxed = fields.Monetary(
         string="Lines Amount (Untaxed)",
         compute="_compute_amount_lines_untaxed",
         store=True,
         help="Sum of the per-prescription credit bases, without taxes: "
-        "what the generated credit-note lines will add up to. Excludes "
-        "lines resolved as duplicates.",
+        "what the generated credit-note lines will add up to.",
     )
     error_codes = fields.Char(
         string="Error Codes",
@@ -168,13 +164,10 @@ class SpmsReturnInvoice(models.Model):
     @api.depends(
         "line_ids.amount_difference",
         "line_ids.move_line_id",
-        "line_ids.resolution",
     )
     def _compute_credit_estimated(self):
         for rec in self:
-            lines = rec.line_ids.filtered(
-                lambda line: line.move_line_id and line.resolution != "duplicate"
-            )
+            lines = rec.line_ids.filtered("move_line_id")
             rounding = rec.currency_id.rounding or 0.01
             tax_amounts = {}
             for line in lines:
@@ -191,13 +184,13 @@ class SpmsReturnInvoice(models.Model):
                 for amount in tax_amounts.values()
             )
 
-    @api.depends("line_ids.amount_difference", "line_ids.resolution")
+    @api.depends("line_ids.amount_difference")
     def _compute_amount_lines_untaxed(self):
         for rec in self:
             rec.amount_lines_untaxed = sum(
                 line.amount_difference
                 for line in rec.line_ids
-                if line.amount_difference > 0 and line.resolution != "duplicate"
+                if line.amount_difference > 0
             )
 
     @api.depends("line_ids.error_ids.code")
@@ -262,56 +255,37 @@ class SpmsReturnInvoice(models.Model):
         """Single source of truth for the invoice state (semaphore).
 
         Called after processing, after an official value is written and
-        after a line resolution changes. Never downgrades a generated
-        invoice (state 'done') while its credit note is alive; once that
-        credit note is cancelled or deleted, the regular evaluation below
-        reopens the invoice (the official value is kept) and drops its
-        'done' return back to 'processed' so generation stays reachable.
+        after generation. An invoice whose own credit note is alive is
+        'done'; a live credit note this module did not create is an
+        'error' (a human fixes accounting, then reprocesses — the module
+        never adopts it). Once our credit note is cancelled or deleted,
+        the regular evaluation below reopens the invoice (the official
+        value is kept) and drops its 'done' return back to 'processed'
+        so generation stays reachable.
         """
         for rec in self:
-            if (
-                rec.state == "done"
-                and rec.credit_note_move_id
-                and rec.credit_note_move_id.state != "cancel"
-            ):
+            if rec.credit_note_move_id and rec.credit_note_move_id.state != "cancel":
+                rec.state = "done"
                 continue
             if not rec.move_id:
                 rec.state = "not_found"
                 continue
-            reversals = rec.move_id.reversal_move_id.filtered(
+            if rec.credit_note_move_id:
+                rec.credit_note_move_id = False
+            foreign_notes = rec.move_id.reversal_move_id.filtered(
                 lambda move: move.state != "cancel"
             )
-            if reversals:
-                rec.credit_note_move_id = reversals[0]
-                total = sum(reversals.mapped("amount_total"))
-                if (
-                    float_compare(
-                        total,
-                        rec.credit_estimated,
-                        precision_rounding=rec.currency_id.rounding or 0.01,
-                    )
-                    == 0
-                ):
-                    rec.state = "already_done"
-                else:
-                    rec.state = "mismatch"
-                continue
-            rec.credit_note_move_id = False
-            pending_lines = rec.line_ids.filtered(
-                lambda line: line.previous_line_id and not line.resolution
-            )
+            claimed_lines = rec.line_ids.filtered("previous_line_id")
             broken_lines = rec.line_ids.filtered(
                 lambda line: line.state in ("data_error", "not_found", "ambiguous")
             )
-            if pending_lines or broken_lines:
-                rec.state = "mismatch"
+            if foreign_notes or claimed_lines or broken_lines:
+                rec.state = "error"
                 continue
             rec.state = "ready" if rec.official_confirmed else "awaiting_official"
         stale_returns = self.mapped("return_id").filtered(
             lambda ret: ret.state == "done"
-            and ret.invoice_ids.filtered(
-                lambda inv: inv.state not in ("done", "already_done")
-            )
+            and ret.invoice_ids.filtered(lambda inv: inv.state != "done")
         )
         stale_returns.write({"state": "processed"})
 
@@ -401,8 +375,9 @@ class SpmsReturnInvoice(models.Model):
         self.ensure_one()
         rounding = self.currency_id.rounding or 0.01
         lines = self.line_ids.filtered(
-            lambda line: line.resolution != "duplicate"
-            and float_compare(line.amount_difference, 0.0, precision_rounding=rounding)
+            lambda line: float_compare(
+                line.amount_difference, 0.0, precision_rounding=rounding
+            )
             > 0
         )
         if not lines:

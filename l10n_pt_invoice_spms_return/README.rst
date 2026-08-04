@@ -70,7 +70,7 @@ Monthly flow, from the *SPMS Issues* menu (Accounting → Customers):
    row. Invoices are matched to the original posted customer invoices by
    the SPMS invoice number, and each prescription to its original
    invoice line. Every invoice gets a state (semaphore): awaiting
-   official value, not found, mismatch, already done…
+   official value, not found, error…
 3. Review the estimated credit per invoice (formula preview) and enter
    the official credit-note value communicated by the conference result.
    Entering the value confirms it automatically.
@@ -88,8 +88,7 @@ Monthly flow, from the *SPMS Issues* menu (Accounting → Customers):
    EDI circuit takes over from there.
 
 *Process* can be run again at any time: the log is rebuilt from the file
-while human input (official values, resolutions, generated invoices) is
-preserved.
+while human input (official values, generated invoices) is preserved.
 
 A processed return is locked: the error file, the period and the date
 can only be changed while the return is draft, and neither the return
@@ -99,12 +98,15 @@ first).
 An invoice with rows the module could not fully use — unreadable amounts
 (the *Data Error Reason* column tells why), a prescription the matched
 invoice does not carry, or a prescription matching several original
-lines — is held in *Mismatch* and will not generate a credit note until
-a corrected file is processed.
+lines — is held in *Error* and will not generate a credit note until a
+corrected file is processed. The same happens when the original invoice
+carries a live credit note this module did not create, or when a
+prescription is already claimed by a previous return: the module never
+adopts or decides — a human fixes accounting (or the file) and
+reprocesses.
 
-Once a credit note is generated and alive, the official value and the
-line resolutions of its invoice are locked; cancel the credit note first
-to change them.
+Once a credit note is generated and alive, the official value of its
+invoice is locked; cancel the credit note first to change it.
 
 Known issues / Roadmap
 ======================
@@ -120,7 +122,7 @@ Known issues / Roadmap
   previous-claim links (``previous_line_id``) of newer returns without a
   human decision. Documented limitation, covered by tests.
 - A prescription the matched invoice does not carry (line *Not Found*)
-  has no resolution lever: the invoice stays in *Mismatch* until a
+  has no manual exclusion lever: the invoice stays in *Error* until a
   corrected file is processed. If a real case ever needs it, a manual
   exclusion mechanism will be added.
 

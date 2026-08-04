@@ -244,9 +244,7 @@ class SpmsReturn(models.Model):
                     generated |= invoice._generate_credit_note()
             except UserError as error:
                 blocked.append((invoice.display_name, str(error)))
-        if not self.invoice_ids.filtered(
-            lambda rec: rec.state not in ("done", "already_done")
-        ):
+        if not self.invoice_ids.filtered(lambda rec: rec.state != "done"):
             self.state = "done"
         blocked_summary = "\n".join(
             "- %s: %s" % (name, reason) for name, reason in blocked
@@ -442,9 +440,8 @@ class SpmsReturn(models.Model):
                 "done": invoice.state == "done",
             }
             for line in invoice.line_ids:
-                if line.resolution or line.refund_move_line_id:
+                if line.refund_move_line_id:
                     line_snapshot[(invoice.name, line.prescription)] = {
-                        "resolution": line.resolution,
                         "refund_move_line_id": line.refund_move_line_id.id,
                     }
         return {"invoices": invoice_snapshot, "lines": line_snapshot}
@@ -630,7 +627,6 @@ class SpmsReturn(models.Model):
                         "previous_line_id": previous_map.get(
                             (invoice_number, prescription), False
                         ),
-                        "resolution": line_snap.get("resolution", False),
                         "refund_move_line_id": line_snap.get(
                             "refund_move_line_id", False
                         ),

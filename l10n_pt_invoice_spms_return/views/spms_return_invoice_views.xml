@@ -7,11 +7,9 @@
         <field name="model">spms.return.invoice</field>
         <field name="arch" type="xml">
             <tree
-                decoration-danger="state == 'not_found'"
-                decoration-warning="state == 'mismatch'"
+                decoration-danger="state in ('not_found', 'error')"
                 decoration-info="state == 'awaiting_official'"
                 decoration-success="state in ('ready', 'done')"
-                decoration-muted="state == 'already_done'"
             >
                 <field name="name" />
                 <field name="move_id" />
@@ -85,7 +83,7 @@
                             delete="false"
                             decoration-danger="state in ('not_found', 'ambiguous', 'data_error')"
                             decoration-muted="state == 'zero_diff'"
-                            decoration-warning="previous_line_id and not resolution"
+                            decoration-warning="previous_line_id"
                         >
                             <field name="prescription" />
                             <field name="amount_billed" />
@@ -101,7 +99,6 @@
                             <field name="days_paid" optional="hide" />
                             <field name="error_codes" />
                             <field name="previous_line_id" optional="hide" />
-                            <field name="resolution" />
                             <field name="currency_id" invisible="1" />
                             <field name="state" />
                             <field
@@ -144,14 +141,9 @@
                     domain="[('state', '=', 'not_found')]"
                 />
                 <filter
-                    name="filter_already_done"
-                    string="Already Done"
-                    domain="[('state', '=', 'already_done')]"
-                />
-                <filter
-                    name="filter_mismatch"
-                    string="Mismatch"
-                    domain="[('state', '=', 'mismatch')]"
+                    name="filter_error"
+                    string="Error"
+                    domain="[('state', '=', 'error')]"
                 />
                 <filter
                     name="filter_done"

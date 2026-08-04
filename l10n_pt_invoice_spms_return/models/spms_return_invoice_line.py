@@ -127,19 +127,7 @@ class SpmsReturnInvoiceLine(models.Model):
         readonly=True,
         copy=False,
         help="Line of a previous return claiming the same (invoice, "
-        "prescription). While set and unresolved, the invoice cannot be "
-        "generated.",
-    )
-    resolution = fields.Selection(
-        selection=[
-            ("duplicate", "Duplicate"),
-            ("new", "New Claim"),
-        ],
-        string="Resolution",
-        copy=False,
-        help="Responsible's decision for a prescription reappearing from a "
-        "previous period: 'Duplicate' excludes it from this return's credit "
-        "and links it to the previous claim; 'New Claim' includes it.",
+        "prescription). While set, the invoice is held in error.",
     )
     error_ids = fields.One2many(
         comodel_name="spms.return.invoice.line.error",
@@ -189,12 +177,6 @@ class SpmsReturnInvoiceLine(models.Model):
                 if code and code not in codes:
                     codes.append(code)
             rec.error_codes = " / ".join(codes)
-
-    def write(self, vals):
-        res = super().write(vals)
-        if "resolution" in vals:
-            self.mapped("return_invoice_id")._update_state()
-        return res
 
     def _get_refund_line_values(self):
         """Values to write on the copied refund line, empty to keep it as-is.
