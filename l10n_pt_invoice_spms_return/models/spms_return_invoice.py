@@ -102,9 +102,6 @@ class SpmsReturnInvoice(models.Model):
     has_data_error = fields.Boolean(
         compute="_compute_has_data_error",
     )
-    has_reappearance = fields.Boolean(
-        compute="_compute_has_reappearance",
-    )
     official_locked = fields.Boolean(
         compute="_compute_official_locked",
     )
@@ -158,11 +155,6 @@ class SpmsReturnInvoice(models.Model):
             rec.has_data_error = any(
                 line.state == "data_error" for line in rec.line_ids
             )
-
-    @api.depends("line_ids.previous_line_id")
-    def _compute_has_reappearance(self):
-        for rec in self:
-            rec.has_reappearance = any(line.previous_line_id for line in rec.line_ids)
 
     @api.depends("state", "credit_note_move_id.state")
     def _compute_official_locked(self):
