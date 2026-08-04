@@ -234,9 +234,9 @@ msgstr "Factura rectificativa"
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Credit notes can only be generated from a processed SPMS return."
+msgid "Credit notes can only be generated from a linked SPMS return."
 msgstr ""
-"Las rectificativas solo se pueden generar desde un retorno SPMS procesado."
+"Las rectificativas solo se pueden generar desde un retorno SPMS vinculado."
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__refund_move_line_id
@@ -294,7 +294,6 @@ msgstr "Códigos de error distintos comunicados para esta factura."
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__done
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__done
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
 msgid "Done"
 msgstr "Realizado"
 
@@ -448,6 +447,17 @@ msgid "ID"
 msgstr "ID"
 
 #. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Import"
+msgstr "Importar"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__imported
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Imported"
+msgstr "Importado"
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_credit_taxed
 msgid ""
 "Informative per-line credit contribution with VAT: the difference with the "
@@ -535,6 +545,17 @@ msgstr ""
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__amount_lines_untaxed
 msgid "Lines Amount (Untaxed)"
 msgstr "Importe de líneas (sin IVA)"
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Link"
+msgstr "Vincular"
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__linked
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Linked"
+msgstr "Vinculado"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__official_source__manual
@@ -641,16 +662,17 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Only draft or processed SPMS returns can be cancelled."
+msgid "Only draft, imported or linked SPMS returns can be cancelled."
 msgstr ""
-"Solo se pueden cancelar retornos SPMS en borrador o procesados."
+"Solo se pueden cancelar retornos SPMS en borrador, importados o vinculados."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Only processed or cancelled SPMS returns can be set back to draft."
+msgid "Only imported, linked or cancelled SPMS returns can be set back to draft."
 msgstr ""
-"Solo se pueden devolver a borrador retornos SPMS procesados o cancelados."
+"Solo se pueden devolver a borrador retornos SPMS importados, vinculados o "
+"cancelados."
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__move_id
@@ -747,17 +769,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__previous_line_id
 msgid "Previous Claim Line"
 msgstr "Línea de reclamación anterior"
-
-#. module: l10n_pt_invoice_spms_return
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
-msgid "Process"
-msgstr "Procesar"
-
-#. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__processed
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
-msgid "Processed"
-msgstr "Procesado"
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__provider_system_ref
@@ -895,8 +906,14 @@ msgstr "Rectificativas SPMS"
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "SPMS return %s cannot be processed in its current state."
-msgstr "El retorno SPMS %s no se puede procesar en su estado actual."
+msgid "SPMS return %s cannot be imported in its current state."
+msgstr "El retorno SPMS %s no se puede importar en su estado actual."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "SPMS return %s must be imported before linking."
+msgstr "El retorno SPMS %s debe estar importado antes de vincular."
 
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_res_company__spms_adjustment_product_id
@@ -1024,10 +1041,10 @@ msgstr "El fichero de errores está vacío."
 #, python-format
 msgid ""
 "The following SPMS invoice numbers match more than one posted invoice: %s. "
-"Fix the duplicated invoices before processing the return."
+"Fix the duplicated invoices before linking the return."
 msgstr ""
 "Los siguientes números de factura SPMS coinciden con más de una factura "
-"publicada: %s. Corrija las facturas duplicadas antes de procesar el retorno."
+"publicada: %s. Corrija las facturas duplicadas antes de vincular el retorno."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
@@ -1094,8 +1111,8 @@ msgstr "Valor de importe no convertible"
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Upload the error file before processing %s."
-msgstr "Suba el fichero de errores antes de procesar %s."
+msgid "Upload the error file before importing %s."
+msgstr "Suba el fichero de errores antes de importar %s."
 
 
 #. module: l10n_pt_invoice_spms_return

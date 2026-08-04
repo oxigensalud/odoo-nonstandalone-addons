@@ -99,8 +99,8 @@ class SpmsReturn(models.Model):
     state = fields.Selection(
         selection=[
             ("draft", "Draft"),
-            ("processed", "Processed"),
-            ("done", "Done"),
+            ("imported", "Imported"),
+            ("linked", "Linked"),
             ("cancel", "Cancelled"),
         ],
         string="State",
@@ -168,26 +168,33 @@ class SpmsReturn(models.Model):
                     _("Invalid SPMS period '%s': expected YYYYMM format.") % rec.period
                 )
 
-    def action_process(self):
+    def action_import(self):
         for rec in self:
-            rec._check_can_process()
+            rec._check_can_import()
             rows = rec._parse_error_file()
             # keep human input before rebuilding the children
             snapshot = rec._snapshot_children()
             rec.invoice_ids.with_context(spms_return_reprocess=True).unlink()
             rec._create_children(rows, snapshot)
+            rec.state = "imported"
+        return True
+
+    def action_link(self):
+        for rec in self:
+            rec._check_can_link()
+            rec._link_children()
             rec.invoice_ids._update_state()
-            rec.state = "processed"
+            rec.state = "linked"
         return True
 
     def action_back_to_draft(self):
         self._check_responsible()
         for rec in self:
-            if rec.state not in ("processed", "cancel"):
+            if rec.state not in ("imported", "linked", "cancel"):
                 raise UserError(
                     _(
-                        "Only processed or cancelled SPMS returns can be set "
-                        "back to draft."
+                        "Only imported, linked or cancelled SPMS returns can "
+                        "be set back to draft."
                     )
                 )
             rec.state = "draft"
@@ -196,9 +203,12 @@ class SpmsReturn(models.Model):
     def action_cancel(self):
         self._check_responsible()
         for rec in self:
-            if rec.state not in ("draft", "processed"):
+            if rec.state not in ("draft", "imported", "linked"):
                 raise UserError(
-                    _("Only draft or processed SPMS returns can be cancelled.")
+                    _(
+                        "Only draft, imported or linked SPMS returns can be "
+                        "cancelled."
+                    )
                 )
             rec.state = "cancel"
         return True
@@ -226,11 +236,11 @@ class SpmsReturn(models.Model):
     def action_create_credit_notes(self):
         self.ensure_one()
         self._check_responsible()
-        self.invoice_ids._update_state()
-        if self.state != "processed":
+        if self.state != "linked":
             raise UserError(
-                _("Credit notes can only be generated from a processed " "SPMS return.")
+                _("Credit notes can only be generated from a linked " "SPMS return.")
             )
+        self.invoice_ids._update_state()
         ready_invoices = self.invoice_ids.filtered(lambda rec: rec.state == "ready")
         if not ready_invoices:
             raise UserError(
@@ -244,8 +254,6 @@ class SpmsReturn(models.Model):
                     generated |= invoice._generate_credit_note()
             except UserError as error:
                 blocked.append((invoice.display_name, str(error)))
-        if not self.invoice_ids.filtered(lambda rec: rec.state != "done"):
-            self.state = "done"
         blocked_summary = "\n".join(
             "- %s: %s" % (name, reason) for name, reason in blocked
         )
@@ -292,17 +300,25 @@ class SpmsReturn(models.Model):
         ):
             raise AccessError(_("Only SPMS Responsible users can perform this action."))
 
-    def _check_can_process(self):
+    def _check_can_import(self):
         self.ensure_one()
         self._check_responsible()
-        if self.state not in ("draft", "processed"):
+        if self.state not in ("draft", "imported", "linked"):
             raise UserError(
-                _("SPMS return %s cannot be processed in its current state.")
+                _("SPMS return %s cannot be imported in its current state.")
                 % self.display_name
             )
         if not self.file:
             raise UserError(
-                _("Upload the error file before processing %s.") % self.display_name
+                _("Upload the error file before importing %s.") % self.display_name
+            )
+
+    def _check_can_link(self):
+        self.ensure_one()
+        self._check_responsible()
+        if self.state not in ("imported", "linked"):
+            raise UserError(
+                _("SPMS return %s must be imported before linking.") % self.display_name
             )
 
     def _parse_error_file(self):
@@ -410,7 +426,7 @@ class SpmsReturn(models.Model):
         return False
 
     @api.model
-    def _line_state(self, data_error_reason, candidate_ids, first):
+    def _line_state(self, data_error_reason, candidate_ids, line):
         # worst state wins:
         # data_error > not_found > ambiguous > zero_diff > matched
         if data_error_reason:
@@ -420,7 +436,7 @@ class SpmsReturn(models.Model):
         if len(candidate_ids) > 1:
             return "ambiguous"
         if float_is_zero(
-            first["amount_billed"] - first["amount_allowed"],
+            line.amount_billed - line.amount_allowed,
             precision_digits=2,
         ):
             return "zero_diff"
@@ -469,7 +485,7 @@ class SpmsReturn(models.Model):
                 _(
                     "The following SPMS invoice numbers match more than one "
                     "posted invoice: %s. Fix the duplicated invoices before "
-                    "processing the return."
+                    "linking the return."
                 )
                 % "; ".join(
                     "%s (%s)"
@@ -497,7 +513,7 @@ class SpmsReturn(models.Model):
                 (
                     "return_invoice_id.return_id.state",
                     "in",
-                    ["processed", "done"],
+                    ["imported", "linked"],
                 ),
                 ("return_invoice_id.name", "in", invoice_numbers),
                 ("prescription", "!=", False),
@@ -514,6 +530,12 @@ class SpmsReturn(models.Model):
         return previous_map
 
     def _create_children(self, rows, snapshot):
+        """Rebuild the children from the parsed rows: PURE parser side.
+
+        No Odoo lookup happens here — links, semaphores and the tax canary
+        belong to the link step. Human input survives the rebuild through
+        the snapshot.
+        """
         self.ensure_one()
         grouped = {}
         for row in rows:
@@ -521,32 +543,12 @@ class SpmsReturn(models.Model):
             line_key = row["prescription"] or "__row_%d" % row["excel_row"]
             invoice_group.setdefault(line_key, []).append(row)
 
-        move_map = self._get_spms_move_map(list(grouped.keys()))
-        matched_move_ids = [
-            move.id for number, move in move_map.items() if move and number in grouped
-        ]
-        move_lines = self.env["account.move.line"].search(
-            [
-                ("move_id", "in", matched_move_ids),
-                ("spms_prescription", "!=", False),
-            ]
-        )
-        move_line_map = {}
-        for move_line in move_lines:
-            move_line_map.setdefault(
-                (move_line.move_id.id, move_line.spms_prescription), []
-            ).append(move_line.id)
-
-        previous_map = self._get_previous_lines_map(list(grouped.keys()))
-
         invoice_vals_list = []
         for invoice_number in grouped:
-            move = move_map.get(invoice_number)
             snap = snapshot["invoices"].get(invoice_number, {})
             vals = {
                 "return_id": self.id,
                 "name": invoice_number,
-                "move_id": move.id if move else False,
                 "credit_official": snap.get("credit_official", 0.0),
                 "official_confirmed": snap.get("official_confirmed", False),
                 "official_source": snap.get("official_source", False),
@@ -561,9 +563,7 @@ class SpmsReturn(models.Model):
 
         line_vals_list = []
         line_rows = []
-        divergence_count = 0
         for invoice, invoice_number in zip(invoices, grouped):
-            move = move_map.get(invoice_number)
             for group_rows in grouped[invoice_number].values():
                 first = group_rows[0]
                 prescription = first["prescription"]
@@ -580,35 +580,17 @@ class SpmsReturn(models.Model):
                         precision_digits=2,
                     )
                     != 0
+                    or float_compare(
+                        row["amount_allowed_taxed"],
+                        first["amount_allowed_taxed"],
+                        precision_digits=2,
+                    )
+                    != 0
                     for row in group_rows[1:]
                 )
-                candidate_ids = (
-                    move_line_map.get((move.id, prescription), [])
-                    if move and prescription
-                    else []
-                )
-                if len(candidate_ids) == 1:
-                    factor = self.env["spms.return.invoice.line"]._get_tax_factor(
-                        self.env["account.move.line"].browse(candidate_ids[0]).tax_ids
-                    )
-                    for row in group_rows:
-                        row["diverged"] = (
-                            float_compare(
-                                row["amount_allowed_taxed"],
-                                float_round(
-                                    row["amount_allowed"] * factor,
-                                    precision_digits=2,
-                                ),
-                                precision_digits=2,
-                            )
-                            != 0
-                        )
-                        if row["diverged"]:
-                            divergence_count += 1
                 data_error_reason = self._group_data_error_reason(
                     group_rows, incoherent
                 )
-                state = self._line_state(data_error_reason, candidate_ids, first)
                 line_snap = snapshot["lines"].get((invoice_number, prescription), {})
                 line_vals_list.append(
                     {
@@ -619,28 +601,14 @@ class SpmsReturn(models.Model):
                         "amount_allowed_taxed": first["amount_allowed_taxed"],
                         "days_billed": first["days_billed"],
                         "days_paid": first["days_paid"],
-                        "state": state,
+                        "state": "data_error" if data_error_reason else False,
                         "data_error_reason": data_error_reason,
-                        "move_line_id": (
-                            candidate_ids[0] if len(candidate_ids) == 1 else False
-                        ),
-                        "previous_line_id": previous_map.get(
-                            (invoice_number, prescription), False
-                        ),
                         "refund_move_line_id": line_snap.get(
                             "refund_move_line_id", False
                         ),
                     }
                 )
                 line_rows.append(group_rows)
-        if divergence_count:
-            _logger.warning(
-                "SPMS return %s: %d rows where VALORTOTALAPURADOIVA differs "
-                "from VALORTOTALAPURADO with the invoice line tax applied; "
-                "keeping the reported values.",
-                self.display_name,
-                divergence_count,
-            )
         lines = self.env["spms.return.invoice.line"].create(line_vals_list)
 
         error_vals_list = []
@@ -656,3 +624,86 @@ class SpmsReturn(models.Model):
                     }
                 )
         self.env["spms.return.invoice.line.error"].create(error_vals_list)
+
+    def _link_children(self):
+        """Match the imported tables against Odoo: LINK side.
+
+        Reads only the children and accounting, writes links and line
+        semaphores. Deletes nothing and never touches human input, so
+        linking and re-linking are the same idempotent operation.
+        """
+        self.ensure_one()
+        invoices = self.invoice_ids
+        invoice_numbers = [name for name in invoices.mapped("name") if name]
+        move_map = self._get_spms_move_map(invoice_numbers)
+
+        for invoice in invoices:
+            move = move_map.get(invoice.name)
+            invoice.move_id = move.id if move else False
+
+        move_lines = self.env["account.move.line"].search(
+            [
+                ("move_id", "in", invoices.move_id.ids),
+                ("spms_prescription", "!=", False),
+            ]
+        )
+        move_line_map = {}
+        for move_line in move_lines:
+            move_line_map.setdefault(
+                (move_line.move_id.id, move_line.spms_prescription), []
+            ).append(move_line.id)
+
+        previous_map = self._get_previous_lines_map(invoice_numbers)
+
+        divergence_count = 0
+        for invoice in invoices:
+            for line in invoice.line_ids:
+                candidate_ids = (
+                    move_line_map.get((invoice.move_id.id, line.prescription), [])
+                    if invoice.move_id and line.prescription
+                    else []
+                )
+                # the link step owns the 'diverged' verdict; the parse-side
+                # reasons are never touched
+                data_error_reason = line.data_error_reason
+                if data_error_reason == "diverged":
+                    data_error_reason = False
+                if not data_error_reason and len(candidate_ids) == 1:
+                    factor = line._get_tax_factor(
+                        self.env["account.move.line"].browse(candidate_ids[0]).tax_ids
+                    )
+                    if (
+                        float_compare(
+                            line.amount_allowed_taxed,
+                            float_round(
+                                line.amount_allowed * factor,
+                                precision_digits=2,
+                            ),
+                            precision_digits=2,
+                        )
+                        != 0
+                    ):
+                        data_error_reason = "diverged"
+                        divergence_count += 1
+                line.write(
+                    {
+                        "move_line_id": (
+                            candidate_ids[0] if len(candidate_ids) == 1 else False
+                        ),
+                        "previous_line_id": previous_map.get(
+                            (invoice.name, line.prescription), False
+                        ),
+                        "data_error_reason": data_error_reason,
+                        "state": self._line_state(
+                            data_error_reason, candidate_ids, line
+                        ),
+                    }
+                )
+        if divergence_count:
+            _logger.warning(
+                "SPMS return %s: %d lines where VALORTOTALAPURADOIVA differs "
+                "from VALORTOTALAPURADO with the invoice line tax applied; "
+                "keeping the reported values.",
+                self.display_name,
+                divergence_count,
+            )

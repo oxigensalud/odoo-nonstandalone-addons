@@ -160,7 +160,8 @@ class TestSpmsReturn(SavepointCase):
             }
         )
         if process:
-            rec.action_process()
+            rec.action_import()
+            rec.action_link()
         return rec
 
     @classmethod
@@ -215,18 +216,18 @@ class TestSpmsReturn(SavepointCase):
         with self.assertRaises(ValidationError):
             self.env["spms.return"].create({"period": "2026-5"})
 
-    def test_process_requires_file(self):
+    def test_import_requires_file(self):
         rec = self.env["spms.return"].create({"period": "202605"})
         with self.assertRaisesRegex(UserError, "Upload the error file"):
-            rec.action_process()
+            rec.action_import()
 
-    def test_process_requires_responsible(self):
+    def test_import_requires_responsible(self):
         plain_user = new_test_user(self.env, login="spms_plain_user")
         rec = self._create_return(self._standard_rows(), process=False)
         with self.assertRaises(AccessError):
-            rec.with_user(plain_user).action_process()
+            rec.with_user(plain_user).action_import()
 
-    def test_process_missing_columns(self):
+    def test_import_missing_columns(self):
         workbook = openpyxl.Workbook()
         workbook.active.append(("NUMFACTURA", "NUMEROPRESCRICAO"))
         workbook.active.append(("FT2026-123", "TESTP001"))
@@ -239,12 +240,12 @@ class TestSpmsReturn(SavepointCase):
             }
         )
         with self.assertRaisesRegex(UserError, "VALORTOTAL"):
-            rec.action_process()
+            rec.action_import()
 
-    def test_process_matches_and_estimates(self):
+    def test_link_matches_and_estimates(self):
         move = self._standard_invoice()
         rec = self._create_return(self._standard_rows())
-        self.assertEqual(rec.state, "processed")
+        self.assertEqual(rec.state, "linked")
         self.assertEqual(len(rec.invoice_ids), 1)
         invoice = rec.invoice_ids
         self.assertEqual(invoice.name, "FT2026-123")
@@ -257,6 +258,33 @@ class TestSpmsReturn(SavepointCase):
         self.assertAlmostEqual(invoice.credit_estimated, 38.16)
         self.assertAlmostEqual(invoice.amount_lines_untaxed, 36.0)
         self.assertEqual(invoice.error_codes, "C010")
+
+    def test_import_leaves_links_and_states_empty(self):
+        # import is a pure parser: no lookup, no links, no semaphores
+        self._standard_invoice()
+        rec = self._create_return(self._standard_rows(), process=False)
+        rec.action_import()
+        self.assertEqual(rec.state, "imported")
+        invoice = rec.invoice_ids
+        self.assertFalse(invoice.move_id)
+        self.assertFalse(invoice.state)
+        self.assertFalse(invoice.line_ids.mapped("move_line_id"))
+        self.assertEqual(invoice.line_ids.mapped("state"), [False, False, False])
+        draft = self._create_return(self._standard_rows(), process=False)
+        with self.assertRaisesRegex(UserError, "must be imported"):
+            draft.action_link()
+
+    def test_relink_matches_late_posted_invoice(self):
+        # the non-destructive repair: link, post the missing invoice, re-link
+        rec = self._create_return(self._standard_rows())
+        invoice = rec.invoice_ids
+        self.assertEqual(invoice.state, "not_found")
+        self._standard_invoice()
+        rec.action_link()
+        self.assertEqual(rec.state, "linked")
+        self.assertEqual(invoice.state, "awaiting_official")
+        self.assertEqual(set(invoice.line_ids.mapped("state")), {"matched"})
+        self.assertAlmostEqual(invoice.credit_estimated, 38.16)
 
     def test_estimate_uses_line_tax(self):
         tax23 = self.env["account.tax"].create(
@@ -371,7 +399,7 @@ class TestSpmsReturn(SavepointCase):
         )
         self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 17.44)
 
-    def test_process_not_found_and_zero_diff(self):
+    def test_link_not_found_and_zero_diff(self):
         rec = self._create_return(
             [
                 {
@@ -388,7 +416,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(invoice.state, "not_found")
         self.assertEqual(invoice.line_ids.state, "not_found")
 
-    def test_process_incoherent_duplicate_rows(self):
+    def test_import_incoherent_duplicate_rows(self):
         self._standard_invoice()
         rows = self._standard_rows()[:1]
         duplicate = dict(rows[0], billed=99.0, code="C313")
@@ -400,7 +428,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(len(line.error_ids), 2)
         self.assertEqual(line.error_codes, "C010 / C313")
 
-    def test_process_empty_amount_marks_data_error(self):
+    def test_import_empty_amount_marks_data_error(self):
         self._standard_invoice()
         rows = self._standard_rows()[:2]
         rows[1]["allowed_taxed"] = None
@@ -412,7 +440,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(broken.state, "data_error")
         self.assertEqual(broken.data_error_reason, "missing")
 
-    def test_process_diverged_amounts_marks_data_error(self):
+    def test_link_diverged_amounts_marks_data_error(self):
         self._standard_invoice()
         rows = self._standard_rows()[:2]
         rows[1]["allowed_taxed"] = 60.0  # 58.00 x 1.06 = 61.48, not 60.00
@@ -424,7 +452,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(broken.state, "data_error")
         self.assertEqual(broken.data_error_reason, "diverged")
 
-    def test_process_unmatched_diverged_left_not_found(self):
+    def test_link_unmatched_diverged_left_not_found(self):
         # without a matched line there is no tax to judge W against: the
         # coherence check is deferred until the invoice exists
         rec = self._create_return(
@@ -442,7 +470,9 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(line.state, "not_found")
         self.assertFalse(line.data_error_reason)
 
-    def test_process_duplicate_rows_taxed_contradiction_marks_data_error(self):
+    def test_import_duplicate_rows_taxed_contradiction_marks_data_error(self):
+        # rows of the same prescription reporting different taxed values are
+        # an intra-file contradiction, caught at import without any lookup
         self._standard_invoice()
         rows = self._standard_rows()[:1]
         duplicate = dict(rows[0], allowed_taxed=33.0, code="C313")
@@ -450,9 +480,9 @@ class TestSpmsReturn(SavepointCase):
         line = rec.invoice_ids.line_ids
         self.assertEqual(len(line), 1)
         self.assertEqual(line.state, "data_error")
-        self.assertEqual(line.data_error_reason, "diverged")
+        self.assertEqual(line.data_error_reason, "incoherent")
 
-    def test_process_text_amount_marks_data_error(self):
+    def test_import_text_amount_marks_data_error(self):
         self._standard_invoice()
         rows = self._standard_rows()[:2]
         rows[1]["allowed_taxed"] = "1,50"
@@ -464,7 +494,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(broken.state, "data_error")
         self.assertEqual(broken.data_error_reason, "unconvertible")
 
-    def test_process_date_amount_marks_data_error(self):
+    def test_import_date_amount_marks_data_error(self):
         self._standard_invoice()
         rows = self._standard_rows()[:2]
         rows[1]["billed"] = date(2026, 5, 31)
@@ -488,7 +518,8 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(invoice.state, "error")
         rec.action_back_to_draft()
         rec.file = self._make_excel(self._standard_rows())
-        rec.action_process()
+        rec.action_import()
+        rec.action_link()
         invoice = rec.invoice_ids
         self.assertEqual(invoice.state, "ready")
         self.assertAlmostEqual(invoice.credit_official, 38.16)
@@ -546,14 +577,15 @@ class TestSpmsReturn(SavepointCase):
                 }
             )
         )
-        rec.action_process()
+        rec.action_import()
+        rec.action_link()
         invoice = rec.invoice_ids
         invoice.credit_official = 38.16
         rec.action_create_credit_notes()
         self.assertEqual(invoice.state, "done")
         self.assertEqual(invoice.credit_note_move_id.state, "draft")
 
-    def test_processed_return_file_and_period_locked(self):
+    def test_imported_return_file_and_period_locked(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
         with self.assertRaisesRegex(UserError, "draft SPMS return"):
@@ -561,7 +593,7 @@ class TestSpmsReturn(SavepointCase):
         with self.assertRaisesRegex(UserError, "draft SPMS return"):
             rec.file = self._make_excel(self._standard_rows())
 
-    def test_processed_return_cannot_be_deleted(self):
+    def test_imported_return_cannot_be_deleted(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
         with self.assertRaisesRegex(UserError, "can be deleted"):
@@ -574,12 +606,12 @@ class TestSpmsReturn(SavepointCase):
         rec.unlink()
         self.assertFalse(rec.exists())
 
-    def test_processed_return_invoice_cannot_be_deleted(self):
+    def test_imported_return_invoice_cannot_be_deleted(self):
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
         with self.assertRaisesRegex(UserError, "draft or cancelled"):
             rec.invoice_ids.unlink()
-        rec.action_process()
+        rec.action_import()
         self.assertTrue(rec.invoice_ids)
 
     def test_done_invoice_official_locked_while_credit_note_alive(self):
@@ -625,7 +657,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(draft.invoice_origin, move.name)
         self.assertAlmostEqual(draft.amount_total, 38.16)
         self.assertEqual(invoice.state, "done")
-        self.assertEqual(rec.state, "done")
+        self.assertEqual(rec.state, "linked")
         by_prescription = {
             line.spms_prescription: line for line in draft.invoice_line_ids
         }
@@ -660,7 +692,7 @@ class TestSpmsReturn(SavepointCase):
             rec.action_create_credit_notes()
         self.assertFalse(invoice.credit_note_move_id)
         self.assertEqual(invoice.state, "ready")
-        self.assertEqual(rec.state, "processed")
+        self.assertEqual(rec.state, "linked")
         self.assertFalse(
             self.env["account.move"].search(
                 [
@@ -848,9 +880,9 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(good.state, "done")
         self.assertFalse(bad.credit_note_move_id)
         self.assertEqual(bad.state, "ready")
-        self.assertEqual(rec.state, "processed")
+        self.assertEqual(rec.state, "linked")
 
-    def test_reprocess_preserves_official_and_done(self):
+    def test_reimport_preserves_official_and_done(self):
         self._standard_invoice()
         self._create_invoice("FT 2026/00124", [("TESTP004", 10, 1.0)])
         rows = self._standard_rows() + [
@@ -868,8 +900,9 @@ class TestSpmsReturn(SavepointCase):
         generated.write({"credit_official": 38.16})
         rec.action_create_credit_notes()
         draft = generated.credit_note_move_id
-        self.assertEqual(rec.state, "processed")
-        rec.action_process()
+        self.assertEqual(rec.state, "linked")
+        rec.action_import()
+        rec.action_link()
         generated = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
         pending = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-124")
         self.assertEqual(generated.state, "done")
@@ -888,11 +921,8 @@ class TestSpmsReturn(SavepointCase):
         self.assertFalse(pending.official_confirmed)
 
     def _reopen_setup(self):
-        """Return with a generated invoice plus a pending one.
-
-        The pending invoice keeps the return in 'processed', mirroring the
-        real files where not_found invoices never let it close.
-        """
+        """Return with a generated invoice plus a pending one, mirroring
+        the real files where some invoices stay pending after the batch."""
         self._standard_invoice()
         self._create_invoice("FT 2026/00124", [("TESTP004", 10, 1.0)])
         rows = self._standard_rows() + [
@@ -912,12 +942,11 @@ class TestSpmsReturn(SavepointCase):
         return rec, generated
 
     def test_credit_note_cancelled_reopens_invoice(self):
-        # a cancelled credit note must not leave a stale 'done': the next
-        # evaluation reopens the invoice keeping the official value
+        # a cancelled credit note must not leave a stale 'done': re-linking
+        # reopens the invoice keeping the official value
         rec, generated = self._reopen_setup()
         generated.credit_note_move_id.button_cancel()
-        rec.action_process()
-        generated = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
+        rec.action_link()
         self.assertEqual(generated.state, "ready")
         self.assertFalse(generated.credit_note_move_id)
         self.assertAlmostEqual(generated.credit_official, 38.16)
@@ -926,37 +955,34 @@ class TestSpmsReturn(SavepointCase):
     def test_credit_note_deleted_reopens_invoice(self):
         rec, generated = self._reopen_setup()
         generated.credit_note_move_id.unlink()
-        rec.action_process()
-        generated = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
+        rec.action_link()
         self.assertEqual(generated.state, "ready")
         self.assertFalse(generated.credit_note_move_id)
         self.assertAlmostEqual(generated.credit_official, 38.16)
 
-    def test_done_return_with_live_notes_stays_closed(self):
-        # the button is also visible on done returns (to regenerate after a
-        # cancelled/deleted credit note); with every credit note alive the
-        # batch must keep the return closed and block
+    def test_generate_again_with_live_notes_blocks(self):
+        # re-clicking the batch with every credit note alive has nothing
+        # left to do: the return stays linked and the batch blocks
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
         invoice = rec.invoice_ids
         invoice.write({"credit_official": 38.16})
         rec.action_create_credit_notes()
-        self.assertEqual(rec.state, "done")
-        with self.assertRaisesRegex(UserError, "processed SPMS return"):
+        self.assertEqual(rec.state, "linked")
+        with self.assertRaisesRegex(UserError, "no ready"):
             rec.action_create_credit_notes()
-        self.assertEqual(rec.state, "done")
+        self.assertEqual(rec.state, "linked")
         self.assertEqual(invoice.state, "done")
 
     def test_credit_note_cancelled_regenerates_in_batch(self):
-        # single-invoice return: generation closes it to 'done'; cancelling
-        # the credit note and running the batch again must reopen the
-        # return, regenerate and close it back
+        # single-invoice return: cancelling the credit note and running the
+        # batch again must reopen the invoice and regenerate
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
         invoice = rec.invoice_ids
         invoice.write({"credit_official": 38.16})
         rec.action_create_credit_notes()
-        self.assertEqual(rec.state, "done")
+        self.assertEqual(rec.state, "linked")
         first_draft = invoice.credit_note_move_id
         first_draft.button_cancel()
         rec.action_create_credit_notes()
@@ -964,7 +990,7 @@ class TestSpmsReturn(SavepointCase):
         self.assertNotEqual(invoice.credit_note_move_id, first_draft)
         self.assertEqual(invoice.credit_note_move_id.state, "draft")
         self.assertEqual(first_draft.state, "cancel")
-        self.assertEqual(rec.state, "done")
+        self.assertEqual(rec.state, "linked")
 
     def test_preexisting_credit_note_state(self):
         move = self._create_invoice("FT 2026/00125", [("TESTP005", 10, 10.0)])
@@ -1020,8 +1046,8 @@ class TestSpmsReturn(SavepointCase):
         )
         self.assertEqual(invoice.state, "error")
 
-    def test_cross_period_link_lost_on_old_reprocess(self):
-        """KNOWN LIMITATION: reprocessing the OLD return rebuilds its lines,
+    def test_cross_period_link_lost_on_old_reimport(self):
+        """KNOWN LIMITATION: re-importing the OLD return rebuilds its lines,
         so the new return's previous_line_id links are set to NULL (ondelete)
         and its error block is released without a human decision."""
         self._standard_invoice()
@@ -1029,7 +1055,7 @@ class TestSpmsReturn(SavepointCase):
         rec = self._create_return(self._standard_rows(), period="202605")
         pending = rec.invoice_ids.line_ids.filtered("previous_line_id")
         self.assertTrue(pending)
-        first.action_process()
+        first.action_import()
         self.assertFalse(rec.invoice_ids.line_ids.mapped("previous_line_id"))
 
     def test_cancel_and_back_to_draft(self):

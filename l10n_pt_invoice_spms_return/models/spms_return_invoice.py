@@ -254,14 +254,13 @@ class SpmsReturnInvoice(models.Model):
     def _update_state(self):
         """Single source of truth for the invoice state (semaphore).
 
-        Called after processing, after an official value is written and
+        Called after linking, after an official value is written and
         after generation. An invoice whose own credit note is alive is
         'done'; a live credit note this module did not create is an
-        'error' (a human fixes accounting, then reprocesses — the module
+        'error' (a human fixes accounting, then re-links — the module
         never adopts it). Once our credit note is cancelled or deleted,
         the regular evaluation below reopens the invoice (the official
-        value is kept) and drops its 'done' return back to 'processed'
-        so generation stays reachable.
+        value is kept) so generation stays reachable.
         """
         for rec in self:
             if rec.credit_note_move_id and rec.credit_note_move_id.state != "cancel":
@@ -283,11 +282,6 @@ class SpmsReturnInvoice(models.Model):
                 rec.state = "error"
                 continue
             rec.state = "ready" if rec.official_confirmed else "awaiting_official"
-        stale_returns = self.mapped("return_id").filtered(
-            lambda ret: ret.state == "done"
-            and ret.invoice_ids.filtered(lambda inv: inv.state != "done")
-        )
-        stale_returns.write({"state": "processed"})
 
     def _generate_credit_note(self):
         """Create the draft credit note for a ready (green) invoice.

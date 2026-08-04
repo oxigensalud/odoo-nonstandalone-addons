@@ -217,7 +217,7 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Credit notes can only be generated from a processed SPMS return."
+msgid "Credit notes can only be generated from a linked SPMS return."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -275,7 +275,6 @@ msgstr ""
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__done
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__done
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
 msgid "Done"
 msgstr ""
 
@@ -414,6 +413,17 @@ msgid "ID"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Import"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__imported
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Imported"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_credit_taxed
 msgid ""
 "Informative per-line credit contribution with VAT: the difference with the "
@@ -490,6 +500,17 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__amount_lines_untaxed
 msgid "Lines Amount (Untaxed)"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
+msgid "Link"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__linked
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
+msgid "Linked"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -589,13 +610,13 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Only draft or processed SPMS returns can be cancelled."
+msgid "Only draft, imported or linked SPMS returns can be cancelled."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Only processed or cancelled SPMS returns can be set back to draft."
+msgid "Only imported, linked or cancelled SPMS returns can be set back to draft."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -681,17 +702,6 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__previous_line_id
 msgid "Previous Claim Line"
-msgstr ""
-
-#. module: l10n_pt_invoice_spms_return
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_form_view
-msgid "Process"
-msgstr ""
-
-#. module: l10n_pt_invoice_spms_return
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return__state__processed
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_search_view
-msgid "Processed"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -823,7 +833,13 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "SPMS return %s cannot be processed in its current state."
+msgid "SPMS return %s cannot be imported in its current state."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
+#, python-format
+msgid "SPMS return %s must be imported before linking."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -931,7 +947,7 @@ msgstr ""
 #, python-format
 msgid ""
 "The following SPMS invoice numbers match more than one posted invoice: %s. "
-"Fix the duplicated invoices before processing the return."
+"Fix the duplicated invoices before linking the return."
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
@@ -990,7 +1006,7 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
-msgid "Upload the error file before processing %s."
+msgid "Upload the error file before importing %s."
 msgstr ""
 
 

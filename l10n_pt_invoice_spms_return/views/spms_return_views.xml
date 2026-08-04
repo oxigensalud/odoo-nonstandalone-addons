@@ -8,7 +8,7 @@
         <field name="arch" type="xml">
             <tree
                 decoration-muted="state == 'cancel'"
-                decoration-success="state == 'done'"
+                decoration-success="state == 'linked'"
             >
                 <field name="name" />
                 <field name="date" />
@@ -25,11 +25,33 @@
             <form>
                 <header>
                     <button
-                        name="action_process"
-                        string="Process"
+                        name="action_import"
+                        string="Import"
                         type="object"
                         class="oe_highlight"
-                        states="draft,processed"
+                        states="draft"
+                        groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
+                    />
+                    <button
+                        name="action_import"
+                        string="Import"
+                        type="object"
+                        states="imported,linked"
+                        groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
+                    />
+                    <button
+                        name="action_link"
+                        string="Link"
+                        type="object"
+                        class="oe_highlight"
+                        states="imported"
+                        groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
+                    />
+                    <button
+                        name="action_link"
+                        string="Link"
+                        type="object"
+                        states="linked"
                         groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
                     />
                     <button
@@ -37,7 +59,7 @@
                         string="Create Credit Notes"
                         type="object"
                         class="oe_highlight"
-                        states="processed,done"
+                        states="linked"
                         confirm="Draft credit notes will be created for every ready (green) invoice of this return. Continue?"
                         groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
                     />
@@ -45,20 +67,20 @@
                         name="action_back_to_draft"
                         string="Set to Draft"
                         type="object"
-                        states="processed,cancel"
+                        states="imported,linked,cancel"
                         groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
                     />
                     <button
                         name="action_cancel"
                         string="Cancel"
                         type="object"
-                        states="draft,processed"
+                        states="draft,imported,linked"
                         groups="l10n_pt_invoice_spms_return.spms_return_group_responsible"
                     />
                     <field
                         name="state"
                         widget="statusbar"
-                        statusbar_visible="draft,processed,done"
+                        statusbar_visible="draft,imported,linked"
                     />
                 </header>
                 <sheet>
@@ -121,14 +143,14 @@
                     domain="[('state', '=', 'draft')]"
                 />
                 <filter
-                    name="filter_processed"
-                    string="Processed"
-                    domain="[('state', '=', 'processed')]"
+                    name="filter_imported"
+                    string="Imported"
+                    domain="[('state', '=', 'imported')]"
                 />
                 <filter
-                    name="filter_done"
-                    string="Done"
-                    domain="[('state', '=', 'done')]"
+                    name="filter_linked"
+                    string="Linked"
+                    domain="[('state', '=', 'linked')]"
                 />
                 <group expand="0" string="Group By">
                     <filter
