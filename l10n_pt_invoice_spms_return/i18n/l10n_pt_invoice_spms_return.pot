@@ -945,14 +945,6 @@ msgid ""
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
-#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice_line.py:0
-#, python-format
-msgid ""
-"The credit of %s is already carried by a credit note; cancel that credit "
-"note first to change a resolution."
-msgstr ""
-
-#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
 msgid ""

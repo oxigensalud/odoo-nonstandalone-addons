@@ -521,20 +521,6 @@ class TestSpmsReturn(SavepointCase):
         self.assertEqual(not_found.state, "mismatch")
         self.assertEqual(ambiguous.state, "mismatch")
 
-    def test_resolution_locked_while_credit_note_alive(self):
-        self._standard_invoice()
-        rec = self._create_return(self._standard_rows())
-        invoice = rec.invoice_ids
-        invoice.credit_official = 38.16
-        rec.action_create_credit_notes()
-        self.assertEqual(invoice.state, "done")
-        line = invoice.line_ids.filtered(lambda line: line.prescription == "TESTP001")
-        with self.assertRaisesRegex(UserError, "cancel that credit note"):
-            line.resolution = "duplicate"
-        invoice.credit_note_move_id.button_cancel()
-        line.resolution = "duplicate"
-        self.assertEqual(invoice.state, "ready")
-
     def test_spms_number_collision_blocks_processing(self):
         self._standard_invoice()
         self._create_invoice("FT 2026/0123", [("TESTP009", 5, 1.0)])
