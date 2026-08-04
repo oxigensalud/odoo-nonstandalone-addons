@@ -1,0 +1,87 @@
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+from odoo import _, api, fields, models
+from odoo.tools import html_escape
+
+
+class AccountMove(models.Model):
+    _inherit = "account.move"
+
+    spms_invoice_check_ids = fields.One2many(
+        comodel_name="spms.invoice.check",
+        inverse_name="move_id",
+        string="SPMS Invoice Checks",
+    )
+    spms_credit_note_invoice_check_ids = fields.One2many(
+        comodel_name="spms.invoice.check",
+        inverse_name="credit_note_move_id",
+        string="SPMS Invoice Checks (Credit Note)",
+    )
+    spms_invoice_check_count = fields.Integer(
+        string="# SPMS Invoice Checks",
+        compute="_compute_spms_invoice_check_count",
+    )
+    spms_invoice_check_error_count = fields.Integer(
+        string="# SPMS Check Errors",
+        compute="_compute_spms_invoice_check_count",
+    )
+
+    @api.depends(
+        "spms_invoice_check_ids",
+        "spms_invoice_check_ids.error_ids",
+    )
+    def _compute_spms_invoice_check_count(self):
+        for rec in self:
+            rec.spms_invoice_check_count = len(rec.spms_invoice_check_ids)
+            rec.spms_invoice_check_error_count = len(
+                rec.spms_invoice_check_ids.error_ids
+            )
+
+    def action_view_spms_invoice_check(self):
+        """Open the invoice's check result form directly (1:1)."""
+        self.ensure_one()
+        result = self.spms_invoice_check_ids[:1]
+        if not result:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Invoice Check"),
+            "res_model": "spms.invoice.check",
+            "res_id": result.id,
+            "view_mode": "form",
+        }
+
+    def button_cancel(self):
+        """Release the linked check results in the same transaction.
+
+        The pointer means 'live credit note': once the note is cancelled
+        the result must become generable again on its own — no manual
+        step — leaving a trace in the original invoice's chatter.
+        """
+        res = super().button_cancel()
+        results = self.spms_credit_note_invoice_check_ids
+        for result in results:
+            result.move_id.message_post(
+                body=_(
+                    "Credit note %(note)s was cancelled: the check "
+                    "result of invoice %(invoice)s is ready for generation "
+                    "again."
+                )
+                % {
+                    "note": html_escape(result.credit_note_move_id.display_name),
+                    "invoice": html_escape(result.move_id.display_name),
+                },
+                subtype_xmlid="mail.mt_note",
+            )
+        results.write({"credit_note_move_id": False})
+        results._update_state()
+        return res
+
+    def unlink(self):
+        results = self.spms_credit_note_invoice_check_ids
+        res = super().unlink()
+        # the database already dropped the pointers (ondelete='set null');
+        # the semaphore has to follow without waiting for a manual refresh
+        results._update_state()
+        return res
