@@ -298,42 +298,78 @@ class TestSpmsReturn(SavepointCase):
         self.assertAlmostEqual(line23.amount_credit_taxed, 12.30)
         self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 45.16)
 
-    def test_estimate_fallback_uses_adjustment_product_tax(self):
+    def test_estimate_unmatched_line_shows_no_taxed_amount(self):
+        # no tax rate is ever assumed: an unmatched line shows no with-VAT
+        # value (even with the adjustment product configured) and the header
+        # estimate covers matched lines only
         self.company.spms_adjustment_product_id = self.adjustment_product
+        self._create_invoice("FT 2026/00124", [("TESTP004", 31, 1.0)])
         rec = self._create_return(
             [
                 {
-                    "invoice_number": "FT2026-999",
-                    "prescription": "TESTP009",
+                    "invoice_number": "FT2026-124",
+                    "prescription": "TESTP004",
+                    "billed": 31.0,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                },
+                {
+                    "invoice_number": "FT2026-124",
+                    "prescription": "TESTP010",
                     "billed": 10.0,
                     "allowed": 0.0,
                     "allowed_taxed": 0.0,
                 },
             ]
         )
-        line = rec.invoice_ids.line_ids
-        self.assertEqual(line.state, "not_found")
-        self.assertAlmostEqual(line.amount_credit_taxed, 10.60)
-        self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 10.60)
+        invoice = rec.invoice_ids
+        matched = invoice.line_ids.filtered(
+            lambda line: line.prescription == "TESTP004"
+        )
+        unmatched = invoice.line_ids.filtered(
+            lambda line: line.prescription == "TESTP010"
+        )
+        self.assertEqual(unmatched.state, "not_found")
+        self.assertFalse(unmatched.amount_credit_taxed)
+        self.assertAlmostEqual(matched.amount_credit_taxed, 32.86)
+        self.assertAlmostEqual(invoice.credit_estimated, 32.86)
 
-    def test_estimate_without_tax_source_keeps_base(self):
-        # unmatched line and no adjustment product configured: the display
-        # degrades to the untaxed base instead of blocking reads
+    def test_estimate_rounds_per_tax_group(self):
+        # the header estimate rounds once per tax group, exactly like the
+        # draft Odoo will compute: 6% on 9,10 -> 0,55 and 23% on 6,33 ->
+        # 1,46 (a single global rounding would yield 17,43 instead of 17,44)
+        tax23 = self.env["account.tax"].create(
+            {
+                "name": "IVA 23% test",
+                "amount_type": "percent",
+                "amount": 23.0,
+                "type_tax_use": "sale",
+                "company_id": self.company.id,
+            }
+        )
+        self._create_invoice(
+            "FT 2026/00125",
+            [("TESTP006", 1, 9.10), ("TESTP007", 1, 6.33, tax23)],
+        )
         rec = self._create_return(
             [
                 {
-                    "invoice_number": "FT2026-999",
-                    "prescription": "TESTP009",
-                    "billed": 10.0,
+                    "invoice_number": "FT2026-125",
+                    "prescription": "TESTP006",
+                    "billed": 9.10,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                },
+                {
+                    "invoice_number": "FT2026-125",
+                    "prescription": "TESTP007",
+                    "billed": 6.33,
                     "allowed": 0.0,
                     "allowed_taxed": 0.0,
                 },
             ]
         )
-        line = rec.invoice_ids.line_ids
-        self.assertEqual(line.state, "not_found")
-        self.assertAlmostEqual(line.amount_credit_taxed, 10.0)
-        self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 10.0)
+        self.assertAlmostEqual(rec.invoice_ids.credit_estimated, 17.44)
 
     def test_process_not_found_and_zero_diff(self):
         rec = self._create_return(

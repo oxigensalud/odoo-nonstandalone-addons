@@ -94,9 +94,9 @@ class SpmsReturnInvoiceLine(models.Model):
         compute="_compute_amount_credit_taxed",
         digits=(16, 2),
         help="Informative per-line credit contribution with VAT: the "
-        "difference with the matched original line's tax applied (the "
-        "settings adjustment-product tax for unmatched lines). The "
-        "per-invoice estimate sums these before rounding once.",
+        "difference with the matched original line's tax applied. Empty "
+        "for unmatched lines — no tax rate is ever assumed; the "
+        "per-invoice estimate covers matched lines only.",
     )
     state = fields.Selection(
         selection=[
@@ -172,22 +172,15 @@ class SpmsReturnInvoiceLine(models.Model):
     def _get_tax_factor(self, taxes):
         return 1 + sum(taxes.mapped("amount")) / 100.0
 
-    def _get_estimation_tax_factor(self):
-        self.ensure_one()
-        if self.move_line_id:
-            taxes = self.move_line_id.tax_ids
-        else:
-            taxes = self.company_id.spms_adjustment_product_id.taxes_id.filtered(
-                lambda tax: tax.company_id == self.company_id
-            )
-        return self._get_tax_factor(taxes)
-
     @api.depends("amount_difference", "move_line_id")
     def _compute_amount_credit_taxed(self):
         for rec in self:
-            rec.amount_credit_taxed = (
-                rec.amount_difference * rec._get_estimation_tax_factor()
-            )
+            if rec.move_line_id:
+                rec.amount_credit_taxed = rec.amount_difference * rec._get_tax_factor(
+                    rec.move_line_id.tax_ids
+                )
+            else:
+                rec.amount_credit_taxed = False
 
     @api.depends("error_ids.code")
     def _compute_error_codes(self):

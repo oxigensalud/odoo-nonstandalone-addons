@@ -112,11 +112,12 @@ class SpmsReturnInvoice(models.Model):
         string="Estimated Credit",
         compute="_compute_credit_estimated",
         store=True,
-        help="Formula estimate of the credit, taxes included: "
-        "round(sum(difference with the line tax applied)) over unique "
-        "prescriptions, excluding lines resolved as duplicates. Matches "
-        "the total the generated draft will compute. Informational "
-        "preview and cross-check; the official value is authoritative.",
+        help="Formula estimate of the credit, taxes included: sum of the "
+        "matched lines' differences plus their taxes, each tax rounded "
+        "once per tax group as Odoo does, excluding lines resolved as "
+        "duplicates. Matches the total the generated draft will compute. "
+        "Informational preview and cross-check; the official value is "
+        "authoritative.",
     )
     amount_lines_untaxed = fields.Monetary(
         string="Lines Amount (Untaxed)",
@@ -179,13 +180,23 @@ class SpmsReturnInvoice(models.Model):
     )
     def _compute_credit_estimated(self):
         for rec in self:
-            lines = rec.line_ids.filtered(lambda line: line.resolution != "duplicate")
+            lines = rec.line_ids.filtered(
+                lambda line: line.move_line_id and line.resolution != "duplicate"
+            )
+            rounding = rec.currency_id.rounding or 0.01
+            tax_amounts = {}
+            for line in lines:
+                for tax in line.move_line_id.tax_ids:
+                    tax_amounts[tax.id] = (
+                        tax_amounts.get(tax.id, 0.0)
+                        + line.amount_difference * tax.amount / 100.0
+                    )
             rec.credit_estimated = float_round(
-                sum(
-                    line.amount_difference * line._get_estimation_tax_factor()
-                    for line in lines
-                ),
-                precision_rounding=rec.currency_id.rounding or 0.01,
+                sum(lines.mapped("amount_difference")),
+                precision_rounding=rounding,
+            ) + sum(
+                float_round(amount, precision_rounding=rounding)
+                for amount in tax_amounts.values()
             )
 
     @api.depends("line_ids.amount_difference", "line_ids.resolution")

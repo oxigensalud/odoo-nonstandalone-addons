@@ -646,18 +646,6 @@ class SpmsReturn(models.Model):
                 divergence_count,
             )
         lines = self.env["spms.return.invoice.line"].create(line_vals_list)
-        if not self.company_id.spms_adjustment_product_id:
-            untaxed = lines.filtered(
-                lambda line: line.amount_difference and not line.move_line_id
-            )
-            if untaxed:
-                _logger.warning(
-                    "SPMS return %s: %d unmatched lines estimated without tax; "
-                    "no adjustment-line product configured on company %s.",
-                    self.display_name,
-                    len(untaxed),
-                    self.company_id.display_name,
-                )
 
         error_vals_list = []
         for line, group_rows in zip(lines, line_rows):

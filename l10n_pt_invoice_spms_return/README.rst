@@ -55,9 +55,7 @@ Configuration
   visible to *Technical Settings* users): a sale service product
   required to append the adjustment line when an official value differs
   from the itemised total. Credit notes that need it are skipped with a
-  clear message until it is configured. Its sale tax is also the
-  fallback rate for the with-VAT credit estimate of lines not matched to
-  an invoice line; matched lines always use their own invoice line tax.
+  clear message until it is configured.
 - The importer requires the ``openpyxl`` Python library on the server.
 
 Usage

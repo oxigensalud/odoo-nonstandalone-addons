@@ -422,16 +422,18 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__credit_estimated
 msgid ""
-"Formula estimate of the credit, taxes included: round(sum(difference with "
-"the line tax applied)) over unique prescriptions, excluding lines resolved "
-"as duplicates. Matches the total the generated draft will compute. "
-"Informational preview and cross-check; the official value is authoritative."
+"Formula estimate of the credit, taxes included: sum of the matched lines' "
+"differences plus their taxes, each tax rounded once per tax group as Odoo "
+"does, excluding lines resolved as duplicates. Matches the total the "
+"generated draft will compute. Informational preview and cross-check; the "
+"official value is authoritative."
 msgstr ""
-"Estimació per fórmula del crèdit, impostos inclosos: round(sum(diferència "
-"amb l'impost de la línia aplicat)) sobre prescripcions úniques, excloent "
-"les línies resoltes com a duplicades. Coincideix amb el total que "
-"calcularà l'esborrany generat. Vista prèvia informativa i contrast; el "
-"valor oficial és el que mana."
+"Estimació per fórmula del crèdit, impostos inclosos: suma de les "
+"diferències de les línies casades més els seus impostos, cada impost "
+"arrodonit una sola vegada per grup d'impost com fa Odoo, excloent les "
+"línies resoltes com a duplicades. Coincideix amb el total que calcularà "
+"l'esborrany generat. Vista prèvia informativa i contrast; el valor oficial "
+"és el que mana."
 
 #. module: l10n_pt_invoice_spms_return
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
@@ -463,14 +465,13 @@ msgstr "ID"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__amount_credit_taxed
 msgid ""
 "Informative per-line credit contribution with VAT: the difference with the "
-"matched original line's tax applied (the settings adjustment-product tax "
-"for unmatched lines). The per-invoice estimate sums these before rounding "
-"once."
+"matched original line's tax applied. Empty for unmatched lines — no tax "
+"rate is ever assumed; the per-invoice estimate covers matched lines only."
 msgstr ""
 "Contribució informativa de la línia al crèdit amb IVA: la diferència amb "
-"l'impost de la línia original casada aplicat (l'impost del producte de "
-"desquadre de la configuració per a les línies no casades). L'estimació per "
-"factura les suma abans d'arrodonir una sola vegada."
+"l'impost de la línia original casada aplicat. Buida per a les línies no "
+"casades — mai no s'assumeix cap tipus d'impost; l'estimació per factura "
+"només cobreix les línies casades."
 
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0

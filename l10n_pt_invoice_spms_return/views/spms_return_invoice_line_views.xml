@@ -28,7 +28,10 @@
                         <field name="amount_allowed" />
                         <field name="amount_allowed_taxed" />
                         <field name="amount_difference" />
-                        <field name="amount_credit_taxed" />
+                        <field
+                            name="amount_credit_taxed"
+                            attrs="{'invisible': [('move_line_id', '=', False)]}"
+                        />
                         <field name="days_billed" />
                         <field name="days_paid" />
                         <field name="currency_id" invisible="1" />

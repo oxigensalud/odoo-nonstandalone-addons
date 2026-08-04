@@ -93,7 +93,11 @@
                             <field name="amount_allowed" />
                             <field name="amount_allowed_taxed" optional="hide" />
                             <field name="amount_difference" />
-                            <field name="amount_credit_taxed" />
+                            <field name="move_line_id" invisible="1" />
+                            <field
+                                name="amount_credit_taxed"
+                                attrs="{'invisible': [('move_line_id', '=', False)]}"
+                            />
                             <field name="days_billed" optional="hide" />
                             <field name="days_paid" optional="hide" />
                             <field name="error_codes" />
