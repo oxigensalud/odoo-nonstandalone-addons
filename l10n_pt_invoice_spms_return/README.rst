@@ -74,7 +74,9 @@ Monthly flow, from the *SPMS Issues* menu (Accounting → Customers):
    awaiting official value, not found, error…
 4. Review the estimated credit per invoice (formula preview) and enter
    the official credit-note value communicated by the conference result.
-   Entering the value confirms it automatically.
+   Entering the value confirms it automatically. A confirmed value of
+   zero closes the invoice as *Zero Official Value*: legitimately
+   settled, nothing to credit, nothing will be generated for it.
 5. Press *Create Credit Notes*. For every ready (green) invoice a draft
    rectifying invoice is created through the standard reversal path, cut
    down to the rejected prescriptions, and linked back to the log. When
@@ -103,9 +105,10 @@ An invoice with rows the module could not fully use — unreadable amounts
 invoice does not carry, or a prescription matching several original
 lines — is held in *Error* and will not generate a credit note until a
 corrected file is imported. The same happens when the original invoice
-carries a live credit note this module did not create, or when a
-prescription is already claimed by a previous return: the module never
-adopts or decides — a human fixes accounting (or the file) and re-links.
+carries a live credit note this module did not create (the invoice form
+names it by number), or when a prescription is already claimed by a
+previous, non-cancelled return: the module never adopts or decides — a
+human fixes accounting (or the file) and re-links.
 
 Once a credit note is generated and alive, the official value of its
 invoice is locked; cancel the credit note first to change it.

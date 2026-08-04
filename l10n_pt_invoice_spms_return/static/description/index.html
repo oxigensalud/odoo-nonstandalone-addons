@@ -430,7 +430,9 @@ original invoice line, and every invoice gets a state (semaphore):
 awaiting official value, not found, error…</li>
 <li>Review the estimated credit per invoice (formula preview) and enter
 the official credit-note value communicated by the conference result.
-Entering the value confirms it automatically.</li>
+Entering the value confirms it automatically. A confirmed value of
+zero closes the invoice as <em>Zero Official Value</em>: legitimately
+settled, nothing to credit, nothing will be generated for it.</li>
 <li>Press <em>Create Credit Notes</em>. For every ready (green) invoice a draft
 rectifying invoice is created through the standard reversal path, cut
 down to the rejected prescriptions, and linked back to the log. When
@@ -457,9 +459,10 @@ nor its invoices can be deleted once imported (cancel the return first).</p>
 invoice does not carry, or a prescription matching several original
 lines — is held in <em>Error</em> and will not generate a credit note until a
 corrected file is imported. The same happens when the original invoice
-carries a live credit note this module did not create, or when a
-prescription is already claimed by a previous return: the module never
-adopts or decides — a human fixes accounting (or the file) and re-links.</p>
+carries a live credit note this module did not create (the invoice form
+names it by number), or when a prescription is already claimed by a
+previous, non-cancelled return: the module never adopts or decides — a
+human fixes accounting (or the file) and re-links.</p>
 <p>Once a credit note is generated and alive, the official value of its
 invoice is locked; cancel the credit note first to change it.</p>
 </div>

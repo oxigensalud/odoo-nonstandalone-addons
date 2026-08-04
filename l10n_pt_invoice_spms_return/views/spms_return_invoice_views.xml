@@ -9,6 +9,7 @@
             <tree
                 decoration-danger="state in ('not_found', 'error')"
                 decoration-info="state == 'awaiting_official'"
+                decoration-muted="state == 'zero_official'"
                 decoration-success="state in ('ready', 'done')"
             >
                 <field name="name" />
@@ -44,6 +45,13 @@
                         statusbar_visible="awaiting_official,ready,done"
                     />
                 </header>
+                <div
+                    class="alert alert-danger"
+                    role="alert"
+                    attrs="{'invisible': [('error_message', '=', False)]}"
+                >
+                    <field name="error_message" nolabel="1" />
+                </div>
                 <sheet>
                     <div class="oe_title">
                         <h1><field name="name" /></h1>
@@ -149,6 +157,11 @@
                     name="filter_done"
                     string="Done"
                     domain="[('state', '=', 'done')]"
+                />
+                <filter
+                    name="filter_zero_official"
+                    string="Zero Official Value"
+                    domain="[('state', '=', 'zero_official')]"
                 />
                 <group expand="0" string="Group By">
                     <filter

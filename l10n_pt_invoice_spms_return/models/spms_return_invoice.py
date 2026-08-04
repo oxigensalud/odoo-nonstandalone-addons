@@ -3,7 +3,7 @@
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools import float_compare, float_round, formatLang
+from odoo.tools import float_compare, float_is_zero, float_round, formatLang
 
 
 class SpmsReturnInvoice(models.Model):
@@ -55,6 +55,7 @@ class SpmsReturnInvoice(models.Model):
             ("not_found", "Not Found"),
             ("error", "Error"),
             ("done", "Done"),
+            ("zero_official", "Zero Official Value"),
         ],
         string="State",
         readonly=True,
@@ -125,6 +126,14 @@ class SpmsReturnInvoice(models.Model):
         compute="_compute_error_codes",
         store=True,
         help="Distinct error codes reported for this invoice.",
+    )
+    error_message = fields.Char(
+        string="Error Message",
+        compute="_compute_error_message",
+        help="Why the invoice is held in error when the reason lives in "
+        "accounting, not in this return: names the live credit note the "
+        "return did not create. Computed live and never stored, so fixing "
+        "accounting clears it on its own.",
     )
 
     _sql_constraints = [
@@ -251,29 +260,60 @@ class SpmsReturnInvoice(models.Model):
                     )
         return super().unlink()
 
+    def _get_foreign_credit_notes(self):
+        """Live credit notes of the invoice that this return did not create."""
+        self.ensure_one()
+        return (
+            self.move_id.reversal_move_id.filtered(
+                lambda move: move.move_type == "out_refund" and move.state != "cancel"
+            )
+            - self.credit_note_move_id
+        )
+
+    @api.depends("move_id.reversal_move_id.state", "credit_note_move_id")
+    def _compute_error_message(self):
+        for rec in self:
+            foreign_notes = rec._get_foreign_credit_notes()
+            rec.error_message = (
+                _(
+                    "The invoice already has a live credit note this return "
+                    "did not create: %s. Only one credit note may exist per "
+                    "invoice; fix or cancel it in accounting, then link the "
+                    "return again."
+                )
+                % ", ".join(foreign_notes.mapped("display_name"))
+                if foreign_notes
+                else False
+            )
+
     def _update_state(self):
         """Single source of truth for the invoice state (semaphore).
 
         Called after linking, after an official value is written and
         after generation. An invoice whose own credit note is alive is
-        'done'; a live credit note this module did not create is an
-        'error' (a human fixes accounting, then re-links — the module
-        never adopts it). Once our credit note is cancelled or deleted,
-        the regular evaluation below reopens the invoice (the official
-        value is kept) so generation stays reachable.
+        'done'; any other live credit note — made by hand or owned by
+        another return — is an 'error' even alongside our own note,
+        because only one credit note may exist per invoice (a human
+        fixes accounting, then re-links — the module never adopts it).
+        Once our credit note is cancelled or deleted, the regular
+        evaluation below reopens the invoice (the official value is
+        kept) so generation stays reachable. A confirmed official value
+        of zero closes the invoice as 'zero_official': legitimately
+        settled, nothing to credit.
         """
         for rec in self:
-            if rec.credit_note_move_id and rec.credit_note_move_id.state != "cancel":
+            foreign_notes = rec._get_foreign_credit_notes()
+            own_note_alive = (
+                rec.credit_note_move_id and rec.credit_note_move_id.state != "cancel"
+            )
+            if own_note_alive and not foreign_notes:
                 rec.state = "done"
                 continue
             if not rec.move_id:
                 rec.state = "not_found"
                 continue
-            if rec.credit_note_move_id:
+            if rec.credit_note_move_id and not own_note_alive:
                 rec.credit_note_move_id = False
-            foreign_notes = rec.move_id.reversal_move_id.filtered(
-                lambda move: move.state != "cancel"
-            )
             claimed_lines = rec.line_ids.filtered("previous_line_id")
             broken_lines = rec.line_ids.filtered(
                 lambda line: line.state in ("data_error", "not_found", "ambiguous")
@@ -281,7 +321,15 @@ class SpmsReturnInvoice(models.Model):
             if foreign_notes or claimed_lines or broken_lines:
                 rec.state = "error"
                 continue
-            rec.state = "ready" if rec.official_confirmed else "awaiting_official"
+            if not rec.official_confirmed:
+                rec.state = "awaiting_official"
+            elif float_is_zero(
+                rec.credit_official,
+                precision_rounding=rec.currency_id.rounding or 0.01,
+            ):
+                rec.state = "zero_official"
+            else:
+                rec.state = "ready"
 
     def _generate_credit_note(self):
         """Create the draft credit note for a ready (green) invoice.

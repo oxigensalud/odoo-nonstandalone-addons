@@ -510,11 +510,9 @@ class SpmsReturn(models.Model):
                     self.company_id.id,
                 ),
                 ("return_invoice_id.return_id", "!=", self.id),
-                (
-                    "return_invoice_id.return_id.state",
-                    "in",
-                    ["imported", "linked"],
-                ),
+                # any non-cancelled return claims its pairs, a draft one
+                # included: only cancelling frees them (§8.15)
+                ("return_invoice_id.return_id.state", "!=", "cancel"),
                 ("return_invoice_id.name", "in", invoice_numbers),
                 ("prescription", "!=", False),
             ]

@@ -319,6 +319,11 @@ msgid "Error Codes"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_message
+msgid "Error Message"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__description
 msgid "Error Description"
 msgstr ""
@@ -953,6 +958,15 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
 #, python-format
+msgid ""
+"The invoice already has a live credit note this return did not create: %s. "
+"Only one credit note may exist per invoice; fix or cancel it in accounting, "
+"then link the return again."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
 msgid "The invoice is no longer ready (current state: %s)."
 msgstr ""
 
@@ -1011,6 +1025,20 @@ msgstr ""
 
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_message
+msgid ""
+"Why the invoice is held in error when the reason lives in accounting, not in "
+"this return: names the live credit note the return did not create. Computed "
+"live and never stored, so fixing accounting clears it on its own."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__data_error_reason
 msgid "Why this line was marked as a data error when parsing the error file."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__zero_official
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Zero Official Value"
 msgstr ""

@@ -702,30 +702,47 @@ class TestSpmsReturn(SavepointCase):
             )
         )
 
-    def test_generate_confirmed_without_value_blocks(self):
-        # confirming with no value means there is nothing to credit; the
-        # guard must block before any draft is created
+    def test_official_zero_closes_invoice(self):
+        # a confirmed official value of zero is a legitimate closure, not a
+        # mistake: the invoice goes black instead of ready and the batch has
+        # nothing left to generate
         self._standard_invoice()
         rec = self._create_return(self._standard_rows())
         invoice = rec.invoice_ids
         invoice.write({"official_confirmed": True})
-        self.assertEqual(invoice.state, "ready")
-        with self.assertRaisesRegex(UserError, "Nothing to credit"):
-            rec.action_create_credit_notes()
-
-    def test_generate_official_zero_blocks(self):
-        # a zero official value must not create a credit note even with the
-        # adjustment product configured: the guard fires before the draft
-        self.company.spms_adjustment_product_id = self.adjustment_product
-        self._standard_invoice()
-        rec = self._create_return(self._standard_rows())
-        invoice = rec.invoice_ids
-        invoice.write({"credit_official": 0.0})
-        self.assertTrue(invoice.official_confirmed)
-        self.assertEqual(invoice.state, "ready")
-        with self.assertRaisesRegex(UserError, "Nothing to credit"):
+        self.assertEqual(invoice.state, "zero_official")
+        with self.assertRaisesRegex(UserError, "no ready"):
             rec.action_create_credit_notes()
         self.assertFalse(invoice.credit_note_move_id)
+
+    def test_generate_skips_zero_official_invoice(self):
+        # the black state is a resolved closure, not a failure: the batch
+        # generates the ready invoice and leaves the zero one untouched
+        self.company.spms_adjustment_product_id = self.adjustment_product
+        self._standard_invoice()
+        self._create_invoice("FT 2026/00124", [("TESTP004", 10, 1.0)])
+        rows = self._standard_rows() + [
+            {
+                "invoice_number": "FT2026-124",
+                "prescription": "TESTP004",
+                "billed": 10.0,
+                "allowed": 5.0,
+                "allowed_taxed": 5.3,
+                "days_billed": 10.0,
+            }
+        ]
+        rec = self._create_return(rows)
+        good = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-123")
+        zero = rec.invoice_ids.filtered(lambda r: r.name == "FT2026-124")
+        good.write({"credit_official": 38.16})
+        zero.write({"credit_official": 0.0})
+        self.assertTrue(zero.official_confirmed)
+        self.assertEqual(zero.state, "zero_official")
+        rec.action_create_credit_notes()
+        self.assertTrue(good.credit_note_move_id)
+        self.assertEqual(good.state, "done")
+        self.assertFalse(zero.credit_note_move_id)
+        self.assertEqual(zero.state, "zero_official")
 
     def test_generate_official_exceeds_total_blocks(self):
         # an official value above the original invoice total can only be a
@@ -1019,6 +1036,102 @@ class TestSpmsReturn(SavepointCase):
         invoice = rec.invoice_ids
         self.assertEqual(invoice.state, "error")
         self.assertFalse(invoice.credit_note_move_id)
+
+    def test_preexisting_credit_note_matching_amounts_still_error(self):
+        # a foreign note is never adopted even when its amounts match the
+        # official exactly (D3): plain error naming the note, a human decides
+        move = self._create_invoice("FT 2026/00125", [("TESTP005", 10, 10.0)])
+        wizard = self.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, move.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": fields.Date.context_today(move),
+                "company_id": self.company.id,
+            }
+        )
+        wizard.reverse_moves()
+        foreign = move.reversal_move_id
+        rec = self._create_return(
+            [
+                {
+                    "invoice_number": "FT2026-125",
+                    "prescription": "TESTP005",
+                    "billed": 100.0,
+                    "allowed": 0.0,
+                    "allowed_taxed": 0.0,
+                    "days_billed": 10.0,
+                }
+            ]
+        )
+        invoice = rec.invoice_ids
+        invoice.write({"credit_official": move.amount_total})
+        self.assertEqual(invoice.state, "error")
+        self.assertFalse(invoice.credit_note_move_id)
+        self.assertIn(foreign.display_name, invoice.error_message)
+
+    def test_second_credit_note_beside_own_marks_error(self):
+        # one credit note per invoice (manual p.33): a second live note
+        # beside our own is an error, never masked by done — and our own
+        # pointer survives untouched
+        rec, generated = self._reopen_setup()
+        own = generated.credit_note_move_id
+        wizard = self.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, generated.move_id.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": fields.Date.context_today(generated),
+                "company_id": self.company.id,
+            }
+        )
+        wizard.reverse_moves()
+        rec.action_link()
+        self.assertEqual(generated.state, "error")
+        self.assertEqual(generated.credit_note_move_id, own)
+        foreign = generated.move_id.reversal_move_id - own
+        self.assertIn(foreign.display_name, generated.error_message)
+        # fixing accounting heals on the next link, back to done
+        foreign.button_cancel()
+        rec.action_link()
+        self.assertEqual(generated.state, "done")
+        self.assertFalse(generated.error_message)
+
+    def test_non_refund_reversal_does_not_block(self):
+        # guard B only counts customer credit notes: a journal entry
+        # hand-linked as a reversal must not block the invoice
+        move = self._standard_invoice()
+        misc_journal = self.env["account.journal"].create(
+            {
+                "name": "Miscellaneous",
+                "code": "TMISC",
+                "type": "general",
+                "company_id": self.company.id,
+            }
+        )
+        self.env["account.move"].create(
+            {
+                "move_type": "entry",
+                "journal_id": misc_journal.id,
+                "reversed_entry_id": move.id,
+            }
+        )
+        rec = self._create_return(self._standard_rows())
+        self.assertEqual(rec.invoice_ids.state, "awaiting_official")
+
+    def test_draft_return_still_claims_pairs(self):
+        # §8.15: a return set back to draft keeps claiming its pairs — only
+        # cancelling it frees them
+        self._standard_invoice()
+        first = self._create_return(self._standard_rows(), period="202604")
+        first.action_back_to_draft()
+        rec = self._create_return(self._standard_rows(), period="202605")
+        self.assertTrue(rec.invoice_ids.line_ids.filtered("previous_line_id"))
+        self.assertEqual(rec.invoice_ids.state, "error")
+        first.action_cancel()
+        rec.action_link()
+        self.assertFalse(rec.invoice_ids.line_ids.filtered("previous_line_id"))
+        self.assertEqual(rec.invoice_ids.state, "awaiting_official")
 
     def test_cross_period_reappearance(self):
         self._standard_invoice()

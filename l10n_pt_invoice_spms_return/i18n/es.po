@@ -341,6 +341,11 @@ msgid "Error Codes"
 msgstr "Códigos de error"
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_message
+msgid "Error Message"
+msgstr "Mensaje de error"
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_spms_return_invoice_line_error__description
 msgid "Error Description"
 msgstr "Descripción del error"
@@ -1049,6 +1054,18 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
 #, python-format
+msgid ""
+"The invoice already has a live credit note this return did not create: %s. "
+"Only one credit note may exist per invoice; fix or cancel it in accounting, "
+"then link the return again."
+msgstr ""
+"La factura ya tiene una factura rectificativa viva que este retorno no ha "
+"creado: %s. Solo puede existir una factura rectificativa por factura; "
+"corrígela o cancélala en contabilidad y vuelve a vincular el retorno."
+
+#. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/spms_return_invoice.py:0
+#, python-format
 msgid "The invoice is no longer ready (current state: %s)."
 msgstr "La factura ya no está preparada (estado actual: %s)."
 
@@ -1116,8 +1133,26 @@ msgstr "Suba el fichero de errores antes de importar %s."
 
 
 #. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice__error_message
+msgid ""
+"Why the invoice is held in error when the reason lives in accounting, not in "
+"this return: names the live credit note the return did not create. Computed "
+"live and never stored, so fixing accounting clears it on its own."
+msgstr ""
+"Por qué la factura está retenida en error cuando la causa vive en "
+"contabilidad y no en este retorno: nombra la factura rectificativa viva que "
+"el retorno no ha creado. Se calcula al vuelo y nunca se almacena, así que "
+"arreglar la contabilidad lo limpia solo."
+
+#. module: l10n_pt_invoice_spms_return
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_return.field_spms_return_invoice_line__data_error_reason
 msgid "Why this line was marked as a data error when parsing the error file."
 msgstr ""
 "Por qué esta línea se marcó como error de datos al procesar el fichero de "
 "errores."
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_return.selection__spms_return_invoice__state__zero_official
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_return.spms_return_invoice_search_view
+msgid "Zero Official Value"
+msgstr "Valor oficial cero"
