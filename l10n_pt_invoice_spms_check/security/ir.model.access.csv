@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_spms_invoice_check_consultation,spms.invoice.check consultation,model_spms_invoice_check,spms_invoice_check_group_consultation,1,0,0,0
+access_spms_invoice_check_responsible,spms.invoice.check responsible,model_spms_invoice_check,spms_invoice_check_group_responsible,1,1,1,0
+access_spms_invoice_check_error_consultation,spms.invoice.check.error consultation,model_spms_invoice_check_error,spms_invoice_check_group_consultation,1,0,0,0
+access_spms_invoice_check_error_responsible,spms.invoice.check.error responsible,model_spms_invoice_check_error,spms_invoice_check_group_responsible,1,1,1,0
