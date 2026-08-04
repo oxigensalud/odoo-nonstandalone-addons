@@ -111,7 +111,10 @@ previous, non-cancelled return: the module never adopts or decides — a
 human fixes accounting (or the file) and re-links.
 
 Once a credit note is generated and alive, the official value of its
-invoice is locked; cancel the credit note first to change it.
+invoice is locked; cancel the credit note first to change it. Cancelling
+or deleting a generated credit note releases its invoice immediately —
+no re-link needed — and the cancellation leaves a note in the return's
+chatter.
 
 Known issues / Roadmap
 ======================

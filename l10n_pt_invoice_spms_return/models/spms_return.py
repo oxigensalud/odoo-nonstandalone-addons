@@ -69,6 +69,7 @@ def _cell_amount(value):
 class SpmsReturn(models.Model):
     _name = "spms.return"
     _description = "SPMS Return"
+    _inherit = ["mail.thread"]
     _order = "period desc, id desc"
 
     name = fields.Char(

@@ -12,6 +12,7 @@
     "category": "Accounting",
     "depends": [
         "l10n_pt_invoice_spms",
+        "mail",
     ],
     "external_dependencies": {"python": ["openpyxl"]},
     "data": [

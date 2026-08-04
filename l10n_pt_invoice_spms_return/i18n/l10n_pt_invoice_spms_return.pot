@@ -215,6 +215,14 @@ msgid "Credit Note"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return
+#: code:addons/l10n_pt_invoice_spms_return/models/account_move.py:0
+#, python-format
+msgid ""
+"Credit note %(note)s was cancelled: invoice %(invoice)s is pending "
+"generation again."
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
 #: code:addons/l10n_pt_invoice_spms_return/models/spms_return.py:0
 #, python-format
 msgid "Credit notes can only be generated from a linked SPMS return."
@@ -809,6 +817,12 @@ msgstr ""
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_payment__spms_return_invoice_ids
 #, python-format
 msgid "SPMS Return Invoices"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_return
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_move__spms_credit_note_return_invoice_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_return.field_account_payment__spms_credit_note_return_invoice_ids
+msgid "SPMS Return Invoices (Credit Note)"
 msgstr ""
 
 #. module: l10n_pt_invoice_spms_return

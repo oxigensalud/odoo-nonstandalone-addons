@@ -958,6 +958,27 @@ class TestSpmsReturn(SavepointCase):
         rec.action_create_credit_notes()
         return rec, generated
 
+    def test_credit_note_cancel_releases_invoice_immediately(self):
+        # the invariant is eager: cancelling the credit note frees the
+        # invoice in the same transaction — no re-link needed — and leaves
+        # a note in the return's chatter
+        rec, generated = self._reopen_setup()
+        generated.credit_note_move_id.button_cancel()
+        self.assertFalse(generated.credit_note_move_id)
+        self.assertEqual(generated.state, "ready")
+        self.assertAlmostEqual(generated.credit_official, 38.16)
+        self.assertTrue(generated.official_confirmed)
+        self.assertTrue(
+            any(generated.name in body for body in rec.message_ids.mapped("body"))
+        )
+
+    def test_credit_note_delete_releases_invoice_immediately(self):
+        rec, generated = self._reopen_setup()
+        generated.credit_note_move_id.unlink()
+        self.assertFalse(generated.credit_note_move_id)
+        self.assertEqual(generated.state, "ready")
+        self.assertAlmostEqual(generated.credit_official, 38.16)
+
     def test_credit_note_cancelled_reopens_invoice(self):
         # a cancelled credit note must not leave a stale 'done': re-linking
         # reopens the invoice keeping the official value

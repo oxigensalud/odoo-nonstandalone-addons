@@ -46,7 +46,10 @@ class SpmsReturnInvoice(models.Model):
         string="Credit Note",
         readonly=True,
         check_company=True,
-        help="Draft credit note generated for this invoice by this module.",
+        ondelete="set null",
+        help="Draft credit note generated for this invoice by this module. "
+        "Full pointer means live note: it is released automatically the "
+        "moment the note is cancelled or deleted.",
     )
     state = fields.Selection(
         selection=[
