@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="spms_conference_result_view_tree" model="ir.ui.view">
+        <field name="name">spms.conference.result.tree</field>
+        <field name="model">spms.conference.result</field>
+        <field name="arch" type="xml">
+            <tree
+                decoration-danger="state == 'error'"
+                decoration-muted="state == 'zero_official'"
+                decoration-success="state in ('ready', 'done')"
+            >
+                <field name="move_id" />
+                <field name="conference_state" />
+                <field name="fetch_date" optional="hide" />
+                <field name="error_codes" />
+                <field name="error_count" optional="hide" />
+                <field name="credit_official" />
+                <field name="credit_note_move_id" optional="hide" />
+                <field name="currency_id" invisible="1" />
+                <field name="state" />
+                <button
+                    name="action_view_credit_note"
+                    type="object"
+                    icon="fa-external-link"
+                    title="Credit Note"
+                    attrs="{'invisible': [('credit_note_move_id', '=', False)]}"
+                />
+            </tree>
+        </field>
+    </record>
+
+    <record id="spms_conference_result_view_form" model="ir.ui.view">
+        <field name="name">spms.conference.result.form</field>
+        <field name="model">spms.conference.result</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="ready,done"
+                    />
+                </header>
+                <div
+                    class="alert alert-danger"
+                    role="alert"
+                    attrs="{'invisible': [('error_message', '=', False)]}"
+                >
+                    <field name="error_message" nolabel="1" />
+                </div>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_view_errors"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-exclamation-circle"
+                        >
+                            <field
+                                name="error_count"
+                                widget="statinfo"
+                                string="Errors"
+                            />
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="move_id" /></h1>
+                    </div>
+                    <group>
+                        <group name="links">
+                            <field name="credit_note_move_id" />
+                            <field
+                                name="company_id"
+                                groups="base.group_multi_company"
+                            />
+                            <field name="conference_state" />
+                            <field name="fetch_date" />
+                        </group>
+                        <group name="official">
+                            <field name="total_billed" />
+                            <field name="total_allowed" />
+                            <field name="total_billed_taxed" />
+                            <field name="total_allowed_taxed" />
+                            <field name="amount_lines_untaxed" />
+                            <field name="credit_official" />
+                            <field name="currency_id" invisible="1" />
+                        </group>
+                    </group>
+                    <group
+                        name="oficio"
+                        attrs="{'invisible': [('oficio', '=', False)]}"
+                    >
+                        <field name="oficio" />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="spms_conference_result_view_search" model="ir.ui.view">
+        <field name="name">spms.conference.result.search</field>
+        <field name="model">spms.conference.result</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="move_id" />
+                <field name="error_codes" />
+                <filter
+                    name="filter_ready"
+                    string="Ready"
+                    domain="[('state', '=', 'ready')]"
+                />
+                <filter
+                    name="filter_error"
+                    string="Error"
+                    domain="[('state', '=', 'error')]"
+                />
+                <filter
+                    name="filter_done"
+                    string="Done"
+                    domain="[('state', '=', 'done')]"
+                />
+                <filter
+                    name="filter_zero_official"
+                    string="Zero Official Value"
+                    domain="[('state', '=', 'zero_official')]"
+                />
+                <separator />
+                <filter
+                    name="filter_with_errors"
+                    string="Conferred With Errors"
+                    domain="[('conference_state', '=', 'with_errors')]"
+                />
+                <filter
+                    name="filter_without_errors"
+                    string="Conferred Without Errors"
+                    domain="[('conference_state', '=', 'without_errors')]"
+                />
+                <group expand="0" string="Group By">
+                    <filter
+                        name="groupby_state"
+                        string="State"
+                        context="{'group_by': 'state'}"
+                    />
+                    <filter
+                        name="groupby_conference_state"
+                        string="Conference State"
+                        context="{'group_by': 'conference_state'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="spms_conference_result_action" model="ir.actions.act_window">
+        <field name="name">SPMS Conference Results</field>
+        <field name="res_model">spms.conference.result</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="spms_conference_result_menu"
+        name="SPMS Conference Results"
+        parent="account.menu_finance_receivables"
+        action="spms_conference_result_action"
+        sequence="5"
+        groups="l10n_pt_invoice_spms_conference.spms_conference_result_group_consultation"
+    />
+</odoo>
