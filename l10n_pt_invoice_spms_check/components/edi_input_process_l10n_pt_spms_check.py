@@ -98,9 +98,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             "total_allowed_taxed": _child_float(fact, "TotalFaturaIVACalculado"),
             "oficio": self._parse_oficio(root),
             "parse_warning": self._completeness_warning(root, len(rows)),
-            # a definitive result supersedes a pending WS anomaly and a
-            # held generation failure: reprocessing IS the retry path
-            "ws_anomaly_code": False,
+            "ws_incident_code": False,
             "generation_error": False,
         }
         check = self._store_check(move, check_vals, rows)
@@ -174,7 +172,6 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                     "amount_allowed": _child_float(claim, "ValorTotalCalculado"),
                     "days_billed": _child_float(claim, "QuantidadeLida"),
                     "days_paid": _child_float(claim, "QuantidadeCalculado"),
-                    # ambiguous or missing prescription: no link, no error
                     "move_line_id": line_ids[0] if len(line_ids) == 1 else False,
                 }
                 add_rows(claim, "prestacao", claim_vals)

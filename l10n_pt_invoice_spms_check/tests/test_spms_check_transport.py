@@ -179,7 +179,7 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertFalse(self._children())
         self.assertFalse(self._checks())
 
-    def test_unknown_invoice_flags_anomaly(self):
+    def test_unknown_invoice_flags_incident(self):
         with mock.patch(POST_PATH) as post:
             post.return_value = _mock_response("<codigoRetorno>301</codigoRetorno>")
             self._run_cron()
@@ -187,7 +187,7 @@ class TestSpmsCheckTransport(SavepointCase):
         check = self._checks()
         self.assertEqual(len(check), 1)
         self.assertEqual(check.state, "error")
-        self.assertEqual(check.ws_anomaly_code, "301")
+        self.assertEqual(check.ws_incident_code, "301")
         self.assertIn("301", check.error_message)
         self.assertIn(self.invoice.name, check.error_message)
         with mock.patch(POST_PATH) as post:
@@ -195,7 +195,7 @@ class TestSpmsCheckTransport(SavepointCase):
             self._run_cron()
         self.assertEqual(len(self._checks()), 1)
 
-    def test_definitive_result_supersedes_anomaly(self):
+    def test_definitive_result_supersedes_incident(self):
         with mock.patch(POST_PATH) as post:
             post.return_value = _mock_response("<codigoRetorno>301</codigoRetorno>")
             self._run_cron()

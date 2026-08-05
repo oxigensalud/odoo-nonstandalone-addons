@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-05 14:40+0000\n"
-"PO-Revision-Date: 2026-08-05 14:40+0000\n"
+"POT-Creation-Date: 2026-08-05 15:20+0000\n"
+"PO-Revision-Date: 2026-08-05 15:20+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -659,15 +659,15 @@ msgid "Responsible"
 msgstr "Responsável"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_anomaly_code
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_incident_code
 msgid ""
-"Return code of an anomalous web-service answer that needs human review: the "
-"CCF does not recognise an invoice that was sent successfully (301). "
-"Superseded by the arrival of a definitive check result."
+"Return code of a web-service incident that needs human review: the CCF does "
+"not recognise an invoice that was sent successfully (301). Superseded by the"
+" arrival of a definitive check result."
 msgstr ""
-"Código de retorno de uma resposta anómala do serviço web que precisa de "
-"revisão humana: o CCF não reconhece uma fatura que foi enviada com sucesso "
-"(301). Substituído pela chegada de um resultado de conferência definitivo."
+"Código de retorno de um incidente do serviço web que precisa de revisão "
+"humana: o CCF não reconhece uma fatura que foi enviada com sucesso (301). "
+"Substituído pela chegada de um resultado de conferência definitivo."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.module.category,name:l10n_pt_invoice_spms_check.module_category_spms
@@ -960,13 +960,13 @@ msgstr "Falha de geração inesperada; consulte o registo do servidor."
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
-msgid "WS Anomaly"
-msgstr "Anomalia WS"
+msgid "WS Incident"
+msgstr "Incidente WS"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_anomaly_code
-msgid "WS Anomaly Code"
-msgstr "Código de anomalia WS"
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_incident_code
+msgid "WS Incident Code"
+msgstr "Código de incidente WS"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__fetch_date
@@ -989,12 +989,12 @@ msgstr ""
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_message
 msgid ""
 "Why the result is held in error: a live credit note this module did not "
-"create, or an anomalous web-service answer. Computed live and never stored, "
-"so fixing the cause clears it on its own."
+"create, or a web-service incident. Computed live and never stored, so fixing"
+" the cause clears it on its own."
 msgstr ""
 "Porque o resultado está retido em erro: uma nota de crédito viva que este "
-"módulo não criou, ou uma resposta anómala do serviço web. Calculado em "
-"direto e nunca armazenado, pelo que corrigir a causa limpa-o por si só."
+"módulo não criou, ou um incidente do serviço web. Calculado em direto e "
+"nunca armazenado, pelo que corrigir a causa limpa-o por si só."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__zero_official

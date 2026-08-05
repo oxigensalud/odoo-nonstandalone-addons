@@ -52,7 +52,6 @@ class EdiExchangeRecord(models.Model):
             if not move or move.state != "posted":
                 continue
             if any(move.spms_invoice_check_ids.mapped("check_state")):
-                # the first definitive result closes the invoice forever
                 continue
             if self.search_count(
                 [
@@ -70,7 +69,6 @@ class EdiExchangeRecord(models.Model):
                     ),
                 ]
             ):
-                # waiting, processed or failed: never fetch a duplicate
                 continue
             try:
                 self._l10n_pt_spms_check_poll(backend, exchange, move)
@@ -106,14 +104,13 @@ class EdiExchangeRecord(models.Model):
                 with self.env.cr.savepoint():
                     backend.exchange_process(child)
             except Exception:
-                # payload safe on the child; processing is retriable
                 _logger.exception(
                     "SPMS check of %s: result stored but not processed",
                     move.name,
                 )
         elif code == "301":
             with self.env.cr.savepoint():
-                self._l10n_pt_spms_check_flag_anomaly(move, code)
+                self._l10n_pt_spms_check_flag_incident(move, code)
         elif code in ("302", "999"):
             _logger.debug("SPMS check of %s: no result yet (code %s)", move.name, code)
         else:
@@ -123,16 +120,16 @@ class EdiExchangeRecord(models.Model):
                 code,
             )
 
-    def _l10n_pt_spms_check_flag_anomaly(self, move, code):
+    def _l10n_pt_spms_check_flag_incident(self, move, code):
         """Store only the code: the message is composed — and
         translated — when the result is read."""
         check = move.spms_invoice_check_ids[:1]
         if not check:
             self.env["spms.invoice.check"].create(
-                {"move_id": move.id, "ws_anomaly_code": code}
+                {"move_id": move.id, "ws_incident_code": code}
             )
-        elif check.ws_anomaly_code != code:
-            check.ws_anomaly_code = code
+        elif check.ws_incident_code != code:
+            check.ws_incident_code = code
 
     def _l10n_pt_spms_check_fetch(self, move):
         """Ask the CCF for the check result of one invoice, mirroring
@@ -186,7 +183,6 @@ class EdiExchangeRecord(models.Model):
         bytes: the encoding its XML declaration announces must survive
         verbatim into the stored file.
         """
-        # resolve_entities off: XXE hardening on external data
         parser = etree.XMLParser(resolve_entities=False)
         root = etree.fromstring(content, parser)
         code = None
