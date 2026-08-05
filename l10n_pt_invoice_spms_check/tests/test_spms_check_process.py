@@ -391,14 +391,14 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(check.error_count, 1)
         self.assertEqual(len(self._attachments(check)), 1)
 
-    def test_definitive_result_supersedes_anomaly(self):
+    def test_definitive_result_supersedes_incident(self):
         self.env["spms.invoice.check"].create(
-            {"move_id": self.invoice.id, "ws_anomaly_code": "301"}
+            {"move_id": self.invoice.id, "ws_incident_code": "301"}
         )
         self.assertEqual(self._check().state, "error")
         self._process(_document(claims=_claim("TESTP001", errors=_erro("C011"))))
         check = self._check()
-        self.assertFalse(check.ws_anomaly_code)
+        self.assertFalse(check.ws_incident_code)
         self.assertFalse(check.error_message)
         self.assertEqual(check.state, "done")
         self.assertTrue(check.credit_note_move_id)

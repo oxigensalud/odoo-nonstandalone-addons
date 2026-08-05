@@ -14,7 +14,7 @@
                 <field name="move_id" />
                 <field name="check_state" />
                 <field name="fetch_date" optional="hide" />
-                <field name="ws_anomaly_code" optional="hide" />
+                <field name="ws_incident_code" optional="hide" />
                 <field name="error_codes" />
                 <field name="error_count" optional="hide" />
                 <field name="credit_official" />
@@ -86,8 +86,8 @@
                             <field name="check_state" />
                             <field name="fetch_date" />
                             <field
-                                name="ws_anomaly_code"
-                                attrs="{'invisible': [('ws_anomaly_code', '=', False)]}"
+                                name="ws_incident_code"
+                                attrs="{'invisible': [('ws_incident_code', '=', False)]}"
                             />
                         </group>
                         <group name="official">
@@ -140,9 +140,9 @@
                 />
                 <separator />
                 <filter
-                    name="filter_ws_anomaly"
-                    string="WS Anomaly"
-                    domain="[('ws_anomaly_code', '!=', False)]"
+                    name="filter_ws_incident"
+                    string="WS Incident"
+                    domain="[('ws_incident_code', '!=', False)]"
                 />
                 <separator />
                 <filter

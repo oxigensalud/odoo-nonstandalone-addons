@@ -75,7 +75,7 @@ to SPMS that has no definitive check result yet. A fetched check
 document is stored as an input exchange record on the SPMS EDI backend
 and processed from there. When the CCF answers that it does not know an
 invoice that was sent successfully (return code 301), its result is
-created and held in *Error*, with the anomaly explained on the result
+created and held in *Error*, with the incident explained on the result
 form, until a definitive check result supersedes it.
 
 Every invoice sent to SPMS gets its check result attached the moment the
@@ -115,7 +115,7 @@ Known issues / Roadmap
 ======================
 
 - The polling queue has no cap or back-off: an invoice that never gets a
-  definitive answer (e.g. a permanent 301 anomaly) is retried every
+  definitive answer (e.g. a permanent 301 incident) is retried every
   pass, forever. Harmless at the current volumes — one read-only call
   per invoice and pass — but revisit if the stuck tail ever grows enough
   to matter.

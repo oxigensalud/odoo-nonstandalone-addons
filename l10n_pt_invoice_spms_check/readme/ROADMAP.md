@@ -1,5 +1,5 @@
 - The polling queue has no cap or back-off: an invoice that never gets
-  a definitive answer (e.g. a permanent 301 anomaly) is retried every
+  a definitive answer (e.g. a permanent 301 incident) is retried every
   pass, forever. Harmless at the current volumes — one read-only call
   per invoice and pass — but revisit if the stuck tail ever grows
   enough to matter.

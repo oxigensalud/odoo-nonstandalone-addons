@@ -149,15 +149,15 @@ class SpmsInvoiceCheck(models.Model):
         string="Error Message",
         compute="_compute_error_message",
         help="Why the result is held in error: a live credit note this "
-        "module did not create, or an anomalous web-service answer. "
+        "module did not create, or a web-service incident. "
         "Computed live and never stored, so fixing the cause clears it "
         "on its own.",
     )
-    ws_anomaly_code = fields.Char(
-        string="WS Anomaly Code",
+    ws_incident_code = fields.Char(
+        string="WS Incident Code",
         readonly=True,
         copy=False,
-        help="Return code of an anomalous web-service answer that needs "
+        help="Return code of a web-service incident that needs "
         "human review: the CCF does not recognise an invoice that was "
         "sent successfully (301). Superseded by the arrival of a "
         "definitive check result.",
@@ -244,7 +244,7 @@ class SpmsInvoiceCheck(models.Model):
         official_touched = any(field in vals for field in OFFICIAL_VALUE_FIELDS)
         state_touched = official_touched or any(
             field in vals
-            for field in ("check_state", "ws_anomaly_code", "generation_error")
+            for field in ("check_state", "ws_incident_code", "generation_error")
         )
         if official_touched:
             for rec in self:
@@ -279,7 +279,7 @@ class SpmsInvoiceCheck(models.Model):
     @api.depends(
         "move_id.reversal_move_id.state",
         "credit_note_move_id",
-        "ws_anomaly_code",
+        "ws_incident_code",
         "check_state",
         "generation_error",
     )
@@ -294,13 +294,13 @@ class SpmsInvoiceCheck(models.Model):
                 ) % ", ".join(foreign_notes.mapped("display_name"))
             elif rec.generation_error:
                 rec.error_message = rec.generation_error
-            elif rec.ws_anomaly_code and not rec.check_state:
+            elif rec.ws_incident_code and not rec.check_state:
                 rec.error_message = _(
                     "The CCF answered %(code)s to the check-result request: "
                     "it does not recognise invoice %(invoice)s even though "
                     "it was sent successfully."
                 ) % {
-                    "code": rec.ws_anomaly_code,
+                    "code": rec.ws_incident_code,
                     "invoice": rec.move_id.display_name,
                 }
             else:
@@ -320,12 +320,12 @@ class SpmsInvoiceCheck(models.Model):
         reachable. An official value of zero closes the result as
         'zero_official': legitimately settled, nothing to credit — the
         'Conferida Sem Erros' results land here by construction. A
-        web-service anomaly (301 on a sent invoice) holds the result in
+        web-service incident (301 on a sent invoice) holds the result in
         'error' for human review until a definitive check result
         arrives.
         """
         for rec in self:
-            if rec.ws_anomaly_code and not rec.check_state:
+            if rec.ws_incident_code and not rec.check_state:
                 rec.state = "error"
                 continue
             foreign_notes = rec._get_foreign_credit_notes()
