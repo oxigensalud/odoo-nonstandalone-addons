@@ -1,0 +1,1 @@
+from . import edi_input_process_l10n_pt_spms_check
