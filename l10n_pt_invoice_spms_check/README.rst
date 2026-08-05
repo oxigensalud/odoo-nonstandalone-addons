@@ -54,6 +54,12 @@ Configuration
 - Assign the *SPMS / Consultation* group to users who can read the check
   results, and *SPMS / Responsible* to the users allowed to work with
   them and with the generated credit notes.
+- The polling scheduled action (*SPMS: obtain check results*, under
+  *Settings → Technical → Automation → Scheduled Actions*) is shipped
+  deactivated because it calls the production CCF web service: activate
+  it in the production database once the SPMS credentials are in place.
+  Its *Active* field is also the pause switch — never uninstall the
+  module just to stop the calls.
 - Set the *SPMS Adjustment Line Product* on the company (SPMS page,
   visible to *Technical Settings* users): a sale service product
   required to append the adjustment line when an official value differs
@@ -62,6 +68,15 @@ Configuration
 
 Usage
 =====
+
+Results arrive on their own: an hourly scheduled action (*SPMS: obtain
+check results*) asks the CCF web service about every posted invoice sent
+to SPMS that has no definitive check result yet. A fetched check
+document is stored as an input exchange record on the SPMS EDI backend
+and processed from there. When the CCF answers that it does not know an
+invoice that was sent successfully (return code 301), its result is
+created and held in *Error*, with the anomaly explained on the result
+form, until a definitive check result supersedes it.
 
 Every invoice sent to SPMS gets its check result attached the moment the
 check resolves it: the invoice form shows a smart button with the error
@@ -74,14 +89,19 @@ error list — searchable, filterable and grouped by level by default —
 since a result can carry hundreds of error rows.
 
 For a result that came back with errors, a draft rectifying invoice is
-created through the standard reversal path, cut down to the rejected
-prescriptions, and linked back to the result. When the official value
-differs from the itemised total, an adjustment line (service product
-configured on the company, SPMS page) is appended so the total matches
-the official value exactly; if no line base can reach it (global tax
-rounding), the group tax amount is forced instead (±0.01 max deviation
-from the computed tax). Drafts stay drafts: the accounting team reviews
-and posts them; the EDI circuit takes over from there.
+created automatically the moment the result is processed, through the
+standard reversal path, cut down to the rejected prescriptions, and
+linked back to the result. When the generation of a result fails
+(adjustment product not configured, a prescription with no matching
+invoice line, a foreign credit note), that result alone is held in
+*Error* with the reason on its form; fix the cause and reprocess the
+document to retry — the rest of the batch is never dragged along. When
+the official value differs from the itemised total, an adjustment line
+(service product configured on the company, SPMS page) is appended so
+the total matches the official value exactly; if no line base can reach
+it (global tax rounding), the group tax amount is forced instead (±0.01
+max deviation from the computed tax). Drafts stay drafts: the accounting
+team reviews and posts them; the EDI circuit takes over from there.
 
 Once a credit note is generated and alive, the official totals of its
 result are locked; cancel the credit note first to change them.
@@ -94,18 +114,14 @@ module never adopts or decides — a human fixes accounting first.
 Known issues / Roadmap
 ======================
 
-- The web-service transport (the ``edi.output.check`` component on the
-  SPMS EDI backend), the check-document parser and the automatic draft
-  generation trigger are not wired yet: results and their error rows are
-  created by code (see the tests) until they land.
-- Error codes are stored as plain codes for now; a shared error-type
-  master (auto-creating unknown codes, carrying the per-code noise and
-  classification attributes) will replace them.
+- The polling queue has no cap or back-off: an invoice that never gets a
+  definitive answer (e.g. a permanent 301 anomaly) is retried every
+  pass, forever. Harmless at the current volumes — one read-only call
+  per invoice and pass — but revisit if the stuck tail ever grows enough
+  to matter.
 - A prescription the parser cannot match to an original invoice line
   blocks the generation of its invoice, with no manual exclusion lever:
   revisit if a real case ever needs one.
-- The raw check document is meant to be attached to its result on
-  processing, as evidence independent of the exchange-record lifecycle.
 
 Bug Tracker
 ===========
