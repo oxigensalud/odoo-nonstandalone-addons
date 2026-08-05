@@ -1,0 +1,1016 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_pt_invoice_spms_check
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 14.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-05 14:40+0000\n"
+"PO-Revision-Date: 2026-08-05 14:40+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_count
+msgid "# Errors"
+msgstr "Nº de errores"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_error_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_error_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_error_count
+msgid "# SPMS Check Errors"
+msgstr "Nº de errores de conferencia SPMS"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_count
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_count
+msgid "# SPMS Invoice Checks"
+msgstr "Nº de conferencias SPMS"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid ""
+"%(count)s of the %(total)s errors of the check document sit at positions "
+"this parser does not know: the error list below is incomplete. The raw "
+"document attached to this result is the authority."
+msgstr ""
+"%(count)s de los %(total)s errores del documento de conferencia están en "
+"posiciones que este parser no conoce: la lista de errores de abajo está "
+"incompleta. El documento en bruto adjunto a este resultado es la autoridad."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid "(empty)"
+msgstr "(vacío)"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_allowed
+msgid "Allowed Amount"
+msgstr "Importe admitido"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_paid
+msgid "Allowed/paid days for the claim; may be empty in the document."
+msgstr ""
+"Días admitidos/pagados de la prestación; puede venir vacío en el documento."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.constraint,message:l10n_pt_invoice_spms_check.constraint_spms_invoice_check_move_uniq
+msgid "An invoice can only carry one check result."
+msgstr "Una factura solo puede tener un resultado de conferencia."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_billed
+msgid "Billed Amount"
+msgstr "Importe facturado"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_billed
+msgid "Billed Days"
+msgstr "Días facturados"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_billed
+msgid "Billed quantity in days for the claim."
+msgstr "Cantidad facturada en días de la prestación."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.account_move_view_form
+#, python-format
+msgid "Check Errors"
+msgstr "Errores de conferencia"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__check_state
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Check State"
+msgstr "Estado de conferencia"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__check_state__with_errors
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Checked With Errors"
+msgstr "Conferida con errores"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__check_state__without_errors
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Checked Without Errors"
+msgstr "Conferida sin errores"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__prestacao
+msgid "Claim"
+msgstr "Prestación"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Claim Level"
+msgstr "Nivel prestación"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_billed
+msgid ""
+"Claim total as read by the check, untaxed. Identical on every row of the "
+"same prescription; read from the document, never recomputed."
+msgstr ""
+"Total de la prestación leído por la conferencia, sin impuestos. Idéntico en "
+"todas las filas de la misma prescripción; leído del documento, nunca "
+"recalculado."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_allowed
+msgid ""
+"Claim total recomputed by the check, untaxed. Identical on every row of the "
+"same prescription; read from the document, never recomputed."
+msgstr ""
+"Total de la prestación recalculado por la conferencia, sin impuestos. "
+"Idéntico en todas las filas de la misma prescripción; leído del documento, "
+"nunca recalculado."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__amount_lines_untaxed
+msgid "Claims Amount (Untaxed)"
+msgstr "Importe de prestaciones (sin impuestos)"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model,name:l10n_pt_invoice_spms_check.model_res_company
+msgid "Companies"
+msgstr "Compañías"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__company_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__company_id
+msgid "Company"
+msgstr "Compañía"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__parse_warning
+msgid ""
+"Completeness warning raised while parsing the check document: some errors "
+"sit at positions the parser does not know, so the error list may be "
+"incomplete. The raw document attached to this result is the authority. Never"
+" blocks the flow."
+msgstr ""
+"Aviso de completitud generado al analizar el documento de conferencia: "
+"algunos errores están en posiciones que el parser no conoce, así que la "
+"lista de errores puede estar incompleta. El documento en bruto adjunto a "
+"este resultado es la autoridad. Nunca bloquea el flujo."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"Configure the SPMS adjustment line product on company %s before generating "
+"credit notes that require an adjustment line."
+msgstr ""
+"Configure el producto de la línea de ajuste SPMS en la compañía %s antes de "
+"generar facturas rectificativas que requieran línea de ajuste."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:res.groups,name:l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation
+msgid "Consultation"
+msgstr "Consulta"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__create_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__create_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__create_date
+msgid "Created on"
+msgstr "Creado el"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_note_move_id
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_tree
+#, python-format
+msgid "Credit Note"
+msgstr "Factura rectificativa"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/account_move.py:0
+#, python-format
+msgid ""
+"Credit note %(note)s was cancelled: the check result of invoice %(invoice)s "
+"is ready for generation again."
+msgstr ""
+"La factura rectificativa %(note)s se ha cancelado: el resultado de "
+"conferencia de la factura %(invoice)s vuelve a estar listo para generación."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__refund_move_line_id
+msgid "Credit-note line generated from this prescription (audit only)."
+msgstr ""
+"Línea de la factura rectificativa generada desde esta prescripción (solo "
+"auditoría)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__currency_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__currency_id
+msgid "Currency"
+msgstr "Moneda"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__check_state
+msgid ""
+"Definitive state reported by the check document (Conferida Com Erros / "
+"Conferida Sem Erros)."
+msgstr ""
+"Estado definitivo informado por el documento de conferencia (Conferida Com "
+"Erros / Conferida Sem Erros)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_difference
+msgid "Difference"
+msgstr "Diferencia"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_edi_exchange_record__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__display_name
+msgid "Display Name"
+msgstr "Nombre mostrado"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_codes
+msgid "Distinct error codes reported for this invoice."
+msgstr "Códigos de error distintos informados para esta factura."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__done
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Done"
+msgstr "Hecho"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_note_move_id
+msgid ""
+"Draft credit note generated for this invoice by this module. Full pointer "
+"means live note: it is released automatically the moment the note is "
+"cancelled or deleted."
+msgstr ""
+"Factura rectificativa borrador generada para esta factura por este módulo. "
+"Puntero lleno significa nota viva: se libera automáticamente en cuanto la "
+"nota se cancela o se elimina."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model,name:l10n_pt_invoice_spms_check.model_edi_exchange_record
+msgid "EDI exchange Record"
+msgstr "Registro de Intercambio EDI"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__error
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Error"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__code
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Error Code"
+msgstr "Código de error"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_codes
+msgid "Error Codes"
+msgstr "Códigos de error"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__description
+msgid "Error Description"
+msgstr "Descripción del error"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_message
+msgid "Error Message"
+msgstr "Mensaje de error"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__error_type_id
+msgid "Error Type"
+msgstr "Tipo de error"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__code
+msgid "Error code reported by the check (Erro/Codigo), e.g. C010, C012, C313."
+msgstr ""
+"Código de error informado por la conferencia (Erro/Codigo), p. ej. C010, "
+"C012, C313."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__description
+msgid "Error description as reported (Erro/Mensagem)."
+msgstr "Descripción del error tal como se informa (Erro/Mensagem)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_ids
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
+msgid "Errors"
+msgstr "Errores"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Exclude Noise"
+msgstr "Excluir ruido"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"Expected exactly one receivable/payable line on the draft credit note "
+"%(move)s, found %(count)d."
+msgstr ""
+"Se esperaba exactamente una línea a cobrar/pagar en el borrador de factura "
+"rectificativa %(move)s; se han encontrado %(count)d."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"Expected exactly one tax line for tax %(tax)s on the draft credit note "
+"%(move)s, found %(count)d."
+msgstr ""
+"Se esperaba exactamente una línea de impuesto para el impuesto %(tax)s en el"
+" borrador de factura rectificativa %(move)s; se han encontrado %(count)d."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__fetch_date
+msgid "Fetch Date"
+msgstr "Fecha de obtención"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__generation_error
+msgid "Generation Error"
+msgstr "Error de generación"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Group By"
+msgstr "Agrupar por"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_edi_exchange_record__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__id
+msgid "ID"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__invoice
+msgid "Invoice"
+msgstr "Factura"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/account_move.py:0
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__result_id
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+#, python-format
+msgid "Invoice Check"
+msgstr "Conferencia de factura"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Invoice Level"
+msgstr "Nivel factura"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__move_id
+msgid ""
+"Invoice this check result belongs to. One result per invoice: the first "
+"definitive answer of the check closes the invoice permanently."
+msgstr ""
+"Factura a la que pertenece este resultado de conferencia. Un resultado por "
+"factura: la primera respuesta definitiva de la conferencia cierra la factura"
+" permanentemente."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_billed_taxed
+msgid ""
+"Invoice total as read by the check, taxes included (TotalFaturaIVALido)."
+msgstr ""
+"Total de la factura leído por la conferencia, impuestos incluidos "
+"(TotalFaturaIVALido)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_billed
+msgid "Invoice total as read by the check, untaxed (TotalFaturaLido)."
+msgstr ""
+"Total de la factura leído por la conferencia, sin impuestos "
+"(TotalFaturaLido)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed_taxed
+msgid ""
+"Invoice total recomputed by the check, taxes included "
+"(TotalFaturaIVACalculado)."
+msgstr ""
+"Total de la factura recalculado por la conferencia, impuestos incluidos "
+"(TotalFaturaIVACalculado)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed
+msgid "Invoice total recomputed by the check, untaxed (TotalFaturaCalculado)."
+msgstr ""
+"Total de la factura recalculado por la conferencia, sin impuestos "
+"(TotalFaturaCalculado)."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model,name:l10n_pt_invoice_spms_check.model_account_move
+msgid "Journal Entry"
+msgstr "Asiento de Diario"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_edi_exchange_record____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error____last_update
+msgid "Last Modified on"
+msgstr "Última modificación el"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__write_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__write_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__level
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Level"
+msgstr "Nivel"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__linha
+msgid "Line"
+msgstr "Línea"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Line Level"
+msgstr "Nivel línea"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__provider_system_ref
+msgid ""
+"Line-level anchor: provider-system reference of the service line the error "
+"is anchored to. Kept as audit of which line came flagged, never used as a "
+"dedup key."
+msgstr ""
+"Ancla a nivel de línea: referencia del sistema del proveedor de la línea de "
+"servicio a la que está anclado el error. Se conserva como auditoría de qué "
+"línea vino marcada; nunca se usa como clave de deduplicación."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__lote
+msgid "Lot"
+msgstr "Lote"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Lot Level"
+msgstr "Nivel lote"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_number
+msgid "Lot Number"
+msgstr "Número de lote"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_type
+msgid "Lot Type"
+msgstr "Tipo de lote"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_number
+msgid "Lot-level anchor: number of the lot the error is anchored to."
+msgstr "Ancla a nivel de lote: número del lote al que está anclado el error."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_type
+msgid "Lot-level anchor: type of the lot the error is anchored to."
+msgstr "Ancla a nivel de lote: tipo del lote al que está anclado el error."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__level
+msgid "Nesting point of the check document the error is anchored to."
+msgstr ""
+"Punto de anidamiento del documento de conferencia al que está anclado el "
+"error."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"Nothing to credit on invoice %(invoice)s: the official value is %(value)s."
+msgstr ""
+"Nada que rectificar en la factura %(invoice)s: el valor oficial es "
+"%(value)s."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_official
+msgid "Official Credit"
+msgstr "Crédito oficial"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__official_locked
+msgid "Official Locked"
+msgstr "Valor oficial bloqueado"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_official
+msgid ""
+"Official credit-note value for this invoice, taxes included: "
+"TotalFaturaIVALido - TotalFaturaIVACalculado, exactly as the check document "
+"states it. The generated credit note must carry exactly this value."
+msgstr ""
+"Valor oficial de la factura rectificativa para esta factura, impuestos "
+"incluidos: TotalFaturaIVALido - TotalFaturaIVACalculado, exactamente como lo"
+" indica el documento de conferencia. La factura rectificativa generada debe "
+"llevar exactamente este valor."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__oficio
+msgid "Ofício"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__oficio
+msgid "Ofício text communicated with the check result, as received."
+msgstr ""
+"Texto del ofício comunicado con el resultado de conferencia, tal como se "
+"recibió."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__move_id
+msgid "Original Invoice"
+msgstr "Factura original"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__move_line_id
+msgid "Original Invoice Line"
+msgstr "Línea de la factura original"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__move_line_id
+msgid ""
+"Original invoice line matched by prescription number within the invoice."
+msgstr ""
+"Línea de la factura original casada por número de prescripción dentro de la "
+"factura."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_difference
+msgid ""
+"Over-billed base, untaxed: billed minus allowed. This is the base the "
+"credit-note line will carry; VAT is applied by the line's taxes."
+msgstr ""
+"Base sobrefacturada, sin impuestos: facturado menos admitido. Es la base que"
+" llevará la línea de la factura rectificativa; el IVA lo aplican los "
+"impuestos de la línea."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_paid
+msgid "Paid Days"
+msgstr "Días pagados"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__parse_warning
+msgid "Parse Warning"
+msgstr "Aviso de análisis"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__prescription
+msgid "Prescription"
+msgstr "Prescripción"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"Prescription %s cannot be mapped to a single line of the credit-note draft."
+msgstr ""
+"La prescripción %s no se puede asignar a una única línea del borrador de "
+"factura rectificativa."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__prescricao
+msgid "Prescription Data"
+msgstr "Datos de prescripción"
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "Prescription Data Level"
+msgstr "Nivel datos de prescripción"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__prescription
+msgid ""
+"Prescription number (NumeroPrescricao), the billing-line key of the claim "
+"the error is anchored to. Patient-linked: treat as an opaque identifier."
+msgstr ""
+"Número de prescripción (NumeroPrescricao), la clave de línea de facturación "
+"de la prestación a la que está anclado el error. Vinculado al paciente: "
+"trátese como un identificador opaco."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid "Prescriptions not matched to an original invoice line: %s."
+msgstr "Prescripciones sin casar con una línea de la factura original: %s."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__provider_system_ref
+msgid "Provider System Ref"
+msgstr "Ref. sistema del proveedor"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__ready
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Ready"
+msgstr "Listo"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__refund_move_line_id
+msgid "Refund Line"
+msgstr "Línea de rectificativa"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:res.groups,name:l10n_pt_invoice_spms_check.spms_invoice_check_group_responsible
+msgid "Responsible"
+msgstr "Responsable"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_anomaly_code
+msgid ""
+"Return code of an anomalous web-service answer that needs human review: the "
+"CCF does not recognise an invoice that was sent successfully (301). "
+"Superseded by the arrival of a definitive check result."
+msgstr ""
+"Código de retorno de una respuesta anómala del servicio web que necesita "
+"revisión humana: el CCF no reconoce una factura que se envió correctamente "
+"(301). Queda superado con la llegada de un resultado de conferencia "
+"definitivo."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.module.category,name:l10n_pt_invoice_spms_check.module_category_spms
+msgid "SPMS"
+msgstr ""
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_product_id
+msgid "SPMS Adjustment Line Product"
+msgstr "Producto de línea de ajuste SPMS"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_check
+msgid "SPMS Invoice Check"
+msgstr "Conferencia SPMS de factura"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_check_error
+msgid "SPMS Invoice Check Error"
+msgstr "Error de conferencia SPMS de factura"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.actions.act_window,name:l10n_pt_invoice_spms_check.spms_invoice_check_action
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_ids
+#: model:ir.ui.menu,name:l10n_pt_invoice_spms_check.spms_invoice_check_menu
+msgid "SPMS Invoice Checks"
+msgstr "Conferencias SPMS de facturas"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_credit_note_invoice_check_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_credit_note_invoice_check_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_credit_note_invoice_check_ids
+msgid "SPMS Invoice Checks (Credit Note)"
+msgstr "Conferencias SPMS de facturas (rectificativa)"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid "SPMS check %s"
+msgstr "Conferencia SPMS %s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid ""
+"SPMS check result of %(invoice)s processed: %(state)s, %(count)s error rows."
+msgstr ""
+"Resultado de conferencia SPMS de %(invoice)s procesado: %(state)s, %(count)s"
+" filas de error."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.actions.server,name:l10n_pt_invoice_spms_check.spms_check_update_cron_ir_actions_server
+#: model:ir.cron,cron_name:l10n_pt_invoice_spms_check.spms_check_update_cron
+#: model:ir.cron,name:l10n_pt_invoice_spms_check.spms_check_update_cron
+msgid "SPMS: obtain check results"
+msgstr "SPMS: obtener resultados de conferencia"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_product_id
+msgid ""
+"Service product used for the adjustment line appended to a generated credit "
+"note when the official value differs from the prescription lines total."
+msgstr ""
+"Producto de tipo servicio usado para la línea de ajuste añadida a una "
+"factura rectificativa generada cuando el valor oficial difiere del total de "
+"las líneas de prescripción."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__state
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "State"
+msgstr "Estado"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__amount_lines_untaxed
+msgid ""
+"Sum of the per-prescription credit bases, without taxes: what the generated "
+"credit-note lines will add up to."
+msgstr ""
+"Suma de las bases de crédito por prescripción, sin impuestos: lo que sumarán"
+" las líneas de la factura rectificativa generada."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The CCF answered %(code)s to the check-result request: it does not recognise"
+" invoice %(invoice)s even though it was sent successfully."
+msgstr ""
+"El CCF respondió %(code)s a la petición del resultado de conferencia: no "
+"reconoce la factura %(invoice)s aunque se envió correctamente."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The adjustment line product %(product)s must carry exactly one percentage "
+"customer tax for company %(company)s."
+msgstr ""
+"El producto de línea de ajuste %(product)s debe llevar exactamente un "
+"impuesto de cliente porcentual para la compañía %(company)s."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid "The check document of %(invoice)s is not parseable XML: %(error)s"
+msgstr ""
+"El documento de conferencia de %(invoice)s no es XML analizable: %(error)s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid ""
+"The check document of %(invoice)s reports an unknown EstadoFactura: "
+"%(estado)s"
+msgstr ""
+"El documento de conferencia de %(invoice)s informa de un EstadoFactura "
+"desconocido: %(estado)s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid ""
+"The check document of %s carries no FacturasErrosEDiferencas extension."
+msgstr ""
+"El documento de conferencia de %s no lleva la extensión "
+"FacturasErrosEDiferencas."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid ""
+"The check result of %s is already carried by a live credit note; cancel that"
+" credit note before reprocessing the document."
+msgstr ""
+"El resultado de conferencia de %s ya lo lleva una factura rectificativa "
+"viva; cancele esa factura rectificativa antes de reprocesar el documento."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The credit note total %(total).2f still differs from the official value "
+"%(official).2f after imposing the tax amount."
+msgstr ""
+"El total de la factura rectificativa %(total).2f sigue difiriendo del valor "
+"oficial %(official).2f tras imponer el importe del impuesto."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The draft tax amount (%(draft).2f) differs from the expected tax "
+"(%(expected).2f) for the taxes on its lines; review the tax configuration "
+"before retrying."
+msgstr ""
+"El importe de impuestos del borrador (%(draft).2f) difiere del impuesto "
+"esperado (%(expected).2f) para los impuestos de sus líneas; revise la "
+"configuración de impuestos antes de reintentar."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The draft untaxed total (%(draft).2f) differs from the prescription claims "
+"total (%(expected).2f); review the draft lines before retrying."
+msgstr ""
+"El total sin impuestos del borrador (%(draft).2f) difiere del total de "
+"prestaciones por prescripción (%(expected).2f); revise las líneas del "
+"borrador antes de reintentar."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid "The exchange record %s is not linked to an invoice."
+msgstr "El registro de intercambio %s no está vinculado a una factura."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The invoice already has a live credit note this module did not create: %s. "
+"Only one credit note may exist per invoice; fix or cancel it in accounting "
+"first."
+msgstr ""
+"La factura ya tiene una factura rectificativa viva que este módulo no creó: "
+"%s. Solo puede existir una factura rectificativa por factura; corríjala o "
+"cancélela antes en contabilidad."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The official value %(value)s exceeds the total of the original invoice "
+"%(invoice)s (%(total)s)."
+msgstr ""
+"El valor oficial %(value)s supera el total de la factura original "
+"%(invoice)s (%(total)s)."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The official value of %s is already carried by a credit note; cancel that "
+"credit note first to change it."
+msgstr ""
+"El valor oficial de %s ya lo lleva una factura rectificativa; cancele antes "
+"esa factura rectificativa para cambiarlo."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid "The original invoice %s is not posted."
+msgstr "La factura original %s no está publicada."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The remaining difference %(difference).2f between the official value "
+"%(official).2f and the credit note total %(total).2f exceeds one rounding "
+"step (%(step).2f); it cannot be absorbed by the imposed tax amount."
+msgstr ""
+"La diferencia restante %(difference).2f entre el valor oficial "
+"%(official).2f y el total de la factura rectificativa %(total).2f supera un "
+"paso de redondeo (%(step).2f); no puede absorberse imponiendo el importe del"
+" impuesto."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid "The result is no longer ready (current state: %s)."
+msgstr "El resultado ya no está listo (estado actual: %s)."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The standard reversal did not create a single draft credit note for %s."
+msgstr ""
+"La reversión estándar no creó una única factura rectificativa borrador para "
+"%s."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid "There is no prescription with a positive difference."
+msgstr "No hay ninguna prescripción con diferencia positiva."
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+msgid "To Classify"
+msgstr "Por clasificar"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed
+msgid "Total Allowed"
+msgstr "Total admitido"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed_taxed
+msgid "Total Allowed (Taxed)"
+msgstr "Total admitido (con impuestos)"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_billed
+msgid "Total Billed"
+msgstr "Total facturado"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_billed_taxed
+msgid "Total Billed (Taxed)"
+msgstr "Total facturado (con impuestos)"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__error_type_id
+msgid ""
+"Type of this error in the shared SPMS error-type master; unknown codes are "
+"auto-created there as pending classification."
+msgstr ""
+"Tipo de este error en el maestro compartido de tipos de error SPMS; los "
+"códigos desconocidos se crean allí automáticamente como pendientes de "
+"clasificación."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid "Unexpected generation failure; see the server log."
+msgstr "Fallo de generación inesperado; consulte el registro del servidor."
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "WS Anomaly"
+msgstr "Anomalía WS"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_anomaly_code
+msgid "WS Anomaly Code"
+msgstr "Código de anomalía WS"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__fetch_date
+msgid "When the definitive check document was fetched from the web service."
+msgstr ""
+"Cuándo se obtuvo el documento de conferencia definitivo del servicio web."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__generation_error
+msgid ""
+"Why the automatic credit-note generation of this result failed; the result "
+"is held in Error until the cause is fixed and the document is reprocessed. "
+"Other results of the same batch are never dragged along."
+msgstr ""
+"Por qué falló la generación automática de la factura rectificativa de este "
+"resultado; el resultado se retiene en Error hasta que se corrige la causa y "
+"se reprocesa el documento. Los demás resultados del mismo lote nunca se ven "
+"arrastrados."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_message
+msgid ""
+"Why the result is held in error: a live credit note this module did not "
+"create, or an anomalous web-service answer. Computed live and never stored, "
+"so fixing the cause clears it on its own."
+msgstr ""
+"Por qué el resultado está retenido en error: una factura rectificativa viva "
+"que este módulo no creó, o una respuesta anómala del servicio web. Se "
+"calcula en vivo y nunca se almacena, así que corregir la causa lo limpia por"
+" sí solo."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__zero_official
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
+msgid "Zero Official Value"
+msgstr "Valor oficial cero"
