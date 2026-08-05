@@ -51,6 +51,13 @@
                 >
                     <field name="error_message" nolabel="1" />
                 </div>
+                <div
+                    class="alert alert-warning"
+                    role="alert"
+                    attrs="{'invisible': [('parse_warning', '=', False)]}"
+                >
+                    <field name="parse_warning" nolabel="1" />
+                </div>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button
