@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2025 Dixmit
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template
+        id="spms_cius_pt_211_PartyType"
+        inherit_id="account_edi_ubl_cii.ubl_20_PartyType"
+        primary="True"
+    >
+        <xpath
+            expr="//*[local-name()='PartyLegalEntity']//*[local-name()='RegistrationAddress']"
+            position="inside"
+        >
+            <cbc:CorporateRegistrationScheme
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >
+                <cbc:Name t-esc="foreach_vals.get('registration_name')" />
+            </cbc:CorporateRegistrationScheme>
+        </xpath>
+        <xpath expr="//*[local-name()='TaxScheme']" position="inside">
+            <cbc:TaxTypeCode
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >IVA</cbc:TaxTypeCode>
+        </xpath>
+    </template>
+    <template
+        id="spms_cius_pt_211_TaxCategoryType"
+        inherit_id="account_edi_ubl_cii.ubl_20_TaxCategoryType"
+        primary="True"
+    >
+        <xpath
+            expr="//*[local-name()='TaxScheme']//*[local-name()='ID']"
+            position="attributes"
+        >
+            <attribute name="t-esc">'PT IVA'</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='TaxScheme']" position="inside">
+            <cbc:TaxTypeCode
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >IVA</cbc:TaxTypeCode>
+        </xpath>
+    </template>
+    <template
+        id="spms_cius_pt_211_AddressType"
+        inherit_id="account_edi_ubl_cii.ubl_20_AddressType"
+        primary="True"
+    >
+        <xpath expr="//*[local-name()='StreetName']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='AdditionalStreetName']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='CountrySubentity']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='CountrySubentityCode']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+        <xpath expr="//*[local-name()='PostalZone']" position="after">
+            <cac:AddressLine
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            >
+                <cbc:Line
+                    xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+                    t-esc="vals.get('street_name')"
+                />
+            </cac:AddressLine>
+            <cac:AddressLine
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            >
+                <cbc:Line
+                    xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+                    t-esc="vals.get('additional_street_name')"
+                />
+            </cac:AddressLine>
+        </xpath>
+    </template>
+    <template
+        id="spms_cius_pt_211_InvoiceType"
+        inherit_id="account_edi_ubl_cii.ubl_21_InvoiceType"
+        primary="True"
+    >
+        <xpath
+            expr="//*[local-name()='AccountingSupplierParty']/*[local-name()='Party']"
+            position="before"
+        >
+            <cbc:CustomerAssignedAccountID
+                t-esc="vals.get('customer_assigned_account_id')"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            />
+        </xpath>
+        <xpath expr="//*[local-name()='UBLVersionID']" position="before">
+            <ext:UBLExtensions
+                xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"
+            >
+                <ext:UBLExtension>
+                    <t
+                        t-call="l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms"
+                    />
+                </ext:UBLExtension>
+            </ext:UBLExtensions>
+        </xpath>
+    </template>
+
+    <template
+        id="spms_cius_pt_211_InvoiceLine"
+        inherit_id="account_edi_ubl_cii.ubl_20_InvoiceLineType"
+        primary="True"
+    >
+        <xpath expr="//*[local-name()='Item']" position="inside">
+            <t t-set="price_vals" t-value="vals.get('price_vals', {})" />
+            <cac:StandardItemIdentification
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >
+                <cbc:ID t-esc="price_vals.get('spms_tipo')" />
+            </cac:StandardItemIdentification>
+            <cac:AdditionalItemProperty
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            >
+                <cbc:Name>NUMERO DISPENSAS</cbc:Name>
+                <cbc:Value t-esc="int(vals.get('invoiced_quantity'))" />
+            </cac:AdditionalItemProperty>
+        </xpath>
+    </template>
+
+    <template id="spms_cius_pt_211_InvoiceExtension_spms">
+        <t
+            xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"
+        >
+            <ext:ExtensionVersionID>ACSS:CCF:CRDExtension:1.0</ext:ExtensionVersionID>
+            <ext:ExtensionContent>
+                <crd:CRDExtension
+                    xmlns:crd="urn:acss:ccf:facturacaoelectronica:schema:xsd:CRD"
+                >
+                    <t t-set="crd" t-value="vals.get('spms_crd_vals', {})" />
+                    <crd:ValorTotalPrestacoes
+                        t-esc="format_float(crd.get('valor_total_prestacoes'), crd.get('currency_dp'))"
+                    />
+                    <crd:QuantidadeTotalPrestacoes
+                        t-esc="crd.get('quantidade_total_prestacoes', 0)"
+                    />
+                    <crd:NumeroLotes t-esc="crd.get('numero_lotes', 0)" />
+                    <crd:Lote t-foreach="crd.get('lotes', [])" t-as="lote">
+                        <crd:Numero t-esc="lote.get('numero', '')" />
+                        <crd:Tipo t-esc="lote.get('tipo', '')" />
+                        <crd:ValorTotal
+                            t-esc="format_float(lote.get('amount', 0), crd.get('currency_dp'))"
+                        />
+                        <crd:NumeroDispensas t-esc="lote.get('total')" />
+                        <crd:Dispensa
+                            t-foreach="lote.get('dispensas', [])"
+                            t-as="dispensa"
+                        >
+                            <crd:NumeroPrescricao
+                                t-esc="dispensa.get('prescription', '')"
+                            />
+                            <crd:NumeroUtente t-esc="dispensa.get('user_number', '')" />
+                            <crd:NumeroBenef
+                                t-esc="dispensa.get('beneficiary_number', '')"
+                            />
+                            <crd:TipoPrescricao
+                                t-esc="dispensa.get('prescription_type', '')"
+                            />
+                            <crd:AreaTratamento t-esc="lote.get('tipo', '')" />
+                            <crd:DataInicio t-esc="dispensa.get('start_date')" />
+                            <crd:DataFim t-esc="dispensa.get('end_date')" />
+                            <crd:ValorPrestado
+                                t-esc="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
+                            />
+                            <crd:LinhaDispensa>
+                                <crd:NumeroLinha
+                                    t-esc="dispensa.get('line_number', '')"
+                                />
+                                <crd:Sistema t-esc="dispensa.get('system', '')" />
+                                <crd:Contexto t-esc="dispensa.get('context', '')" />
+                                <crd:ValorUnitario
+                                    t-esc="format_float(dispensa.get('price_unit', 0), crd.get('currency_dp'))"
+                                />
+                                <crd:Quantidade t-esc="dispensa.get('quantity', 0)" />
+                                <crd:ValorTotal
+                                    t-esc="format_float(dispensa.get('price_subtotal', 0), crd.get('currency_dp'))"
+                                />
+                            </crd:LinhaDispensa>
+                            <crd:MotivoSuspensao
+                                t-esc="dispensa.get('suspension_reason')"
+                            />
+                        </crd:Dispensa>
+                    </crd:Lote>
+                </crd:CRDExtension>
+            </ext:ExtensionContent>
+        </t>
+    </template>
+</odoo>
