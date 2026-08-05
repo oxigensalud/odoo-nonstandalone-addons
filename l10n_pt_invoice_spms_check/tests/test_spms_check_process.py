@@ -4,6 +4,8 @@
 import base64
 from datetime import date
 
+from odoo import fields
+
 from odoo.addons.component.tests.common import SavepointComponentCase
 
 # Synthetic CCF document shapes; the synthetic NumeroUtente must never
@@ -71,8 +73,8 @@ def _document(
     estado="Conferida Com Erros",
     total_billed="41.00",
     total_allowed="5.00",
-    total_billed_taxed="43.46",
-    total_allowed_taxed="5.30",
+    total_billed_taxed="41.00",
+    total_allowed_taxed="5.00",
     oficio="Documento conferido. Com rectificações.",
     invoice_errors="",
     lote_errors="",
@@ -129,7 +131,18 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
         cls.company = cls.env.company
+        # the SPMS flow relies on global tax rounding (production setting)
+        cls.company.tax_calculation_rounding_method = "round_globally"
         cls.backend = cls.env.ref("l10n_pt_invoice_spms.spms_backend")
+        cls.tax6 = cls.env["account.tax"].create(
+            {
+                "name": "IVA 6% (OBS) test",
+                "amount_type": "percent",
+                "amount": 6.0,
+                "type_tax_use": "sale",
+                "company_id": cls.company.id,
+            }
+        )
         cls.income_account = cls.env["account.account"].search(
             [
                 ("company_id", "=", cls.company.id),
@@ -226,9 +239,9 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(check.check_state, "with_errors")
         self.assertAlmostEqual(check.total_billed, 41.0)
         self.assertAlmostEqual(check.total_allowed, 5.0)
-        self.assertAlmostEqual(check.total_billed_taxed, 43.46)
-        self.assertAlmostEqual(check.total_allowed_taxed, 5.30)
-        self.assertAlmostEqual(check.credit_official, 38.16)
+        self.assertAlmostEqual(check.total_billed_taxed, 41.0)
+        self.assertAlmostEqual(check.total_allowed_taxed, 5.0)
+        self.assertAlmostEqual(check.credit_official, 36.0)
         self.assertIn("Documento conferido", check.oficio)
         self.assertTrue(check.fetch_date)
         self.assertFalse(check.parse_warning)
@@ -252,11 +265,16 @@ class TestSpmsCheckProcess(SavepointComponentCase):
                 "TESTP001",
             )
         self.assertEqual(by_level["linha"].provider_system_ref, "REF1")
-        # the seeded master classifies C012 as systematic noise
         self.assertTrue(by_level["linha"].error_type_id.noise)
         attachment = self._attachments(check)
         self.assertEqual(len(attachment), 1)
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
+        self.assertFalse(check.generation_error)
+        self.assertEqual(check.state, "done")
+        draft = check.credit_note_move_id
+        self.assertEqual(draft.state, "draft")
+        self.assertEqual(draft.move_type, "out_refund")
+        self.assertAlmostEqual(draft.amount_total, 36.0)
 
     def test_sem_erros_closes_as_zero_official(self):
         document = _document(
@@ -272,6 +290,14 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(check.check_state, "without_errors")
         self.assertEqual(check.error_count, 0)
         self.assertEqual(check.state, "zero_official")
+        self.assertFalse(
+            self.env["account.move"].search(
+                [
+                    ("move_type", "=", "out_refund"),
+                    ("journal_id", "=", self.journal.id),
+                ]
+            )
+        )
 
     def test_unknown_code_autocreates_pending_type(self):
         document = _document(
@@ -283,13 +309,19 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertTrue(row.error_type_id.to_classify)
         self.assertEqual(row.error_type_id.message_pt, "Nova mensagem")
 
-    def test_unmatched_prescription_has_no_link_and_no_error(self):
+    def test_unmatched_prescription_has_no_link_and_no_parse_error(self):
         document = _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        row = self._check().error_ids
+        check = self._check()
+        row = check.error_ids
         self.assertEqual(row.prescription, "TESTMISSING")
         self.assertFalse(row.move_line_id)
+        # parsing never blocks; the generation reports the unmatched
+        self.assertEqual(check.state, "error")
+        self.assertIn("not matched", check.generation_error)
+        self.assertEqual(check.error_message, check.generation_error)
+        self.assertFalse(check.credit_note_move_id)
 
     def test_ambiguous_prescription_stays_unlinked(self):
         invoice = self._create_invoice(
@@ -347,7 +379,8 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertTrue(check.parse_warning)
 
     def test_reprocess_is_idempotent(self):
-        document = _document(claims=_claim("TESTP001", errors=_erro("C011")))
+        # held generation: the result never locks, reprocess stays allowed
+        document = _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
         check = self._check()
         self.assertEqual(check.error_count, 1)
@@ -367,7 +400,8 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         check = self._check()
         self.assertFalse(check.ws_anomaly_code)
         self.assertFalse(check.error_message)
-        self.assertEqual(check.state, "ready")
+        self.assertEqual(check.state, "done")
+        self.assertTrue(check.credit_note_move_id)
 
     def test_locked_result_blocks_reprocessing(self):
         refund = self.env["account.move"].create(
@@ -419,3 +453,90 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         child = self._process(_document(estado="Estado Misterioso"))
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
         self.assertFalse(self._check())
+
+    def test_trigger_holds_on_missing_adjustment_product(self):
+        document = _document(
+            total_billed_taxed="43.46",
+            total_allowed_taxed="5.30",
+            claims=_claim("TESTP001", errors=_erro("C011")),
+        )
+        child = self._process(document)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        check = self._check()
+        self.assertEqual(check.state, "error")
+        self.assertIn("adjustment line product", check.generation_error)
+        self.assertEqual(check.error_message, check.generation_error)
+        self.assertFalse(check.credit_note_move_id)
+
+    def test_trigger_retry_after_configuring_adjustment(self):
+        document = _document(
+            total_billed_taxed="43.46",
+            total_allowed_taxed="5.30",
+            claims=_claim("TESTP001", errors=_erro("C011")),
+        )
+        child = self._process(document)
+        self.assertEqual(self._check().state, "error")
+        product = self.env["product.product"].create(
+            {
+                "name": "SPMS adjustment test",
+                "type": "service",
+                "taxes_id": [(6, 0, self.tax6.ids)],
+            }
+        )
+        self.company.spms_adjustment_product_id = product
+        child.edi_exchange_state = "input_received"
+        self.backend.exchange_process(child)
+        check = self._check()
+        self.assertEqual(check.state, "done")
+        self.assertFalse(check.generation_error)
+        self.assertFalse(check.error_message)
+        self.assertAlmostEqual(check.credit_note_move_id.amount_total, 38.16)
+
+    def test_trigger_preexisting_foreign_note_blocks_generation(self):
+        invoice = self._create_invoice("FT TEST/00004", [("TESTP201", 31, 1.0)])
+        wizard = self.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, invoice.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": fields.Date.context_today(invoice),
+                "company_id": self.company.id,
+            }
+        )
+        wizard.reverse_moves()
+        foreign = invoice.reversal_move_id
+        child = self._process(
+            _document(claims=_claim("TESTP201", errors=_erro("C011"))),
+            invoice=invoice,
+        )
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        check = self._check(invoice)
+        self.assertEqual(check.state, "error")
+        self.assertFalse(check.generation_error)
+        self.assertIn(foreign.display_name, check.error_message)
+        self.assertFalse(check.credit_note_move_id)
+
+    def test_trigger_failure_does_not_drag_other_results(self):
+        bad_child = self._process(
+            _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
+        )
+        good_invoice = self._create_invoice("FT TEST/00005", [("TESTP301", 31, 1.0)])
+        good_child = self._process(
+            _document(
+                total_billed="31.00",
+                total_allowed="0.00",
+                total_billed_taxed="31.00",
+                total_allowed_taxed="0.00",
+                # a real diff-claim always carries an error (golden evidence)
+                claims=_claim(
+                    "TESTP301", billed="31.00", allowed="0.00", errors=_erro("C011")
+                ),
+            ),
+            invoice=good_invoice,
+        )
+        self.assertEqual(bad_child.edi_exchange_state, "input_processed")
+        self.assertEqual(good_child.edi_exchange_state, "input_processed")
+        self.assertEqual(self._check().state, "error")
+        good_check = self._check(good_invoice)
+        self.assertEqual(good_check.state, "done")
+        self.assertAlmostEqual(good_check.credit_note_move_id.amount_total, 31.0)
