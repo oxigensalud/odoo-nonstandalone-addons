@@ -53,10 +53,22 @@ class SpmsInvoiceCheckError(models.Model):
         readonly=True,
         help="Nesting point of the check document the error is " "anchored to.",
     )
-    code = fields.Char(
-        string="Error Code",
-        index=True,
+    error_type_id = fields.Many2one(
+        comodel_name="spms.error.type",
+        string="Error Type",
+        required=True,
         readonly=True,
+        index=True,
+        ondelete="restrict",
+        help="Type of this error in the shared SPMS error-type master; "
+        "unknown codes are auto-created there as pending "
+        "classification.",
+    )
+    code = fields.Char(
+        related="error_type_id.code",
+        store=True,
+        index=True,
+        string="Error Code",
         help="Error code reported by the check (Erro/Codigo), "
         "e.g. C010, C012, C313.",
     )

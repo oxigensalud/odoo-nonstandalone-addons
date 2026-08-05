@@ -142,7 +142,9 @@ class TestSpmsCheck(SavepointCase):
                 {
                     "result_id": result.id,
                     "level": row.get("level", "prestacao"),
-                    "code": row.get("code", "C010"),
+                    "error_type_id": cls.env["spms.error.type"]
+                    ._get_or_create(row.get("code", "C010"))
+                    .id,
                     "description": row.get("description", "Test error"),
                     "prescription": row.get("prescription"),
                     "amount_billed": row.get("billed", 0.0),
@@ -620,3 +622,21 @@ class TestSpmsCheck(SavepointCase):
         )
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         self.assertEqual(result.state, "ready")
+
+    def test_error_row_autocreates_unknown_type(self):
+        move = self._create_invoice("FT 2026/00132", [("TESTP013", 10, 1.0)])
+        result = self._create_result(
+            move,
+            [
+                {
+                    "prescription": "TESTP013",
+                    "billed": 10.0,
+                    "allowed": 0.0,
+                    "days_billed": 10.0,
+                    "code": "Z999",
+                }
+            ],
+        )
+        row = result.error_ids
+        self.assertEqual(row.code, "Z999")
+        self.assertTrue(row.error_type_id.to_classify)
