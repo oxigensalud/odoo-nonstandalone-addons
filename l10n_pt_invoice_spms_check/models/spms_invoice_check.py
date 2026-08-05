@@ -144,10 +144,19 @@ class SpmsInvoiceCheck(models.Model):
     error_message = fields.Char(
         string="Error Message",
         compute="_compute_error_message",
-        help="Why the result is held in error when the reason lives in "
-        "accounting, not in this module: names the live credit note the "
-        "module did not create. Computed live and never stored, so fixing "
-        "accounting clears it on its own.",
+        help="Why the result is held in error: a live credit note this "
+        "module did not create, or an anomalous web-service answer. "
+        "Computed live and never stored, so fixing the cause clears it "
+        "on its own.",
+    )
+    ws_anomaly_code = fields.Char(
+        string="WS Anomaly Code",
+        readonly=True,
+        copy=False,
+        help="Return code of an anomalous web-service answer that needs "
+        "human review: the CCF does not recognise an invoice that was "
+        "sent successfully (301). Superseded by the arrival of a "
+        "definitive check result.",
     )
 
     _sql_constraints = [
@@ -210,6 +219,9 @@ class SpmsInvoiceCheck(models.Model):
 
     def write(self, vals):
         official_touched = any(field in vals for field in OFFICIAL_VALUE_FIELDS)
+        state_touched = official_touched or any(
+            field in vals for field in ("check_state", "ws_anomaly_code")
+        )
         if official_touched:
             for rec in self:
                 if (
@@ -226,7 +238,7 @@ class SpmsInvoiceCheck(models.Model):
                         % rec.display_name
                     )
         res = super().write(vals)
-        if official_touched:
+        if state_touched:
             self._update_state()
         return res
 
@@ -240,20 +252,32 @@ class SpmsInvoiceCheck(models.Model):
             - self.credit_note_move_id
         )
 
-    @api.depends("move_id.reversal_move_id.state", "credit_note_move_id")
+    @api.depends(
+        "move_id.reversal_move_id.state",
+        "credit_note_move_id",
+        "ws_anomaly_code",
+        "check_state",
+    )
     def _compute_error_message(self):
         for rec in self:
             foreign_notes = rec._get_foreign_credit_notes()
-            rec.error_message = (
-                _(
+            if foreign_notes:
+                rec.error_message = _(
                     "The invoice already has a live credit note this module "
                     "did not create: %s. Only one credit note may exist per "
                     "invoice; fix or cancel it in accounting first."
-                )
-                % ", ".join(foreign_notes.mapped("display_name"))
-                if foreign_notes
-                else False
-            )
+                ) % ", ".join(foreign_notes.mapped("display_name"))
+            elif rec.ws_anomaly_code and not rec.check_state:
+                rec.error_message = _(
+                    "The CCF answered %(code)s to the check-result request: "
+                    "it does not recognise invoice %(invoice)s even though "
+                    "it was sent successfully."
+                ) % {
+                    "code": rec.ws_anomaly_code,
+                    "invoice": rec.move_id.display_name,
+                }
+            else:
+                rec.error_message = False
 
     def _update_state(self):
         """Single source of truth for the result state (semaphore).
@@ -268,9 +292,15 @@ class SpmsInvoiceCheck(models.Model):
         result (the official value is kept) so generation stays
         reachable. An official value of zero closes the result as
         'zero_official': legitimately settled, nothing to credit — the
-        'Conferida Sem Erros' results land here by construction.
+        'Conferida Sem Erros' results land here by construction. A
+        web-service anomaly (301 on a sent invoice) holds the result in
+        'error' for human review until a definitive check result
+        arrives.
         """
         for rec in self:
+            if rec.ws_anomaly_code and not rec.check_state:
+                rec.state = "error"
+                continue
             foreign_notes = rec._get_foreign_credit_notes()
             own_note_alive = (
                 rec.credit_note_move_id and rec.credit_note_move_id.state != "cancel"

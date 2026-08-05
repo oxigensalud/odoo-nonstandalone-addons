@@ -16,6 +16,8 @@
     "data": [
         "security/spms_invoice_check_security.xml",
         "security/ir.model.access.csv",
+        "data/edi.xml",
+        "data/cron.xml",
         "views/account_move_views.xml",
         "views/res_company_views.xml",
         "views/spms_invoice_check_error_views.xml",

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="spms_check_exchange_type" model="edi.exchange.type">
+        <field name="backend_id" ref="l10n_pt_invoice_spms.spms_backend" />
+        <field name="name">SPMS Check Result</field>
+        <field name="code">l10n_pt_spms_check</field>
+        <field name="backend_type_id" ref="l10n_pt_invoice_spms.spms_backend_type" />
+        <field name="direction">input</field>
+        <field name="exchange_filename_pattern">{record_name}--{dt}</field>
+        <field name="exchange_file_ext">xml</field>
+    </record>
+</odoo>
