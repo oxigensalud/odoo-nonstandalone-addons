@@ -17,9 +17,14 @@ computed official credit value. The *Errors* smart button opens the real
 error list — searchable, filterable and grouped by level by default —
 since a result can carry hundreds of error rows.
 
-For a result that came back with errors, a draft rectifying invoice is created
-through the standard reversal path, cut down to the rejected
-prescriptions, and linked back to the result. When the official value
+For a result that came back with errors, a draft rectifying invoice is
+created automatically the moment the result is processed, through the
+standard reversal path, cut down to the rejected prescriptions, and
+linked back to the result. When the generation of a result fails
+(adjustment product not configured, a prescription with no matching
+invoice line, a foreign credit note), that result alone is held in
+*Error* with the reason on its form; fix the cause and reprocess the
+document to retry — the rest of the batch is never dragged along. When the official value
 differs from the itemised total, an adjustment line (service product
 configured on the company, SPMS page) is appended so the total matches the
 official value exactly; if no line base can reach it (global tax

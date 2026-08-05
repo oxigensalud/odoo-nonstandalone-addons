@@ -6,10 +6,19 @@
         <field name="name">spms.invoice.check.error.tree</field>
         <field name="model">spms.invoice.check.error</field>
         <field name="arch" type="xml">
-            <tree create="false" delete="false">
+            <tree
+                create="false"
+                delete="false"
+                decoration-danger="level == 'invoice'"
+                decoration-warning="level == 'lote'"
+                decoration-primary="level == 'prestacao'"
+                decoration-info="level == 'linha'"
+                decoration-success="level == 'prescricao'"
+            >
                 <field name="result_id" optional="hide" />
                 <field name="level" />
                 <field name="code" />
+                <field name="error_type_id" optional="hide" />
                 <field name="description" />
                 <field name="lot_type" optional="hide" />
                 <field name="lot_number" optional="hide" />
@@ -36,6 +45,7 @@
                     <group name="main">
                         <field name="result_id" />
                         <field name="level" />
+                        <field name="error_type_id" />
                         <field name="code" />
                         <field name="description" />
                         <field name="lot_type" />
@@ -64,8 +74,20 @@
         <field name="arch" type="xml">
             <search>
                 <field name="code" />
+                <field name="error_type_id" />
                 <field name="prescription" />
                 <field name="result_id" />
+                <filter
+                    name="filter_exclude_noise"
+                    string="Exclude Noise"
+                    domain="[('error_type_id.noise', '=', False)]"
+                />
+                <filter
+                    name="filter_to_classify"
+                    string="To Classify"
+                    domain="[('error_type_id.to_classify', '=', True)]"
+                />
+                <separator />
                 <filter
                     name="filter_level_invoice"
                     string="Invoice Level"
