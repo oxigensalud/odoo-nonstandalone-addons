@@ -98,11 +98,16 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             "total_allowed_taxed": _child_float(fact, "TotalFaturaIVACalculado"),
             "oficio": self._parse_oficio(root),
             "parse_warning": self._completeness_warning(root, len(rows)),
-            # a definitive result supersedes any pending WS anomaly
+            # a definitive result supersedes a pending WS anomaly and a
+            # held generation failure: reprocessing IS the retry path
             "ws_anomaly_code": False,
+            "generation_error": False,
         }
         check = self._store_check(move, check_vals, rows)
         self._attach_document(move, check, exchange_record)
+        # a definitive with-errors result goes straight to its draft
+        # credit note; a failure holds this result only, with reason
+        check._generate_credit_note_or_hold()
         return _(
             "SPMS check result of %(invoice)s processed: %(state)s, "
             "%(count)s error rows."

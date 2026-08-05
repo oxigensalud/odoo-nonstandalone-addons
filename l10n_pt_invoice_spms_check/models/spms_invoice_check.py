@@ -1,9 +1,13 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import logging
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_compare, float_is_zero, float_round, formatLang
+
+_logger = logging.getLogger(__name__)
 
 OFFICIAL_VALUE_FIELDS = (
     "total_billed",
@@ -168,6 +172,15 @@ class SpmsInvoiceCheck(models.Model):
         "attached to this result is the authority. Never blocks the "
         "flow.",
     )
+    generation_error = fields.Text(
+        string="Generation Error",
+        readonly=True,
+        copy=False,
+        help="Why the automatic credit-note generation of this result "
+        "failed; the result is held in Error until the cause is fixed "
+        "and the document is reprocessed. Other results of the same "
+        "batch are never dragged along.",
+    )
 
     _sql_constraints = [
         (
@@ -230,7 +243,8 @@ class SpmsInvoiceCheck(models.Model):
     def write(self, vals):
         official_touched = any(field in vals for field in OFFICIAL_VALUE_FIELDS)
         state_touched = official_touched or any(
-            field in vals for field in ("check_state", "ws_anomaly_code")
+            field in vals
+            for field in ("check_state", "ws_anomaly_code", "generation_error")
         )
         if official_touched:
             for rec in self:
@@ -267,6 +281,7 @@ class SpmsInvoiceCheck(models.Model):
         "credit_note_move_id",
         "ws_anomaly_code",
         "check_state",
+        "generation_error",
     )
     def _compute_error_message(self):
         for rec in self:
@@ -277,6 +292,8 @@ class SpmsInvoiceCheck(models.Model):
                     "did not create: %s. Only one credit note may exist per "
                     "invoice; fix or cancel it in accounting first."
                 ) % ", ".join(foreign_notes.mapped("display_name"))
+            elif rec.generation_error:
+                rec.error_message = rec.generation_error
             elif rec.ws_anomaly_code and not rec.check_state:
                 rec.error_message = _(
                     "The CCF answered %(code)s to the check-result request: "
@@ -323,6 +340,9 @@ class SpmsInvoiceCheck(models.Model):
             if foreign_notes:
                 rec.state = "error"
                 continue
+            if rec.generation_error:
+                rec.state = "error"
+                continue
             if float_is_zero(
                 rec.credit_official,
                 precision_rounding=rec.currency_id.rounding or 0.01,
@@ -330,6 +350,26 @@ class SpmsInvoiceCheck(models.Model):
                 rec.state = "zero_official"
             else:
                 rec.state = "ready"
+
+    def _generate_credit_note_or_hold(self):
+        """One savepoint per result: a failure holds that result alone
+        in Error with its reason; reprocessing the document retries."""
+        for rec in self:
+            if rec.check_state != "with_errors" or rec.state != "ready":
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    rec._generate_credit_note()
+            except UserError as err:
+                rec.generation_error = err.args[0] if err.args else str(err)
+            except Exception:
+                _logger.exception(
+                    "Credit-note generation of %s failed unexpectedly",
+                    rec.display_name,
+                )
+                rec.generation_error = _(
+                    "Unexpected generation failure; see the server log."
+                )
 
     def _generate_credit_note(self):
         """Create the draft credit note for a ready (green) result.
