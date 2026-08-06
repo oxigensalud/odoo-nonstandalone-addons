@@ -8,7 +8,7 @@ from unittest import mock
 
 from odoo.addons.component.tests.common import SavepointComponentCase
 
-from .test_spms_check_process import _document, _erro, _linha, _prestacao
+from .test_spms_check_process import _document, _erro, _linha, _prescricao, _prestacao
 from .test_spms_check_transport import CLIENT_PATH, _mock_client, _result_response
 
 # One wire-faithful journey: the answer envelope carries the check
@@ -186,3 +186,60 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         self.assertEqual(credit_note.state, "draft")
         self.assertEqual(credit_note.move_type, "out_refund")
         self.assertAlmostEqual(credit_note.amount_total, CREDIT_OFFICIAL, places=2)
+
+    def test_full_journey_all_five_anchor_levels(self):
+        # the spec defines five anchor levels for errors; no real
+        # document has used all five at once yet, but the wire allows
+        # it and the module must place every row where it belongs.
+        # The unknown code must auto-create its catalogue entry.
+        document = _document(
+            total_billed="100.00",
+            total_allowed="100.00",
+            total_billed_taxed="100.00",
+            total_allowed_taxed="100.00",
+            invoice_errors=_erro("Z999"),
+            lote_errors=_erro("D306"),
+            claims=_prestacao(
+                "TESTP001",
+                errors=_erro("C011"),
+                lines=_linha("REF001", _erro("C012")),
+                prescription_data=_prescricao(_erro("C010")),
+            ),
+        )
+        client = _mock_client(_wire_wrap(document))
+        with mock.patch(CLIENT_PATH, return_value=client):
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+
+        child = self.env["edi.exchange.record"].search(
+            [
+                ("type_id.code", "=", "l10n_pt_spms_check"),
+                ("model", "=", "account.move"),
+                ("res_id", "=", self.invoice.id),
+            ]
+        )
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        result = self.env["spms.invoice.check"].search(
+            [("move_id", "=", self.invoice.id)]
+        )
+        rows = result.error_ids
+        self.assertEqual(len(rows), 5)
+        self.assertEqual(
+            Counter(rows.mapped("level")),
+            Counter(
+                {
+                    "invoice": 1,
+                    "lote": 1,
+                    "prestacao": 1,
+                    "linha": 1,
+                    "prescricao": 1,
+                }
+            ),
+        )
+        # the unknown code arrived: catalogue entry auto-created,
+        # flagged for human classification
+        unknown = rows.filtered(lambda r: r.code == "Z999").error_type_id
+        self.assertTrue(unknown.to_classify)
+        # equal totals: official credit zero, no credit note to draft
+        self.assertEqual(result.check_state, "with_errors")
+        self.assertEqual(result.state, "zero_official")
+        self.assertFalse(result.credit_note_move_id)
