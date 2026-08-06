@@ -13,6 +13,7 @@
     "depends": [
         "l10n_pt_invoice_spms",
     ],
+    "external_dependencies": {"python": ["zeep"]},
     "data": [
         "security/spms_invoice_check_security.xml",
         "security/ir.model.access.csv",

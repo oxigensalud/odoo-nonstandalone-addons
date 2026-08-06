@@ -2,6 +2,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import base64
+from datetime import date
 from unittest import mock
 
 import requests
@@ -10,7 +11,7 @@ from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
 
 MODULE = "odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record"
-POST_PATH = MODULE + ".requests.post"
+CLIENT_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_client"
 
 DOCUMENT_XML = (
     '<?xml version="1.0" encoding="UTF-8"?>'
@@ -24,22 +25,43 @@ LATIN1_XML = (
 ).encode("iso-8859-1")
 
 
-def _soap_response(inner):
+def _result_response(inner):
+    """A check answer as the live service sends it: HTTP 200 with the
+    JAX-WS <return> wrapper (probed 2026-08-03)."""
     return (
         '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
         'soap/envelope/"><soapenv:Body>'
         '<ns2:obterResultadoConferenciaResponse xmlns:ns2="http://'
-        'facturaElectronica.service.cc.ccf/">' + inner + "</ns2:"
-        "obterResultadoConferenciaResponse></soapenv:Body></soapenv:Envelope>"
+        'facturaElectronica.service.cc.ccf/"><return>' + inner + "</return>"
+        "</ns2:obterResultadoConferenciaResponse>"
+        "</soapenv:Body></soapenv:Envelope>"
     ).encode()
 
 
-def _mock_response(inner, raw=None):
-    response = mock.Mock()
-    response.status_code = 200
-    response.content = raw if raw is not None else _soap_response(inner)
-    response.raise_for_status = mock.Mock()
-    return response
+def _fault_response(faultstring):
+    """A CCF refusal as the live service sends it: HTTP 500 with a SOAP
+    fault whose faultstring starts with the code — e.g. the real
+    "301 - Factura Inexistente." (probed 2026-08-03)."""
+    return (
+        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
+        'soap/envelope/"><soapenv:Body><soapenv:Fault>'
+        "<faultcode>soapenv:Server</faultcode>"
+        "<faultstring>" + faultstring + "</faultstring>"
+        "</soapenv:Fault></soapenv:Body></soapenv:Envelope>"
+    ).encode()
+
+
+def _mock_client(*responses, side_effect=None):
+    """A fake zeep client: raw_response mode returns requests-like
+    responses, so only .content matters."""
+    client = mock.Mock()
+    if side_effect is not None:
+        client.service.obterResultadoConferencia.side_effect = side_effect
+    else:
+        client.service.obterResultadoConferencia.side_effect = [
+            mock.Mock(content=content) for content in responses
+        ]
+    return client
 
 
 class TestSpmsCheckTransport(SavepointCase):
@@ -75,7 +97,9 @@ class TestSpmsCheckTransport(SavepointCase):
         if "edi_format_ids" in cls.env["account.journal"]._fields:
             journal_vals["edi_format_ids"] = [(5, 0, 0)]
         cls.journal = cls.env["account.journal"].create(journal_vals)
-        cls.partner = cls.env["res.partner"].create({"name": "Transport Partner"})
+        cls.partner = cls.env["res.partner"].create(
+            {"name": "Transport Partner", "spms_assigned_id": "12345678"}
+        )
         cls.invoice = cls.env["account.move"].create(
             {
                 "name": "FT TEST/00001",
@@ -108,8 +132,9 @@ class TestSpmsCheckTransport(SavepointCase):
             },
         )
 
-    def _run_cron(self):
-        self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+    def _run_cron(self, client):
+        with mock.patch(CLIENT_PATH, return_value=client):
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
 
     def _children(self):
         return self.env["edi.exchange.record"].search(
@@ -125,64 +150,66 @@ class TestSpmsCheckTransport(SavepointCase):
             [("move_id", "=", self.invoice.id)]
         )
 
+    def test_request_carries_the_resolution_key(self):
+        # the CCF resolves an invoice by (numeroFactura, dataFactura),
+        # wrapped in <factura> — the exact shape production submits with
+        client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
+        self._run_cron(client)
+        client.service.obterResultadoConferencia.assert_called_once()
+        args, kwargs = client.service.obterResultadoConferencia.call_args
+        self.assertFalse(args)
+        factura = kwargs["factura"]
+        self.assertEqual(factura["areaConferencia"], 3)
+        self.assertEqual(factura["codigoPrestador"], "12345678")
+        self.assertEqual(factura["dataFactura"], date(2026, 5, 31))
+        self.assertEqual(factura["nif"], 999999990)
+        self.assertEqual(
+            factura["numeroFactura"], self.invoice._get_spms_invoice_number()
+        )
+
     def test_not_checked_yet_leaves_no_trace(self):
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<codigoRetorno>302</codigoRetorno>")
-            self._run_cron()
-        post.assert_called_once()
+        client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
+        self._run_cron(client)
+        client.service.obterResultadoConferencia.assert_called_once()
         self.assertFalse(self._children())
         self.assertFalse(self._checks())
 
-    def test_transient_error_leaves_no_trace(self):
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<codigoRetorno>999</codigoRetorno>")
-            self._run_cron()
+    def test_service_illness_leaves_no_trace(self):
+        # the real July-2026 outage answered this exact fault for weeks
+        client = _mock_client(_fault_response("999 - Erro desconhecido."))
+        self._run_cron(client)
         self.assertFalse(self._children())
         self.assertFalse(self._checks())
 
     def test_timeout_leaves_no_trace(self):
-        with mock.patch(POST_PATH) as post:
-            post.side_effect = requests.Timeout("no answer")
-            with self.assertLogs(MODULE, level="WARNING") as capture:
-                self._run_cron()
-        self.assertTrue(any("request failed" in line for line in capture.output))
-        self.assertFalse(self._children())
-        self.assertFalse(self._checks())
-
-    def test_http_error_warns_and_leaves_no_trace(self):
-        with mock.patch(POST_PATH) as post:
-            response = _mock_response("")
-            response.raise_for_status.side_effect = requests.HTTPError("500")
-            post.return_value = response
-            with self.assertLogs(MODULE, level="WARNING") as capture:
-                self._run_cron()
+        client = _mock_client(side_effect=requests.Timeout("no answer"))
+        with self.assertLogs(MODULE, level="WARNING") as capture:
+            self._run_cron(client)
         self.assertTrue(any("request failed" in line for line in capture.output))
         self.assertFalse(self._children())
         self.assertFalse(self._checks())
 
     def test_malformed_answer_warns_and_leaves_no_trace(self):
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("", raw=b"this is not xml")
-            with self.assertLogs(MODULE, level="WARNING") as capture:
-                self._run_cron()
+        client = _mock_client(b"this is not xml")
+        with self.assertLogs(MODULE, level="WARNING") as capture:
+            self._run_cron(client)
         self.assertTrue(any("request failed" in line for line in capture.output))
         self.assertFalse(self._children())
         self.assertFalse(self._checks())
 
     def test_unrecognised_answer_warns_and_leaves_no_trace(self):
-        # a SOAP Fault must never pass for a quiet "no result yet"
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<somethingElse>x</somethingElse>")
-            with self.assertLogs(MODULE, level="WARNING") as capture:
-                self._run_cron()
+        # an answer with neither documento, fault code nor return code
+        # must never pass for a quiet "no result yet"
+        client = _mock_client(_result_response("<somethingElse>x</somethingElse>"))
+        with self.assertLogs(MODULE, level="WARNING") as capture:
+            self._run_cron(client)
         self.assertTrue(any("unrecognised answer" in line for line in capture.output))
         self.assertFalse(self._children())
         self.assertFalse(self._checks())
 
     def test_unknown_invoice_flags_incident(self):
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<codigoRetorno>301</codigoRetorno>")
-            self._run_cron()
+        client = _mock_client(_fault_response("301 - Factura Inexistente."))
+        self._run_cron(client)
         self.assertFalse(self._children())
         check = self._checks()
         self.assertEqual(len(check), 1)
@@ -190,15 +217,13 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertEqual(check.ws_incident_code, "301")
         self.assertIn("301", check.error_message)
         self.assertIn(self.invoice.name, check.error_message)
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<codigoRetorno>301</codigoRetorno>")
-            self._run_cron()
+        client = _mock_client(_fault_response("301 - Factura Inexistente."))
+        self._run_cron(client)
         self.assertEqual(len(self._checks()), 1)
 
     def test_definitive_result_supersedes_incident(self):
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<codigoRetorno>301</codigoRetorno>")
-            self._run_cron()
+        client = _mock_client(_fault_response("301 - Factura Inexistente."))
+        self._run_cron(client)
         check = self._checks()
         self.assertEqual(check.state, "error")
         self.assertTrue(check.error_message)
@@ -209,11 +234,8 @@ class TestSpmsCheckTransport(SavepointCase):
     @mute_logger(MODULE)
     def test_document_creates_child_input(self):
         document = base64.b64encode(DOCUMENT_XML.encode()).decode()
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response(
-                "<codigoRetorno>200</codigoRetorno><documento>%s</documento>" % document
-            )
-            self._run_cron()
+        client = _mock_client(_result_response("<documento>%s</documento>" % document))
+        self._run_cron(client)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(child.parent_id, self.exchange)
@@ -224,19 +246,16 @@ class TestSpmsCheckTransport(SavepointCase):
             ["input_received", "input_processed", "input_processed_error"],
         )
         # while the fetched document waits for processing, no re-poll
-        with mock.patch(POST_PATH) as post:
-            self._run_cron()
-        post.assert_not_called()
+        client = _mock_client()
+        self._run_cron(client)
+        client.service.obterResultadoConferencia.assert_not_called()
         self.assertEqual(len(self._children()), 1)
 
     @mute_logger(MODULE)
     def test_inline_document_stored(self):
         inline = DOCUMENT_XML.replace("&", "&amp;").replace("<", "&lt;")
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response(
-                "<codigoRetorno>200</codigoRetorno><documento>%s</documento>" % inline
-            )
-            self._run_cron()
+        client = _mock_client(_result_response("<documento>%s</documento>" % inline))
+        self._run_cron(client)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(child._get_file_content(), DOCUMENT_XML)
@@ -244,11 +263,8 @@ class TestSpmsCheckTransport(SavepointCase):
     @mute_logger(MODULE)
     def test_latin1_document_stored_verbatim(self):
         document = base64.b64encode(LATIN1_XML).decode()
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response(
-                "<codigoRetorno>200</codigoRetorno><documento>%s</documento>" % document
-            )
-            self._run_cron()
+        client = _mock_client(_result_response("<documento>%s</documento>" % document))
+        self._run_cron(client)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(base64.b64decode(child.exchange_file), LATIN1_XML)
@@ -257,22 +273,21 @@ class TestSpmsCheckTransport(SavepointCase):
         self.env["spms.invoice.check"].create(
             {"move_id": self.invoice.id, "check_state": "without_errors"}
         )
-        with mock.patch(POST_PATH) as post:
-            self._run_cron()
-        post.assert_not_called()
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        factory.assert_not_called()
 
     def test_cancelled_invoice_not_polled(self):
         self.invoice.button_cancel()
-        with mock.patch(POST_PATH) as post:
-            self._run_cron()
-        post.assert_not_called()
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        factory.assert_not_called()
 
     def test_output_sent_also_polled(self):
         self.exchange.edi_exchange_state = "output_sent"
-        with mock.patch(POST_PATH) as post:
-            post.return_value = _mock_response("<codigoRetorno>302</codigoRetorno>")
-            self._run_cron()
-        post.assert_called_once()
+        client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
+        self._run_cron(client)
+        client.service.obterResultadoConferencia.assert_called_once()
 
     def test_cron_ships_paused(self):
         # calls the production CCF: activating it is a production-only decision

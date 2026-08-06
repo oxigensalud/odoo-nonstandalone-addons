@@ -3,20 +3,16 @@
 
 import base64
 import logging
-from uuid import uuid4
+import re
 
 import requests
 from lxml import etree
+from zeep import Client, Settings
+from zeep.transports import Transport
+from zeep.wsse.username import UsernameToken
 
 from odoo import models
-
-from odoo.addons.l10n_pt_invoice_spms.components.edi_output_send_l10n_pt_spms import (
-    FACTURA_NS,
-    SOAPENV_NS,
-    WSDL,
-    WSSE_NS,
-    WSU_NS,
-)
+from odoo.modules.module import get_resource_path
 
 _logger = logging.getLogger(__name__)
 
@@ -47,6 +43,7 @@ class EdiExchangeRecord(models.Model):
                 ("model", "=", "account.move"),
             ]
         )
+        clients = {}
         for exchange in exchanges:
             move = exchange.record
             if not move or move.state != "posted":
@@ -70,15 +67,42 @@ class EdiExchangeRecord(models.Model):
                 ]
             ):
                 continue
+            client = clients.get(move.company_id.id)
+            if client is None:
+                client = clients[move.company_id.id] = self._l10n_pt_spms_check_client(
+                    move.company_id
+                )
             try:
-                self._l10n_pt_spms_check_poll(backend, exchange, move)
+                self._l10n_pt_spms_check_poll(backend, client, exchange, move)
             except Exception:
                 _logger.exception("SPMS check of %s: unexpected failure", move.name)
 
-    def _l10n_pt_spms_check_poll(self, backend, exchange, move):
+    def _l10n_pt_spms_check_client(self, company):
+        """One zeep client per company and pass: the WSSE token carries
+        that company's portal credentials.
+
+        The shipped WSDL is the live one with its three read-path
+        defects fixed (see api/FacturaCRDWS.wsdl): the live file
+        declares the request without any parameter, omits the
+        <return> wrapper of the response and points to an internal
+        host — zeep against the raw live WSDL cannot work.
+        """
+        wsdl = get_resource_path(
+            "l10n_pt_invoice_spms_check", "api", "FacturaCRDWS.wsdl"
+        )
+        return Client(
+            wsdl,
+            wsse=UsernameToken(company.spms_username, company.spms_password),
+            transport=Transport(
+                timeout=REQUEST_TIMEOUT, operation_timeout=REQUEST_TIMEOUT
+            ),
+            settings=Settings(raw_response=True),
+        )
+
+    def _l10n_pt_spms_check_poll(self, backend, client, exchange, move):
         """Fetch and route the CCF answer for one sent invoice."""
         try:
-            code, document = self._l10n_pt_spms_check_fetch(move)
+            code, document = self._l10n_pt_spms_check_fetch(client, move)
         except (requests.RequestException, etree.XMLSyntaxError) as err:
             _logger.warning("SPMS check of %s: request failed (%s)", move.name, err)
             return
@@ -131,57 +155,43 @@ class EdiExchangeRecord(models.Model):
         elif check.ws_incident_code != code:
             check.ws_incident_code = code
 
-    def _l10n_pt_spms_check_fetch(self, move):
-        """Ask the CCF for the check result of one invoice, mirroring
-        the WSSE envelope of the sending component."""
+    def _l10n_pt_spms_check_fetch(self, client, move):
+        """Ask the CCF for the check result of one invoice.
+
+        The request mirrors the proven submission envelope of
+        l10n_pt_invoice_spms: the identification travels wrapped in a
+        <factura> element and must carry codigoPrestador and
+        dataFactura — the CCF resolves the invoice by (numeroFactura,
+        dataFactura), so a poll without the date answers 301 for
+        every invoice, issued or not.
+        """
         vat = move.company_id.vat
         if vat and len(vat) >= 11:
             vat = vat[-9:]
-        root = etree.Element(
-            f"{{{SOAPENV_NS}}}Envelope",
-            nsmap={"soapenv": SOAPENV_NS, "fac": FACTURA_NS},
+        response = client.service.obterResultadoConferencia(
+            factura={
+                "areaConferencia": 3,
+                "codigoPrestador": move.partner_id.sudo().spms_assigned_id,
+                "dataFactura": move.invoice_date,
+                "nif": int(vat) if vat and vat.isdigit() else None,
+                "numeroFactura": move._get_spms_invoice_number(),
+            }
         )
-        header = etree.SubElement(root, f"{{{SOAPENV_NS}}}Header")
-        security = etree.SubElement(
-            header, f"{{{WSSE_NS}}}Security", nsmap={"wsse": WSSE_NS, "wsu": WSU_NS}
-        )
-        security.set(etree.QName(SOAPENV_NS, "mustUnderstand"), "1")
-        username_token = etree.SubElement(security, f"{{{WSSE_NS}}}UsernameToken")
-        username_token.set(etree.QName(WSU_NS, "Id"), f"UsernameToken-{uuid4()}")
-        username = etree.SubElement(username_token, f"{{{WSSE_NS}}}Username")
-        username.text = move.company_id.spms_username
-        password = etree.SubElement(username_token, f"{{{WSSE_NS}}}Password")
-        password.set(
-            "Type",
-            "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText",  # noqa: B950
-        )
-        password.text = move.company_id.spms_password
-        body = etree.SubElement(root, f"{{{SOAPENV_NS}}}Body")
-        action = etree.SubElement(body, f"{{{FACTURA_NS}}}obterResultadoConferencia")
-        etree.SubElement(action, "areaConferencia").text = "3"
-        etree.SubElement(action, "nif").text = vat
-        etree.SubElement(action, "numeroFactura").text = move._get_spms_invoice_number()
-        xml = etree.tostring(root, encoding="utf-8", xml_declaration=False)
-        response = requests.post(
-            WSDL,
-            data=xml.decode("utf-8"),
-            headers={
-                "Content-Type": "text/xml; charset=utf-8",
-                "SOAPAction": "obterResultadoConferencia",
-            },
-            timeout=REQUEST_TIMEOUT,
-        )
-        response.raise_for_status()
         return self._l10n_pt_spms_check_parse_response(response.content)
 
     def _l10n_pt_spms_check_parse_response(self, content):
         """Split a WS answer into (return code, check document).
 
-        The WSDL keeps the response types private, so both fields are
-        located tolerantly by local name — the single place to adjust
-        if a live answer differs. A base64 document is returned as raw
-        bytes: the encoding its XML declaration announces must survive
-        verbatim into the stored file.
+        Real service behaviour (probed July-August 2026): a result
+        carries the base64 conference file in return/documento over
+        HTTP 200, while "factura inexistente" (301) and "not yet
+        conferred" (302) arrive as SOAP faults over HTTP 500 whose
+        faultstring starts with the code ("301 - Factura
+        Inexistente."). Fields are still located tolerantly by local
+        name — the WSDL keeps the response types private — and a
+        base64 document is returned as raw bytes: the encoding its
+        XML declaration announces must survive verbatim into the
+        stored file.
         """
         parser = etree.XMLParser(resolve_entities=False)
         root = etree.fromstring(content, parser)
@@ -193,6 +203,10 @@ class EdiExchangeRecord(models.Model):
             tag = etree.QName(element).localname
             if tag == "documento" and element.text and element.text.strip():
                 document = element.text.strip()
+            elif tag == "faultstring" and element.text:
+                match = re.match(r"\s*(\d{3})", element.text)
+                if match:
+                    code = match.group(1)
             elif code is None and tag in (
                 "codigoRetorno",
                 "codigoResposta",
