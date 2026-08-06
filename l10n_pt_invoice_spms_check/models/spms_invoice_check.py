@@ -162,8 +162,8 @@ class SpmsInvoiceCheck(models.Model):
         "sent successfully (301). Superseded by the arrival of a "
         "definitive check result.",
     )
-    parse_warning = fields.Text(
-        string="Parse Warning",
+    completeness_warning = fields.Text(
+        string="Completeness Warning",
         readonly=True,
         copy=False,
         help="Completeness warning raised while parsing the check "

@@ -155,7 +155,7 @@ msgid "Company"
 msgstr "Compañía"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__parse_warning
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__completeness_warning
 msgid ""
 "Completeness warning raised while parsing the check document: some errors "
 "sit at positions the parser does not know, so the error list may be "
@@ -601,9 +601,9 @@ msgid "Paid Days"
 msgstr "Días pagados"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__parse_warning
-msgid "Parse Warning"
-msgstr "Aviso de análisis"
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__completeness_warning
+msgid "Completeness Warning"
+msgstr "Aviso de completitud"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__prescription

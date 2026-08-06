@@ -244,7 +244,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertAlmostEqual(check.credit_official, 36.0)
         self.assertIn("Documento conferido", check.oficio)
         self.assertTrue(check.fetch_date)
-        self.assertFalse(check.parse_warning)
+        self.assertFalse(check.completeness_warning)
         self.assertEqual(check.error_count, 5)
         by_level = {row.level: row for row in check.error_ids}
         self.assertEqual(
@@ -353,7 +353,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         codes = set(check.error_codes.split(" / "))
         self.assertEqual(codes, {"C011", "D306", "C012"})
 
-    def test_completeness_trap_fires_on_unknown_position(self):
+    def test_completeness_warning_fires_on_unknown_position(self):
         document = _document(
             claims=_claim(
                 "TESTP001",
@@ -368,15 +368,15 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(child.edi_exchange_state, "input_processed")
         check = self._check()
         self.assertEqual(check.error_count, 1)
-        self.assertTrue(check.parse_warning)
-        self.assertIn("1", check.parse_warning)
+        self.assertTrue(check.completeness_warning)
+        self.assertIn("1", check.completeness_warning)
 
-    def test_empty_code_counts_in_the_trap(self):
+    def test_empty_code_counts_in_the_completeness_warning(self):
         document = _document(claims=_claim("TESTP001", errors=_erro("")))
         self._process(document)
         check = self._check()
         self.assertEqual(check.error_count, 0)
-        self.assertTrue(check.parse_warning)
+        self.assertTrue(check.completeness_warning)
 
     def test_reprocess_is_idempotent(self):
         # held generation: the result never locks, reprocess stays allowed
