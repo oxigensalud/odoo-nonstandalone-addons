@@ -214,8 +214,10 @@ class EdiExchangeRecord(models.Model):
             ):
                 code = (element.text or "").strip()
         if document:
+            # the live service line-wraps the base64 payload and XSD
+            # base64Binary allows whitespace: strip it, then decode strict
             try:
-                decoded = base64.b64decode(document, validate=True)
+                decoded = base64.b64decode("".join(document.split()), validate=True)
                 etree.fromstring(decoded, parser)
             except (ValueError, etree.XMLSyntaxError):
                 pass

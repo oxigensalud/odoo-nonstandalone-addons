@@ -252,6 +252,19 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertEqual(len(self._children()), 1)
 
     @mute_logger(MODULE)
+    def test_wrapped_base64_document_is_decoded(self):
+        # the live service line-wraps the base64 payload (XSD
+        # base64Binary allows whitespace): a real answer probed on
+        # 2026-08-06 carries 3016 newlines inside <documento>
+        encoded = base64.b64encode(DOCUMENT_XML.encode()).decode()
+        wrapped = "\n".join(encoded[i : i + 76] for i in range(0, len(encoded), 76))
+        client = _mock_client(_result_response("<documento>%s</documento>" % wrapped))
+        self._run_cron(client)
+        child = self._children()
+        self.assertEqual(len(child), 1)
+        self.assertEqual(child._get_file_content(), DOCUMENT_XML)
+
+    @mute_logger(MODULE)
     def test_inline_document_stored(self):
         inline = DOCUMENT_XML.replace("&", "&amp;").replace("<", "&lt;")
         client = _mock_client(_result_response("<documento>%s</documento>" % inline))
