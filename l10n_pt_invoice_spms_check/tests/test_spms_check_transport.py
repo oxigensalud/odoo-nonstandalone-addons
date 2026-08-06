@@ -289,8 +289,8 @@ class TestSpmsCheckTransport(SavepointCase):
         self._run_cron(client)
         client.service.obterResultadoConferencia.assert_called_once()
 
-    def test_cron_ships_paused(self):
-        # calls the production CCF: activating it is a production-only decision
+    def test_cron_ships_active(self):
+        # standard polling pattern: always on, the empty work queue is the gate
         cron = self.env.ref("l10n_pt_invoice_spms_check.spms_check_update_cron")
-        self.assertFalse(cron.active)
+        self.assertTrue(cron.active)
         self.assertIn("_cron_l10n_pt_spms_check_update", cron.code)
