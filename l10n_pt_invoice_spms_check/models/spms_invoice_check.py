@@ -149,7 +149,8 @@ class SpmsInvoiceCheck(models.Model):
         string="Error Message",
         compute="_compute_error_message",
         help="Why the result is held in error: a live credit note this "
-        "module did not create, or a web-service incident. "
+        "module did not create, a web-service incident, or a check "
+        "outcome this module does not recognise. "
         "Computed live and never stored, so fixing the cause clears it "
         "on its own.",
     )
@@ -282,6 +283,7 @@ class SpmsInvoiceCheck(models.Model):
         "ws_incident_code",
         "check_state",
         "generation_error",
+        "credit_official",
     )
     def _compute_error_message(self):
         for rec in self:
@@ -303,8 +305,37 @@ class SpmsInvoiceCheck(models.Model):
                     "code": rec.ws_incident_code,
                     "invoice": rec.move_id.display_name,
                 }
+            elif rec._is_unrecognized_outcome():
+                rec.error_message = _(
+                    "The check result of %(invoice)s does not match any "
+                    "recognised outcome (official credit: %(value)s); it "
+                    "is held for human review. The raw document attached "
+                    "to this result is the authority."
+                ) % {
+                    "invoice": rec.move_id.display_name,
+                    "value": formatLang(
+                        self.env,
+                        rec.credit_official,
+                        currency_obj=rec.currency_id,
+                    ),
+                }
             else:
                 rec.error_message = False
+
+    def _is_unrecognized_outcome(self):
+        """A verdict/totals combination outside the flows this module knows.
+
+        Known: a with-errors verdict (its generation guards already hold
+        odd totals loudly) and a no-errors verdict with zero official
+        credit. Anything else must never close or park silently.
+        """
+        self.ensure_one()
+        if self.check_state == "with_errors":
+            return False
+        return self.check_state != "without_errors" or not float_is_zero(
+            self.credit_official,
+            precision_rounding=self.currency_id.rounding or 0.01,
+        )
 
     def _update_state(self):
         """Single source of truth for the result state (semaphore).
@@ -341,6 +372,9 @@ class SpmsInvoiceCheck(models.Model):
                 rec.state = "error"
                 continue
             if rec.generation_error:
+                rec.state = "error"
+                continue
+            if rec._is_unrecognized_outcome():
                 rec.state = "error"
                 continue
             if float_is_zero(

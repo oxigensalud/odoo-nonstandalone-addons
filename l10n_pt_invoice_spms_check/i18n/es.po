@@ -807,6 +807,19 @@ msgstr ""
 "FacturasErrosEDiferencas."
 
 #. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The check result of %(invoice)s does not match any recognised outcome "
+"(official credit: %(value)s); it is held for human review. The raw document "
+"attached to this result is the authority."
+msgstr ""
+"El resultado de conferencia de %(invoice)s no corresponde a ningún "
+"desenlace reconocido (crédito oficial: %(value)s); queda retenido para "
+"revisión humana. El documento en bruto adjunto a este resultado es la "
+"autoridad."
+
+#. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
 #, python-format
 msgid ""
@@ -1000,12 +1013,14 @@ msgstr ""
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_message
 msgid ""
 "Why the result is held in error: a live credit note this module did not "
-"create, or a web-service incident. Computed live and never stored, so fixing"
-" the cause clears it on its own."
+"create, a web-service incident, or a check outcome this module does not "
+"recognise. Computed live and never stored, so fixing the cause clears it on "
+"its own."
 msgstr ""
 "Por qué el resultado está retenido en error: una factura rectificativa viva "
-"que este módulo no creó, o una incidencia del servicio web. Se calcula en "
-"vivo y nunca se almacena, así que corregir la causa lo limpia por sí solo."
+"que este módulo no creó, una incidencia del servicio web o un desenlace de "
+"conferencia que este módulo no reconoce. Se calcula en vivo y nunca se "
+"almacena, así que corregir la causa lo limpia por sí solo."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__zero_official

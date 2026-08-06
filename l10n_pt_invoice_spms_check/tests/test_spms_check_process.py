@@ -299,6 +299,32 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             )
         )
 
+    def test_without_errors_with_credit_holds_in_error(self):
+        # a no-errors verdict whose totals still leave credit is not a
+        # recognised outcome: held for human review, never parked in Ready
+        document = _document(
+            estado="Conferida Sem Erros",
+            total_billed="41.00",
+            total_allowed="5.00",
+            total_billed_taxed="41.00",
+            total_allowed_taxed="5.00",
+        )
+        child = self._process(document)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        result = self._result()
+        self.assertEqual(result.check_state, "without_errors")
+        self.assertEqual(result.state, "error")
+        self.assertIn("recognised outcome", result.error_message)
+        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.generation_error)
+
+    def test_result_without_verdict_holds_in_error(self):
+        # a result with no verdict and no incident must never close
+        # silently (out-of-band creations: imports, future code)
+        result = self.env["spms.invoice.check"].create({"move_id": self.invoice.id})
+        self.assertEqual(result.state, "error")
+        self.assertIn("recognised outcome", result.error_message)
+
     def test_unknown_code_autocreates_pending_type(self):
         document = _document(
             claims=_prestacao("TESTP001", errors=_erro("Z998", "Nova mensagem"))
