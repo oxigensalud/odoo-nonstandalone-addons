@@ -147,13 +147,13 @@ class EdiExchangeRecord(models.Model):
     def _l10n_pt_spms_check_flag_incident(self, move, code):
         """Store only the code: the message is composed — and
         translated — when the result is read."""
-        check = move.spms_invoice_check_ids[:1]
-        if not check:
+        result = move.spms_invoice_check_ids[:1]
+        if not result:
             self.env["spms.invoice.check"].create(
                 {"move_id": move.id, "ws_incident_code": code}
             )
-        elif check.ws_incident_code != code:
-            check.ws_incident_code = code
+        elif result.ws_incident_code != code:
+            result.ws_incident_code = code
 
     def _l10n_pt_spms_check_fetch(self, client, move):
         """Ask the CCF for the check result of one invoice.

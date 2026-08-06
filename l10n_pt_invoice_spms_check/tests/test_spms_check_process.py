@@ -211,14 +211,14 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.backend.exchange_process(child)
         return child
 
-    def _check(self, invoice=None):
+    def _result(self, invoice=None):
         return self.env["spms.invoice.check"].search(
             [("move_id", "=", (invoice or self.invoice).id)]
         )
 
-    def _attachments(self, check):
+    def _attachments(self, result):
         return self.env["ir.attachment"].search(
-            [("res_model", "=", "spms.invoice.check"), ("res_id", "=", check.id)]
+            [("res_model", "=", "spms.invoice.check"), ("res_id", "=", result.id)]
         )
 
     def test_full_document_maps_everything(self):
@@ -234,19 +234,19 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        check = self._check()
-        self.assertEqual(len(check), 1)
-        self.assertEqual(check.check_state, "with_errors")
-        self.assertAlmostEqual(check.total_billed, 41.0)
-        self.assertAlmostEqual(check.total_allowed, 5.0)
-        self.assertAlmostEqual(check.total_billed_taxed, 41.0)
-        self.assertAlmostEqual(check.total_allowed_taxed, 5.0)
-        self.assertAlmostEqual(check.credit_official, 36.0)
-        self.assertIn("Documento conferido", check.oficio)
-        self.assertTrue(check.fetch_date)
-        self.assertFalse(check.completeness_warning)
-        self.assertEqual(check.error_count, 5)
-        by_level = {row.level: row for row in check.error_ids}
+        result = self._result()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result.check_state, "with_errors")
+        self.assertAlmostEqual(result.total_billed, 41.0)
+        self.assertAlmostEqual(result.total_allowed, 5.0)
+        self.assertAlmostEqual(result.total_billed_taxed, 41.0)
+        self.assertAlmostEqual(result.total_allowed_taxed, 5.0)
+        self.assertAlmostEqual(result.credit_official, 36.0)
+        self.assertIn("Documento conferido", result.oficio)
+        self.assertTrue(result.fetch_date)
+        self.assertFalse(result.completeness_warning)
+        self.assertEqual(result.error_count, 5)
+        by_level = {row.level: row for row in result.error_ids}
         self.assertEqual(
             set(by_level), {"invoice", "lote", "prestacao", "linha", "prescricao"}
         )
@@ -266,12 +266,12 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             )
         self.assertEqual(by_level["linha"].provider_system_ref, "REF1")
         self.assertTrue(by_level["linha"].error_type_id.is_noise)
-        attachment = self._attachments(check)
+        attachment = self._attachments(result)
         self.assertEqual(len(attachment), 1)
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
-        self.assertFalse(check.generation_error)
-        self.assertEqual(check.state, "done")
-        draft = check.credit_note_move_id
+        self.assertFalse(result.generation_error)
+        self.assertEqual(result.state, "done")
+        draft = result.credit_note_move_id
         self.assertEqual(draft.state, "draft")
         self.assertEqual(draft.move_type, "out_refund")
         self.assertAlmostEqual(draft.amount_total, 36.0)
@@ -286,10 +286,10 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        check = self._check()
-        self.assertEqual(check.check_state, "without_errors")
-        self.assertEqual(check.error_count, 0)
-        self.assertEqual(check.state, "zero_official")
+        result = self._result()
+        self.assertEqual(result.check_state, "without_errors")
+        self.assertEqual(result.error_count, 0)
+        self.assertEqual(result.state, "zero_official")
         self.assertFalse(
             self.env["account.move"].search(
                 [
@@ -304,7 +304,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             claims=_claim("TESTP001", errors=_erro("Z998", "Nova mensagem"))
         )
         self._process(document)
-        row = self._check().error_ids
+        row = self._result().error_ids
         self.assertEqual(row.code, "Z998")
         self.assertTrue(row.error_type_id.to_classify)
         self.assertEqual(row.error_type_id.description, "Nova mensagem")
@@ -313,15 +313,15 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         document = _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        check = self._check()
-        row = check.error_ids
+        result = self._result()
+        row = result.error_ids
         self.assertEqual(row.prescription, "TESTMISSING")
         self.assertFalse(row.move_line_id)
         # parsing never blocks; the generation reports the unmatched
-        self.assertEqual(check.state, "error")
-        self.assertIn("not matched", check.generation_error)
-        self.assertEqual(check.error_message, check.generation_error)
-        self.assertFalse(check.credit_note_move_id)
+        self.assertEqual(result.state, "error")
+        self.assertIn("not matched", result.generation_error)
+        self.assertEqual(result.error_message, result.generation_error)
+        self.assertFalse(result.credit_note_move_id)
 
     def test_ambiguous_prescription_stays_unlinked(self):
         invoice = self._create_invoice(
@@ -329,7 +329,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         document = _document(claims=_claim("TESTPDUP", errors=_erro("C011")))
         self._process(document, invoice=invoice)
-        row = self._check(invoice).error_ids
+        row = self._result(invoice).error_ids
         self.assertFalse(row.move_line_id)
 
     def test_multi_claim_counts_per_level(self):
@@ -344,13 +344,15 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             )
         )
         self._process(document)
-        check = self._check()
-        self.assertEqual(check.error_count, 5)
+        result = self._result()
+        self.assertEqual(result.error_count, 5)
         self.assertEqual(
-            len(check.error_ids.filtered(lambda r: r.level == "prestacao")), 3
+            len(result.error_ids.filtered(lambda r: r.level == "prestacao")), 3
         )
-        self.assertEqual(len(check.error_ids.filtered(lambda r: r.level == "linha")), 2)
-        codes = set(check.error_codes.split(" / "))
+        self.assertEqual(
+            len(result.error_ids.filtered(lambda r: r.level == "linha")), 2
+        )
+        codes = set(result.error_codes.split(" / "))
         self.assertEqual(codes, {"C011", "D306", "C012"})
 
     def test_completeness_warning_fires_on_unknown_position(self):
@@ -366,42 +368,42 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        check = self._check()
-        self.assertEqual(check.error_count, 1)
-        self.assertTrue(check.completeness_warning)
-        self.assertIn("1", check.completeness_warning)
+        result = self._result()
+        self.assertEqual(result.error_count, 1)
+        self.assertTrue(result.completeness_warning)
+        self.assertIn("1", result.completeness_warning)
 
     def test_empty_code_counts_in_the_completeness_warning(self):
         document = _document(claims=_claim("TESTP001", errors=_erro("")))
         self._process(document)
-        check = self._check()
-        self.assertEqual(check.error_count, 0)
-        self.assertTrue(check.completeness_warning)
+        result = self._result()
+        self.assertEqual(result.error_count, 0)
+        self.assertTrue(result.completeness_warning)
 
     def test_reprocess_is_idempotent(self):
         # held generation: the result never locks, reprocess stays allowed
         document = _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
-        check = self._check()
-        self.assertEqual(check.error_count, 1)
+        result = self._result()
+        self.assertEqual(result.error_count, 1)
         child.edi_exchange_state = "input_received"
         self.backend.exchange_process(child)
-        check = self._check()
-        self.assertEqual(len(check), 1)
-        self.assertEqual(check.error_count, 1)
-        self.assertEqual(len(self._attachments(check)), 1)
+        result = self._result()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result.error_count, 1)
+        self.assertEqual(len(self._attachments(result)), 1)
 
     def test_definitive_result_supersedes_incident(self):
         self.env["spms.invoice.check"].create(
             {"move_id": self.invoice.id, "ws_incident_code": "301"}
         )
-        self.assertEqual(self._check().state, "error")
+        self.assertEqual(self._result().state, "error")
         self._process(_document(claims=_claim("TESTP001", errors=_erro("C011"))))
-        check = self._check()
-        self.assertFalse(check.ws_incident_code)
-        self.assertFalse(check.error_message)
-        self.assertEqual(check.state, "done")
-        self.assertTrue(check.credit_note_move_id)
+        result = self._result()
+        self.assertFalse(result.ws_incident_code)
+        self.assertFalse(result.error_message)
+        self.assertEqual(result.state, "done")
+        self.assertTrue(result.credit_note_move_id)
 
     def test_locked_result_blocks_reprocessing(self):
         refund = self.env["account.move"].create(
@@ -424,35 +426,35 @@ class TestSpmsCheckProcess(SavepointComponentCase):
                 ],
             }
         )
-        check = self.env["spms.invoice.check"].create(
+        result = self.env["spms.invoice.check"].create(
             {
                 "move_id": self.invoice.id,
                 "check_state": "with_errors",
                 "total_billed_taxed": 10.0,
             }
         )
-        check.write({"credit_note_move_id": refund.id, "state": "done"})
-        self.assertTrue(check.official_locked)
+        result.write({"credit_note_move_id": refund.id, "state": "done"})
+        self.assertTrue(result.official_locked)
         child = self._process(_document())
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
         self.assertIn("credit note", child.exchange_error)
-        self.assertAlmostEqual(check.total_billed_taxed, 10.0)
+        self.assertAlmostEqual(result.total_billed_taxed, 10.0)
 
     def test_garbage_document_marks_processing_error(self):
         child = self._process("this is not xml at all")
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
-        self.assertFalse(self._check())
+        self.assertFalse(self._result())
 
     def test_missing_extension_marks_processing_error(self):
         child = self._process("<ApplicationResponse><ID>x</ID></ApplicationResponse>")
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
         self.assertIn("FacturasErrosEDiferencas", child.exchange_error)
-        self.assertFalse(self._check())
+        self.assertFalse(self._result())
 
     def test_unknown_estado_marks_processing_error(self):
         child = self._process(_document(estado="Estado Misterioso"))
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
-        self.assertFalse(self._check())
+        self.assertFalse(self._result())
 
     def test_trigger_holds_on_missing_adjustment_product(self):
         document = _document(
@@ -462,11 +464,11 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        check = self._check()
-        self.assertEqual(check.state, "error")
-        self.assertIn("adjustment line product", check.generation_error)
-        self.assertEqual(check.error_message, check.generation_error)
-        self.assertFalse(check.credit_note_move_id)
+        result = self._result()
+        self.assertEqual(result.state, "error")
+        self.assertIn("adjustment line product", result.generation_error)
+        self.assertEqual(result.error_message, result.generation_error)
+        self.assertFalse(result.credit_note_move_id)
 
     def test_trigger_retry_after_configuring_adjustment(self):
         document = _document(
@@ -475,7 +477,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             claims=_claim("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
-        self.assertEqual(self._check().state, "error")
+        self.assertEqual(self._result().state, "error")
         product = self.env["product.product"].create(
             {
                 "name": "SPMS adjustment test",
@@ -486,11 +488,11 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.company.spms_adjustment_product_id = product
         child.edi_exchange_state = "input_received"
         self.backend.exchange_process(child)
-        check = self._check()
-        self.assertEqual(check.state, "done")
-        self.assertFalse(check.generation_error)
-        self.assertFalse(check.error_message)
-        self.assertAlmostEqual(check.credit_note_move_id.amount_total, 38.16)
+        result = self._result()
+        self.assertEqual(result.state, "done")
+        self.assertFalse(result.generation_error)
+        self.assertFalse(result.error_message)
+        self.assertAlmostEqual(result.credit_note_move_id.amount_total, 38.16)
 
     def test_trigger_preexisting_foreign_note_blocks_generation(self):
         invoice = self._create_invoice("FT TEST/00004", [("TESTP201", 31, 1.0)])
@@ -510,11 +512,11 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             invoice=invoice,
         )
         self.assertEqual(child.edi_exchange_state, "input_processed")
-        check = self._check(invoice)
-        self.assertEqual(check.state, "error")
-        self.assertFalse(check.generation_error)
-        self.assertIn(foreign.display_name, check.error_message)
-        self.assertFalse(check.credit_note_move_id)
+        result = self._result(invoice)
+        self.assertEqual(result.state, "error")
+        self.assertFalse(result.generation_error)
+        self.assertIn(foreign.display_name, result.error_message)
+        self.assertFalse(result.credit_note_move_id)
 
     def test_trigger_failure_does_not_drag_other_results(self):
         bad_child = self._process(
@@ -536,7 +538,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         self.assertEqual(bad_child.edi_exchange_state, "input_processed")
         self.assertEqual(good_child.edi_exchange_state, "input_processed")
-        self.assertEqual(self._check().state, "error")
-        good_check = self._check(good_invoice)
+        self.assertEqual(self._result().state, "error")
+        good_check = self._result(good_invoice)
         self.assertEqual(good_check.state, "done")
         self.assertAlmostEqual(good_check.credit_note_move_id.amount_total, 31.0)
