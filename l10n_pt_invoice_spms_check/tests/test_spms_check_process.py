@@ -276,7 +276,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(draft.move_type, "out_refund")
         self.assertAlmostEqual(draft.amount_total, 36.0)
 
-    def test_sem_erros_closes_as_zero_official(self):
+    def test_without_errors_closes_as_zero_official(self):
         document = _document(
             estado="Conferida Sem Erros",
             total_billed="10.00",
