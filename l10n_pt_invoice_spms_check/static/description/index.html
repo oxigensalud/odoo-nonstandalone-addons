@@ -411,11 +411,12 @@ prescription plus a deterministic adjustment line when needed.</li>
 results, and <em>SPMS / Responsible</em> to the users allowed to work with
 them and with the generated credit notes.</li>
 <li>The polling scheduled action (<em>SPMS: obtain check results</em>, under
-<em>Settings → Technical → Automation → Scheduled Actions</em>) is shipped
-deactivated because it calls the production CCF web service: activate
-it in the production database once the SPMS credentials are in place.
-Its <em>Active</em> field is also the pause switch — never uninstall the
-module just to stop the calls.</li>
+<em>Settings → Technical → Automation → Scheduled Actions</em>) runs hourly
+out of the box. It only acts on invoices already sent to SPMS that
+still have no definitive check result, with each company’s own SPMS
+credentials, so a database where nothing was sent makes no calls. To
+pause the polling, deactivate the scheduled action — never uninstall
+the module just to stop the calls.</li>
 <li>Set the <em>SPMS Adjustment Line Product</em> on the company (SPMS page,
 visible to <em>Technical Settings</em> users): a sale service product
 required to append the adjustment line when an official value differs

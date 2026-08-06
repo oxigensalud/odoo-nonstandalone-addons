@@ -2,12 +2,12 @@
 <!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo noupdate="1">
-    <!-- Shipped inactive: the web service is the production CCF —
-         activate in production only. Its Active field is also the
-         polling pause switch. -->
+    <!-- Always-on polling (fetchmail/FACE pattern): the work queue is
+         the gate — with no sent SPMS invoices awaiting a result it makes
+         no calls. Its Active field is the polling pause switch. -->
     <record id="spms_check_update_cron" model="ir.cron">
         <field name="name">SPMS: obtain check results</field>
-        <field name="active" eval="False" />
+        <field name="active" eval="True" />
         <field name="user_id" ref="base.user_root" />
         <field name="interval_number">1</field>
         <field name="interval_type">hours</field>
