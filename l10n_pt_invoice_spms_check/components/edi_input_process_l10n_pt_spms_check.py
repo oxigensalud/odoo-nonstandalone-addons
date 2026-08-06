@@ -97,7 +97,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             "total_billed_taxed": _child_float(fact, "TotalFaturaIVALido"),
             "total_allowed_taxed": _child_float(fact, "TotalFaturaIVACalculado"),
             "oficio": self._parse_oficio(root),
-            "parse_warning": self._completeness_warning(root, len(rows)),
+            "completeness_warning": self._completeness_warning(root, len(rows)),
             "ws_incident_code": False,
             "generation_error": False,
         }
@@ -145,7 +145,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                     _child_text(erro, "Codigo"), _child_text(erro, "Mensagem")
                 )
                 if not error_type:
-                    # unnamed error: left to the completeness trap
+                    # unnamed error: left to the completeness warning
                     continue
                 rows.append(
                     dict(
