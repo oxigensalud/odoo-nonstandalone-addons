@@ -721,9 +721,9 @@ msgstr ""
 "%(count)s linhas de erro."
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.actions.server,name:l10n_pt_invoice_spms_check.spms_check_update_cron_ir_actions_server
-#: model:ir.cron,cron_name:l10n_pt_invoice_spms_check.spms_check_update_cron
-#: model:ir.cron,name:l10n_pt_invoice_spms_check.spms_check_update_cron
+#: model:ir.actions.server,name:l10n_pt_invoice_spms_check.cron_spms_check_update_ir_actions_server
+#: model:ir.cron,cron_name:l10n_pt_invoice_spms_check.cron_spms_check_update
+#: model:ir.cron,name:l10n_pt_invoice_spms_check.cron_spms_check_update
 msgid "SPMS: obtain check results"
 msgstr "SPMS: obter resultados da conferência"
 

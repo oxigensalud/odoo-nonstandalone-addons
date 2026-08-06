@@ -291,6 +291,6 @@ class TestSpmsCheckTransport(SavepointCase):
 
     def test_cron_ships_active(self):
         # standard polling pattern: always on, the empty work queue is the gate
-        cron = self.env.ref("l10n_pt_invoice_spms_check.spms_check_update_cron")
+        cron = self.env.ref("l10n_pt_invoice_spms_check.cron_spms_check_update")
         self.assertTrue(cron.active)
         self.assertIn("_cron_l10n_pt_spms_check_update", cron.code)
