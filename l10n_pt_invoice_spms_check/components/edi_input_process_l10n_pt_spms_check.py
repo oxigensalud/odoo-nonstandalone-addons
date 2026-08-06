@@ -51,7 +51,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
     column on purpose and are never stored.
     """
 
-    _name = "edi.input.process.l10n_pt_spms_check"
+    _name = "edi.input.process.l10n_pt_spms.l10n_pt_spms_check"
     _usage = "input.process"
     _backend_type = "l10n_pt_spms"
     _exchange_type = "l10n_pt_spms_check"
