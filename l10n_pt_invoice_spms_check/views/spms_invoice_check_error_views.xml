@@ -80,7 +80,7 @@
                 <filter
                     name="filter_exclude_noise"
                     string="Exclude Noise"
-                    domain="[('error_type_id.noise', '=', False)]"
+                    domain="[('error_type_id.is_noise', '=', False)]"
                 />
                 <filter
                     name="filter_to_classify"
