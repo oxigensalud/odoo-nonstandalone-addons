@@ -89,7 +89,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             )
         check_state = self._parse_check_state(move, fact)
         rows = self._parse_error_rows(move, fact)
-        check_vals = {
+        result_vals = {
             "check_state": check_state,
             "fetch_date": fields.Datetime.now(),
             "total_billed": _child_float(fact, "TotalFaturaLido"),
@@ -101,11 +101,11 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             "ws_incident_code": False,
             "generation_error": False,
         }
-        check = self._store_check(move, check_vals, rows)
-        self._attach_document(move, check, exchange_record)
+        result = self._store_result(move, result_vals, rows)
+        self._attach_document(move, result, exchange_record)
         # a definitive with-errors result goes straight to its draft
         # credit note; a failure holds this result only, with reason
-        check._generate_credit_note_or_hold()
+        result._generate_credit_note_or_hold()
         return _(
             "SPMS check result of %(invoice)s processed: %(state)s, "
             "%(count)s error rows."
@@ -206,10 +206,10 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         response = _find_first(root, "Response")
         return _child_text(response, "Description") if response is not None else False
 
-    def _store_check(self, move, check_vals, rows):
+    def _store_result(self, move, result_vals, rows):
         """Upsert the 1:1 result and rebuild its rows (idempotent)."""
-        check = move.spms_invoice_check_ids[:1]
-        if check and check.official_locked:
+        result = move.spms_invoice_check_ids[:1]
+        if result and result.official_locked:
             raise UserError(
                 _(
                     "The check result of %s is already carried by a live "
@@ -218,26 +218,26 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                 )
                 % move.display_name
             )
-        if check:
-            check.error_ids.unlink()
-            check.write(check_vals)
+        if result:
+            result.error_ids.unlink()
+            result.write(result_vals)
         else:
-            check = self.env["spms.invoice.check"].create(
-                dict(check_vals, move_id=move.id)
+            result = self.env["spms.invoice.check"].create(
+                dict(result_vals, move_id=move.id)
             )
         if rows:
             self.env["spms.invoice.check.error"].create(
-                [dict(row, result_id=check.id) for row in rows]
+                [dict(row, result_id=result.id) for row in rows]
             )
-        return check
+        return result
 
-    def _attach_document(self, move, check, exchange_record):
+    def _attach_document(self, move, result, exchange_record):
         """One attachment per result: reprocessing replaces its content."""
         name = "%s-spms-check.xml" % (move.name or "invoice").replace("/", "_")
         attachment = self.env["ir.attachment"].search(
             [
-                ("res_model", "=", check._name),
-                ("res_id", "=", check.id),
+                ("res_model", "=", result._name),
+                ("res_id", "=", result.id),
                 ("name", "=", name),
             ],
             limit=1,
@@ -253,7 +253,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                 dict(
                     values,
                     name=name,
-                    res_model=check._name,
-                    res_id=check.id,
+                    res_model=result._name,
+                    res_id=result.id,
                 )
             )

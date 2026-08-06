@@ -145,7 +145,7 @@ class TestSpmsCheckTransport(SavepointCase):
             ]
         )
 
-    def _checks(self):
+    def _results(self):
         return self.env["spms.invoice.check"].search(
             [("move_id", "=", self.invoice.id)]
         )
@@ -172,14 +172,14 @@ class TestSpmsCheckTransport(SavepointCase):
         self._run_cron(client)
         client.service.obterResultadoConferencia.assert_called_once()
         self.assertFalse(self._children())
-        self.assertFalse(self._checks())
+        self.assertFalse(self._results())
 
     def test_service_illness_leaves_no_trace(self):
         # the real July-2026 outage answered this exact fault for weeks
         client = _mock_client(_fault_response("999 - Erro desconhecido."))
         self._run_cron(client)
         self.assertFalse(self._children())
-        self.assertFalse(self._checks())
+        self.assertFalse(self._results())
 
     def test_timeout_leaves_no_trace(self):
         client = _mock_client(side_effect=requests.Timeout("no answer"))
@@ -187,7 +187,7 @@ class TestSpmsCheckTransport(SavepointCase):
             self._run_cron(client)
         self.assertTrue(any("request failed" in line for line in capture.output))
         self.assertFalse(self._children())
-        self.assertFalse(self._checks())
+        self.assertFalse(self._results())
 
     def test_malformed_answer_warns_and_leaves_no_trace(self):
         client = _mock_client(b"this is not xml")
@@ -195,7 +195,7 @@ class TestSpmsCheckTransport(SavepointCase):
             self._run_cron(client)
         self.assertTrue(any("request failed" in line for line in capture.output))
         self.assertFalse(self._children())
-        self.assertFalse(self._checks())
+        self.assertFalse(self._results())
 
     def test_unrecognised_answer_warns_and_leaves_no_trace(self):
         # an answer with neither documento, fault code nor return code
@@ -205,31 +205,31 @@ class TestSpmsCheckTransport(SavepointCase):
             self._run_cron(client)
         self.assertTrue(any("unrecognised answer" in line for line in capture.output))
         self.assertFalse(self._children())
-        self.assertFalse(self._checks())
+        self.assertFalse(self._results())
 
     def test_unknown_invoice_flags_incident(self):
         client = _mock_client(_fault_response("301 - Factura Inexistente."))
         self._run_cron(client)
         self.assertFalse(self._children())
-        check = self._checks()
-        self.assertEqual(len(check), 1)
-        self.assertEqual(check.state, "error")
-        self.assertEqual(check.ws_incident_code, "301")
-        self.assertIn("301", check.error_message)
-        self.assertIn(self.invoice.name, check.error_message)
+        result = self._results()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result.state, "error")
+        self.assertEqual(result.ws_incident_code, "301")
+        self.assertIn("301", result.error_message)
+        self.assertIn(self.invoice.name, result.error_message)
         client = _mock_client(_fault_response("301 - Factura Inexistente."))
         self._run_cron(client)
-        self.assertEqual(len(self._checks()), 1)
+        self.assertEqual(len(self._results()), 1)
 
     def test_definitive_result_supersedes_incident(self):
         client = _mock_client(_fault_response("301 - Factura Inexistente."))
         self._run_cron(client)
-        check = self._checks()
-        self.assertEqual(check.state, "error")
-        self.assertTrue(check.error_message)
-        check.write({"check_state": "without_errors"})
-        self.assertEqual(check.state, "zero_official")
-        self.assertFalse(check.error_message)
+        result = self._results()
+        self.assertEqual(result.state, "error")
+        self.assertTrue(result.error_message)
+        result.write({"check_state": "without_errors"})
+        self.assertEqual(result.state, "zero_official")
+        self.assertFalse(result.error_message)
 
     @mute_logger(MODULE)
     def test_document_creates_child_input(self):
