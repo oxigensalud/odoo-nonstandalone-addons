@@ -5,7 +5,7 @@
     <!-- Always-on polling (fetchmail/FACE pattern): the work queue is
          the gate — with no sent SPMS invoices awaiting a result it makes
          no calls. Its Active field is the polling pause switch. -->
-    <record id="spms_check_update_cron" model="ir.cron">
+    <record id="cron_spms_check_update" model="ir.cron">
         <field name="name">SPMS: obtain check results</field>
         <field name="active" eval="True" />
         <field name="user_id" ref="base.user_root" />
