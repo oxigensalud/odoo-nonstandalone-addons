@@ -36,7 +36,7 @@ def _prescricao(content):
     )
 
 
-def _claim(
+def _prestacao(
     prescription,
     billed="41.00",
     allowed="5.00",
@@ -225,7 +225,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         document = _document(
             invoice_errors=_erro("D306"),
             lote_errors=_erro("A004"),
-            claims=_claim(
+            claims=_prestacao(
                 "TESTP001",
                 errors=_erro("C011"),
                 lines=_linha("REF1", _erro("C012")),
@@ -301,7 +301,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
 
     def test_unknown_code_autocreates_pending_type(self):
         document = _document(
-            claims=_claim("TESTP001", errors=_erro("Z998", "Nova mensagem"))
+            claims=_prestacao("TESTP001", errors=_erro("Z998", "Nova mensagem"))
         )
         self._process(document)
         row = self._result().error_ids
@@ -310,7 +310,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(row.error_type_id.description, "Nova mensagem")
 
     def test_unmatched_prescription_has_no_link_and_no_parse_error(self):
-        document = _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
+        document = _document(claims=_prestacao("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
         result = self._result()
@@ -327,7 +327,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         invoice = self._create_invoice(
             "FT TEST/00002", [("TESTPDUP", 10, 1.0), ("TESTPDUP", 5, 2.0)]
         )
-        document = _document(claims=_claim("TESTPDUP", errors=_erro("C011")))
+        document = _document(claims=_prestacao("TESTPDUP", errors=_erro("C011")))
         self._process(document, invoice=invoice)
         row = self._result(invoice).error_ids
         self.assertFalse(row.move_line_id)
@@ -335,12 +335,12 @@ class TestSpmsCheckProcess(SavepointComponentCase):
     def test_multi_claim_counts_per_level(self):
         document = _document(
             claims=(
-                _claim(
+                _prestacao(
                     "TESTP001",
                     errors=_erro("C011") + _erro("D306"),
                     lines=_linha("REF1", _erro("C012") + _erro("C012")),
                 )
-                + _claim("TESTP002", errors=_erro("C011"))
+                + _prestacao("TESTP002", errors=_erro("C011"))
             )
         )
         self._process(document)
@@ -357,7 +357,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
 
     def test_completeness_warning_fires_on_unknown_position(self):
         document = _document(
-            claims=_claim(
+            claims=_prestacao(
                 "TESTP001",
                 errors=_erro("C011"),
                 prescription_data=_prescricao(
@@ -374,7 +374,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertIn("1", result.completeness_warning)
 
     def test_empty_code_counts_in_the_completeness_warning(self):
-        document = _document(claims=_claim("TESTP001", errors=_erro("")))
+        document = _document(claims=_prestacao("TESTP001", errors=_erro("")))
         self._process(document)
         result = self._result()
         self.assertEqual(result.error_count, 0)
@@ -382,7 +382,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
 
     def test_reprocess_is_idempotent(self):
         # held generation: the result never locks, reprocess stays allowed
-        document = _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
+        document = _document(claims=_prestacao("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
         result = self._result()
         self.assertEqual(result.error_count, 1)
@@ -398,7 +398,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             {"move_id": self.invoice.id, "ws_incident_code": "301"}
         )
         self.assertEqual(self._result().state, "error")
-        self._process(_document(claims=_claim("TESTP001", errors=_erro("C011"))))
+        self._process(_document(claims=_prestacao("TESTP001", errors=_erro("C011"))))
         result = self._result()
         self.assertFalse(result.ws_incident_code)
         self.assertFalse(result.error_message)
@@ -460,7 +460,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         document = _document(
             total_billed_taxed="43.46",
             total_allowed_taxed="5.30",
-            claims=_claim("TESTP001", errors=_erro("C011")),
+            claims=_prestacao("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
@@ -474,7 +474,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         document = _document(
             total_billed_taxed="43.46",
             total_allowed_taxed="5.30",
-            claims=_claim("TESTP001", errors=_erro("C011")),
+            claims=_prestacao("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
         self.assertEqual(self._result().state, "error")
@@ -508,7 +508,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         wizard.reverse_moves()
         foreign = invoice.reversal_move_id
         child = self._process(
-            _document(claims=_claim("TESTP201", errors=_erro("C011"))),
+            _document(claims=_prestacao("TESTP201", errors=_erro("C011"))),
             invoice=invoice,
         )
         self.assertEqual(child.edi_exchange_state, "input_processed")
@@ -520,7 +520,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
 
     def test_trigger_failure_does_not_drag_other_results(self):
         bad_child = self._process(
-            _document(claims=_claim("TESTMISSING", errors=_erro("C011")))
+            _document(claims=_prestacao("TESTMISSING", errors=_erro("C011")))
         )
         good_invoice = self._create_invoice("FT TEST/00005", [("TESTP301", 31, 1.0)])
         good_child = self._process(
@@ -530,7 +530,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
                 total_billed_taxed="31.00",
                 total_allowed_taxed="0.00",
                 # a real diff-claim always carries an error (golden evidence)
-                claims=_claim(
+                claims=_prestacao(
                     "TESTP301", billed="31.00", allowed="0.00", errors=_erro("C011")
                 ),
             ),
