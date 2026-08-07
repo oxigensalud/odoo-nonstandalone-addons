@@ -783,6 +783,16 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
 #, python-format
+msgid ""
+"The check document of %(invoice)s carries an unparseable %(field)s: "
+"%(text)s"
+msgstr ""
+"El documento de conferencia de %(invoice)s lleva un %(field)s ilegible: "
+"%(text)s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
 msgid "The check document of %(invoice)s is not parseable XML: %(error)s"
 msgstr ""
 "El documento de conferencia de %(invoice)s no es XML analizable: %(error)s"
@@ -980,6 +990,16 @@ msgstr ""
 #, python-format
 msgid "Unexpected generation failure; see the server log."
 msgstr "Fallo de generación inesperado; consulte el registro del servidor."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid ""
+"Unparseable %(field)s of prescription %(prescription)s: %(text)s (stored as"
+" 0)."
+msgstr ""
+"%(field)s ilegible de la prescripción %(prescription)s: %(text)s (guardado "
+"como 0)."
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
