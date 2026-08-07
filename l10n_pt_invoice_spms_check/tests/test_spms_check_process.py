@@ -508,6 +508,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertAlmostEqual(by_prescription["TESTP002"].amount_billed, 10.0)
 
     def test_trigger_holds_on_missing_adjustment_product(self):
+        self.company.spms_adjustment_product_id = False
         document = _document(
             total_billed_taxed="43.46",
             total_allowed_taxed="5.30",
@@ -522,6 +523,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertFalse(result.credit_note_move_id)
 
     def test_trigger_retry_after_configuring_adjustment(self):
+        self.company.spms_adjustment_product_id = False
         document = _document(
             total_billed_taxed="43.46",
             total_allowed_taxed="5.30",

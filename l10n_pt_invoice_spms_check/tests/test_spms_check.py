@@ -367,6 +367,7 @@ class TestSpmsCheck(SavepointCase):
         # the generation contract expects the caller to run each result in
         # its own savepoint (as the batch action did and the automatic
         # trigger will): a raise then leaves no half-built draft behind
+        self.company.spms_adjustment_product_id = False
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.15)
         with self.assertRaisesRegex(
