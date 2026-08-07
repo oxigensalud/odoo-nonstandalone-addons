@@ -29,11 +29,12 @@ def _child_text(element, name):
 
 
 def _child_float(element, name):
-    text = _child_text(element, name).replace(",", ".")
-    try:
-        return float(text)
-    except ValueError:
+    """0.0 for an absent or empty child; ValueError when its text is
+    present but not a number (comma decimals accepted)."""
+    text = _child_text(element, name)
+    if not text:
         return 0.0
+    return float(text.replace(",", "."))
 
 
 def _find_first(root, name):
@@ -88,16 +89,21 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                 % move.display_name
             )
         check_state = self._parse_check_state(move, fact)
-        rows = self._parse_error_rows(move, fact)
+        problems = []
+        rows = self._parse_error_rows(move, fact, problems)
         result_vals = {
             "check_state": check_state,
             "fetch_date": fields.Datetime.now(),
-            "total_billed": _child_float(fact, "TotalFaturaLido"),
-            "total_allowed": _child_float(fact, "TotalFaturaCalculado"),
-            "total_billed_taxed": _child_float(fact, "TotalFaturaIVALido"),
-            "total_allowed_taxed": _child_float(fact, "TotalFaturaIVACalculado"),
+            "total_billed": self._parse_total(move, fact, "TotalFaturaLido"),
+            "total_allowed": self._parse_total(move, fact, "TotalFaturaCalculado"),
+            "total_billed_taxed": self._parse_total(move, fact, "TotalFaturaIVALido"),
+            "total_allowed_taxed": self._parse_total(
+                move, fact, "TotalFaturaIVACalculado"
+            ),
             "oficio": self._parse_oficio(root),
-            "completeness_warning": self._completeness_warning(root, len(rows)),
+            "completeness_warning": self._completeness_warning(
+                root, len(rows), problems
+            ),
             "ws_incident_code": False,
             "generation_error": False,
         }
@@ -129,7 +135,45 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             % {"invoice": move.display_name, "estado": estado or _("(empty)")}
         )
 
-    def _parse_error_rows(self, move, fact):
+    def _parse_total(self, move, fact, name):
+        """The official totals are the money: a present but unparseable
+        amount rejects the whole document."""
+        try:
+            return _child_float(fact, name)
+        except ValueError as err:
+            raise UserError(
+                _(
+                    "The check document of %(invoice)s carries an "
+                    "unparseable %(field)s: %(text)s"
+                )
+                % {
+                    "invoice": move.display_name,
+                    "field": name,
+                    "text": _child_text(fact, name),
+                }
+            ) from err
+
+    def _claim_float(self, claim, name, prescription, problems):
+        """Claim amounts only shape the breakdown (the credit-note money
+        comes from the official totals): store zero and report, never
+        block."""
+        try:
+            return _child_float(claim, name)
+        except ValueError:
+            problems.append(
+                _(
+                    "Unparseable %(field)s of prescription "
+                    "%(prescription)s: %(text)s (stored as 0)."
+                )
+                % {
+                    "field": name,
+                    "prescription": prescription or "?",
+                    "text": _child_text(claim, name),
+                }
+            )
+            return 0.0
+
+    def _parse_error_rows(self, move, fact, problems):
         """Error rows at their five anchors, in document order."""
         error_type_model = self.env["spms.error.type"]
         line_by_prescription = {}
@@ -168,10 +212,18 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                 line_ids = line_by_prescription.get(prescription, [])
                 claim_vals = {
                     "prescription": prescription,
-                    "amount_billed": _child_float(claim, "ValorTotalLido"),
-                    "amount_allowed": _child_float(claim, "ValorTotalCalculado"),
-                    "days_billed": _child_float(claim, "QuantidadeLida"),
-                    "days_paid": _child_float(claim, "QuantidadeCalculado"),
+                    "amount_billed": self._claim_float(
+                        claim, "ValorTotalLido", prescription, problems
+                    ),
+                    "amount_allowed": self._claim_float(
+                        claim, "ValorTotalCalculado", prescription, problems
+                    ),
+                    "days_billed": self._claim_float(
+                        claim, "QuantidadeLida", prescription, problems
+                    ),
+                    "days_paid": self._claim_float(
+                        claim, "QuantidadeCalculado", prescription, problems
+                    ),
                     "move_line_id": line_ids[0] if len(line_ids) == 1 else False,
                 }
                 add_rows(claim, "prestacao", claim_vals)
@@ -188,19 +240,25 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                     add_rows(prescription_data, "prescricao", claim_vals)
         return rows
 
-    def _completeness_warning(self, root, row_count):
-        """Any Erro the anchored walk did not turn into a row is
-        reported on the result, never blocking."""
+    def _completeness_warning(self, root, row_count, problems):
+        """Any Erro the anchored walk did not turn into a row, and any
+        unparseable claim amount, is reported on the result, never
+        blocking."""
         total = sum(1 for element in root.iter() if _local(element.tag) == "Erro")
         missing = total - row_count
-        if missing <= 0:
-            return False
-        return _(
-            "%(count)s of the %(total)s errors of the check document sit at "
-            "positions this parser does not know: the error list below is "
-            "incomplete. The raw document attached to this result is the "
-            "authority."
-        ) % {"count": missing, "total": total}
+        warnings = []
+        if missing > 0:
+            warnings.append(
+                _(
+                    "%(count)s of the %(total)s errors of the check document "
+                    "sit at positions this parser does not know: the error "
+                    "list below is incomplete. The raw document attached to "
+                    "this result is the authority."
+                )
+                % {"count": missing, "total": total}
+            )
+        warnings.extend(problems)
+        return "\n".join(warnings) or False
 
     def _parse_oficio(self, root):
         response = _find_first(root, "Response")

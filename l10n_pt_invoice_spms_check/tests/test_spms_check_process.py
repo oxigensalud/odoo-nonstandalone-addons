@@ -482,6 +482,31 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
         self.assertFalse(self._result())
 
+    def test_unparseable_total_marks_processing_error(self):
+        # the official totals are the money: an unreadable one rejects
+        # the document instead of silently becoming 0.0
+        child = self._process(_document(total_billed_taxed="1.234,56"))
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("TotalFaturaIVALido", child.exchange_error)
+        self.assertIn("1.234,56", child.exchange_error)
+        self.assertFalse(self._result())
+
+    def test_unparseable_claim_amount_warns_and_continues(self):
+        # claim amounts only shape the breakdown: stored as 0 with a
+        # completeness warning, and comma decimals keep working
+        document = _document(
+            claims=_prestacao("TESTP001", billed="12 345,67", errors=_erro("C011"))
+            + _prestacao("TESTP002", billed="10,00", errors=_erro("C012")),
+        )
+        child = self._process(document)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        result = self._result()
+        self.assertIn("ValorTotalLido", result.completeness_warning)
+        self.assertIn("TESTP001", result.completeness_warning)
+        by_prescription = {row.prescription: row for row in result.error_ids}
+        self.assertAlmostEqual(by_prescription["TESTP001"].amount_billed, 0.0)
+        self.assertAlmostEqual(by_prescription["TESTP002"].amount_billed, 10.0)
+
     def test_trigger_holds_on_missing_adjustment_product(self):
         document = _document(
             total_billed_taxed="43.46",
