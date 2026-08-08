@@ -78,17 +78,6 @@
                 <field name="prescription" />
                 <field name="result_id" />
                 <filter
-                    name="filter_exclude_noise"
-                    string="Exclude Noise"
-                    domain="[('error_type_id.is_noise', '=', False)]"
-                />
-                <filter
-                    name="filter_to_classify"
-                    string="To Classify"
-                    domain="[('error_type_id.to_classify', '=', True)]"
-                />
-                <separator />
-                <filter
                     name="filter_level_invoice"
                     string="Invoice Level"
                     domain="[('level', '=', 'invoice')]"

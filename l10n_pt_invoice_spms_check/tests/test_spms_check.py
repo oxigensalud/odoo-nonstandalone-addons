@@ -640,4 +640,4 @@ class TestSpmsCheck(SavepointCase):
         )
         row = result.error_ids
         self.assertEqual(row.code, "Z999")
-        self.assertTrue(row.error_type_id.to_classify)
+        self.assertTrue(row.error_type_id)

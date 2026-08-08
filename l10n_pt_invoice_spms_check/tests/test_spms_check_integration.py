@@ -235,10 +235,10 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
                 }
             ),
         )
-        # the unknown code arrived: catalogue entry auto-created,
-        # flagged for human classification
+        # the unknown code arrived: catalogue entry auto-created
+        # carrying the official message straight from the wire
         unknown = rows.filtered(lambda r: r.code == "Z999").error_type_id
-        self.assertTrue(unknown.to_classify)
+        self.assertEqual(unknown.description, "Synthetic message")
         # equal totals: official credit zero, no credit note to draft
         self.assertEqual(result.check_state, "with_errors")
         self.assertEqual(result.state, "zero_official")
