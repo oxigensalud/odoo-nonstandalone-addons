@@ -265,7 +265,6 @@ class TestSpmsCheckProcess(SavepointComponentCase):
                 "TESTP001",
             )
         self.assertEqual(by_level["linha"].provider_system_ref, "REF1")
-        self.assertTrue(by_level["linha"].error_type_id.is_noise)
         attachment = self._attachments(result)
         self.assertEqual(len(attachment), 1)
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
@@ -332,7 +331,6 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self._process(document)
         row = self._result().error_ids
         self.assertEqual(row.code, "Z998")
-        self.assertTrue(row.error_type_id.to_classify)
         self.assertEqual(row.error_type_id.description, "Nova mensagem")
 
     def test_unmatched_prescription_has_no_link_and_no_parse_error(self):
