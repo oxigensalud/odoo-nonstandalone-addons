@@ -14,3 +14,6 @@ rectifying credit notes:
   that came back with errors, through the standard reversal mechanism, carrying
   exactly the official value: one line per rejected prescription plus a
   deterministic adjustment line when needed.
+- Keeps the sale order closed: the CCF cut is definitive, so the credited
+  quantities are not returned as pending to invoice on the sale order the
+  invoice came from.

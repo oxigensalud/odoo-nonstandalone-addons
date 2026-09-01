@@ -12,6 +12,7 @@
     "category": "Accounting",
     "depends": [
         "l10n_pt_invoice_spms",
+        "sale_line_refund_to_invoice_qty",
     ],
     "external_dependencies": {"python": ["zeep"]},
     "data": [
