@@ -287,6 +287,17 @@ class TestSpmsCheck(SavepointCase):
         self.assertFalse(result.credit_note_move_id)
         self.assertEqual(result.state, "ready")
 
+    def test_generate_does_not_return_quantities_to_the_sale_order(self):
+        # the CCF cut is definitive: what is credited is never invoiced
+        # again, so the credited lines must not come back as pending on
+        # the sale order they were invoiced from
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_credit_note()
+        credited = draft.invoice_line_ids.filtered("spms_prescription")
+        self.assertEqual(len(credited), 3)
+        self.assertFalse(any(credited.mapped("sale_qty_to_reinvoice")))
+
     def test_generate_dedupes_multi_error_rows(self):
         # a prescription reported by several error rows (e.g. C010 at
         # prescription-data level plus C012 at line level) is credited once:

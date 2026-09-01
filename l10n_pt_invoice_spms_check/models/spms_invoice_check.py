@@ -530,6 +530,8 @@ class SpmsInvoiceCheck(models.Model):
                 "date": fields.Date.context_today(self),
                 "reason": _("SPMS check %s") % self.move_id.name,
                 "company_id": self.company_id.id,
+                # the CCF cut is definitive: the sale order must not reopen
+                "sale_qty_to_reinvoice": False,
             }
         )
         wizard.reverse_moves()
