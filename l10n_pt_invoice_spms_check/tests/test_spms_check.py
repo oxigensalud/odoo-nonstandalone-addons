@@ -298,6 +298,53 @@ class TestSpmsCheck(SavepointCase):
         self.assertEqual(len(credited), 3)
         self.assertFalse(any(credited.mapped("sale_qty_to_reinvoice")))
 
+    def test_generate_keeps_the_sale_order_fully_invoiced(self):
+        # the same three line rewrites as production (total rejection,
+        # partial with days, money-only fallback), this time on an invoice
+        # made from a sale order: none of them may bring quantities back
+        # to invoice on that order
+        self.product.invoice_policy = "order"
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": self.partner.id,
+                "order_line": [
+                    (
+                        0,
+                        0,
+                        {
+                            "name": prescription,
+                            "product_id": self.product.id,
+                            "product_uom": self.product.uom_id.id,
+                            "product_uom_qty": days,
+                            "price_unit": price_unit,
+                            "tax_id": [(6, 0, self.tax6.ids)],
+                        },
+                    )
+                    for prescription, days, price_unit in (
+                        ("TESTP001", 31, 1.0),
+                        ("TESTP002", 31, 2.0),
+                        ("TESTP003", 10, 3.0),
+                    )
+                ],
+            }
+        )
+        order.action_confirm()
+        move = order.with_context(default_journal_id=self.journal.id)._create_invoices()
+        # the sale-to-invoice propagation of the prescription number lives
+        # outside this module's dependencies: the sale line description
+        # carries it here and the invoice line takes it from there
+        for line in move.invoice_line_ids:
+            line.spms_prescription = line.sale_line_ids.name
+        move.action_post()
+        self.assertEqual(order.invoice_status, "invoiced")
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_credit_note()
+        self.assertEqual(len(draft.invoice_line_ids), 3)
+        self.assertEqual(order.invoice_status, "invoiced")
+        for line in order.order_line:
+            self.assertEqual(line.qty_invoiced, line.product_uom_qty)
+            self.assertEqual(line.qty_to_invoice, 0)
+
     def test_generate_dedupes_multi_error_rows(self):
         # a prescription reported by several error rows (e.g. C010 at
         # prescription-data level plus C012 at line level) is credited once:
