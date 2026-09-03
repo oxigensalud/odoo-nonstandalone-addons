@@ -86,8 +86,8 @@ created and held in *Error*, with the incident explained on the result
 form, until a definitive check result supersedes it.
 
 Every invoice sent to SPMS gets its check result attached the moment the
-check resolves it: the invoice form shows a smart button with the error
-count, opening the result directly (one result per invoice — the first
+check resolves it: the invoice form shows an *SPMS Check* smart button
+opening the result directly (one result per invoice — the first
 definitive answer closes the invoice permanently).
 
 The result form carries the check state, the official totals and the

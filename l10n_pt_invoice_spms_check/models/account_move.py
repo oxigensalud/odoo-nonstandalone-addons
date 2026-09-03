@@ -22,21 +22,11 @@ class AccountMove(models.Model):
         string="# SPMS Invoice Checks",
         compute="_compute_spms_invoice_check_count",
     )
-    spms_invoice_check_error_count = fields.Integer(
-        string="# SPMS Check Errors",
-        compute="_compute_spms_invoice_check_count",
-    )
 
-    @api.depends(
-        "spms_invoice_check_ids",
-        "spms_invoice_check_ids.error_ids",
-    )
+    @api.depends("spms_invoice_check_ids")
     def _compute_spms_invoice_check_count(self):
         for rec in self:
             rec.spms_invoice_check_count = len(rec.spms_invoice_check_ids)
-            rec.spms_invoice_check_error_count = len(
-                rec.spms_invoice_check_ids.error_ids
-            )
 
     def action_view_spms_invoice_check(self):
         """Open the invoice's check result form directly (1:1)."""
