@@ -90,7 +90,8 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             )
         check_state = self._parse_check_state(move, fact)
         problems = []
-        rows = self._parse_error_rows(move, fact, problems)
+        lines, errors = self._parse_lines(move, fact, problems)
+        error_count = len(errors) + sum(len(line_errors) for _, line_errors in lines)
         result_vals = {
             "check_state": check_state,
             "fetch_date": fields.Datetime.now(),
@@ -102,23 +103,24 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             ),
             "oficio": self._parse_oficio(root),
             "completeness_warning": self._completeness_warning(
-                root, len(rows), problems
+                root, error_count, problems
             ),
             "ws_incident_code": False,
             "generation_error": False,
         }
-        result = self._store_result(move, result_vals, rows)
+        result = self._store_result(move, result_vals, lines, errors)
         self._attach_document(move, result, exchange_record)
         # a definitive with-errors result goes straight to its draft
         # credit note; a failure holds this result only, with reason
         result._generate_credit_note_or_hold()
         return _(
             "SPMS check result of %(invoice)s processed: %(state)s, "
-            "%(count)s error rows."
+            "%(lines)s lines, %(errors)s errors."
         ) % {
             "invoice": move.display_name,
             "state": check_state,
-            "count": len(rows),
+            "lines": len(lines),
+            "errors": error_count,
         }
 
     def _parse_check_state(self, move, fact):
@@ -173,79 +175,89 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             )
             return 0.0
 
-    def _parse_error_rows(self, move, fact, problems):
-        """Error rows at their five anchors, in document order."""
+    def _parse_lines(self, move, fact, problems):
+        """The document's claims as (line values, error values) pairs, in
+        document order, plus the errors anchored above the claims (invoice
+        and lot levels), which have no line."""
         error_type_model = self.env["spms.error.type"]
         line_by_prescription = {}
         for line in move.invoice_line_ids:
             if line.spms_prescription:
                 line_by_prescription.setdefault(line.spms_prescription, [])
                 line_by_prescription[line.spms_prescription].append(line.id)
-        rows = []
 
-        def add_rows(anchor_element, level, anchor_vals):
+        def errors_of(anchor_element, level, anchor_vals=None):
+            errors = []
             for erro in _children(anchor_element, "Erro"):
+                message = _child_text(erro, "Mensagem")
                 error_type = error_type_model._get_or_create(
-                    _child_text(erro, "Codigo"), _child_text(erro, "Mensagem")
+                    _child_text(erro, "Codigo"), message
                 )
                 if not error_type:
                     # unnamed error: left to the completeness warning
                     continue
-                rows.append(
+                errors.append(
                     dict(
-                        anchor_vals,
+                        anchor_vals or {},
                         level=level,
                         error_type_id=error_type.id,
-                        description=_child_text(erro, "Mensagem"),
+                        description=message,
                     )
                 )
+            return errors
 
-        add_rows(fact, "invoice", {})
+        lines = []
+        errors = errors_of(fact, "invoice")
         for lote in _children(fact, "LoteErrosEDiferencas"):
-            lote_vals = {
+            errors.extend(errors_of(lote, "lote"))
+            lot_vals = {
                 "lot_type": _child_text(lote, "TipoLote"),
                 "lot_number": _child_text(lote, "Numero"),
             }
-            add_rows(lote, "lote", lote_vals)
             for claim in _children(lote, "PrestacoesErrosEDiferencas"):
                 prescription = _child_text(claim, "NumeroPrescricao")
                 line_ids = line_by_prescription.get(prescription, [])
-                claim_vals = {
-                    "prescription": prescription,
-                    "amount_billed": self._claim_float(
+                line_vals = dict(
+                    lot_vals,
+                    prescription=prescription,
+                    amount_billed=self._claim_float(
                         claim, "ValorTotalLido", prescription, problems
                     ),
-                    "amount_allowed": self._claim_float(
+                    amount_allowed=self._claim_float(
                         claim, "ValorTotalCalculado", prescription, problems
                     ),
-                    "days_billed": self._claim_float(
+                    days_billed=self._claim_float(
                         claim, "QuantidadeLida", prescription, problems
                     ),
-                    "days_paid": self._claim_float(
+                    days_paid=self._claim_float(
                         claim, "QuantidadeCalculado", prescription, problems
                     ),
-                    "move_line_id": line_ids[0] if len(line_ids) == 1 else False,
-                }
-                add_rows(claim, "prestacao", claim_vals)
-                for line in _children(claim, "LinhaPrestacaoErrosEDiferencas"):
-                    add_rows(
-                        line,
-                        "linha",
-                        dict(
-                            claim_vals,
-                            provider_system_ref=_child_text(line, "SistemaPrescrito"),
-                        ),
+                    move_line_id=line_ids[0] if len(line_ids) == 1 else False,
+                )
+                line_errors = errors_of(claim, "prestacao")
+                for linha in _children(claim, "LinhaPrestacaoErrosEDiferencas"):
+                    line_errors.extend(
+                        errors_of(
+                            linha,
+                            "linha",
+                            {
+                                "provider_system_ref": _child_text(
+                                    linha, "SistemaPrescrito"
+                                )
+                            },
+                        )
                     )
                 for prescription_data in _children(claim, "PrescricaoErrosEDiferencas"):
-                    add_rows(prescription_data, "prescricao", claim_vals)
-        return rows
+                    line_errors.extend(errors_of(prescription_data, "prescricao"))
+                lines.append((line_vals, line_errors))
+        return lines, errors
 
-    def _completeness_warning(self, root, row_count, problems):
-        """Any Erro the anchored walk did not turn into a row, and any
-        unparseable claim amount, is reported on the result, never
+    def _completeness_warning(self, root, error_count, problems):
+        """Any Erro the anchored walk did not turn into an error record,
+        and any unparseable claim amount, is reported on the result, never
         blocking."""
         total = sum(1 for element in root.iter() if _local(element.tag) == "Erro")
-        missing = total - row_count
+        missing = total - error_count
         warnings = []
         if missing > 0:
             warnings.append(
@@ -264,8 +276,9 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         response = _find_first(root, "Response")
         return _child_text(response, "Description") if response is not None else False
 
-    def _store_result(self, move, result_vals, rows):
-        """Upsert the 1:1 result and rebuild its rows (idempotent)."""
+    def _store_result(self, move, result_vals, lines, errors):
+        """Upsert the 1:1 result and rebuild its lines and errors
+        (idempotent)."""
         result = move.spms_invoice_check_ids[:1]
         if result and result.official_locked:
             raise UserError(
@@ -278,14 +291,29 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             )
         if result:
             result.error_ids.unlink()
+            result.line_ids.unlink()
             result.write(result_vals)
         else:
             result = self.env["spms.invoice.check"].create(
                 dict(result_vals, move_id=move.id)
             )
-        if rows:
-            self.env["spms.invoice.check.error"].create(
-                [dict(row, result_id=result.id) for row in rows]
+        if lines:
+            self.env["spms.invoice.check.line"].create(
+                [
+                    dict(
+                        line_vals,
+                        result_id=result.id,
+                        error_ids=[
+                            (0, 0, dict(error_vals, result_id=result.id))
+                            for error_vals in line_errors
+                        ],
+                    )
+                    for line_vals, line_errors in lines
+                ]
+            )
+        if errors:
+            self.env["spms.invoice.check.line.error"].create(
+                [dict(error_vals, result_id=result.id) for error_vals in errors]
             )
         return result
 

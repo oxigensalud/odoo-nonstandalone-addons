@@ -61,16 +61,12 @@
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button
-                            name="action_view_errors"
+                            name="action_view_lines"
                             type="object"
                             class="oe_stat_button"
-                            icon="fa-exclamation-circle"
+                            icon="fa-list"
                         >
-                            <field
-                                name="error_count"
-                                widget="statinfo"
-                                string="Errors"
-                            />
+                            <field name="line_count" widget="statinfo" string="Lines" />
                         </button>
                     </div>
                     <div class="oe_title">
@@ -106,6 +102,20 @@
                     >
                         <field name="oficio" />
                     </group>
+                    <notebook attrs="{'invisible': [('document_error_ids', '=', [])]}">
+                        <page name="document_errors" string="Document Errors">
+                            <field name="document_error_ids" readonly="1">
+                                <tree
+                                    decoration-danger="level == 'invoice'"
+                                    decoration-warning="level == 'lote'"
+                                >
+                                    <field name="level" />
+                                    <field name="code" />
+                                    <field name="description" />
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

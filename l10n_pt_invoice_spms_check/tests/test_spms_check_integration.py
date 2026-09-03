@@ -151,8 +151,14 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         self.assertEqual(result.check_state, "with_errors")
         self.assertAlmostEqual(result.credit_official, CREDIT_OFFICIAL, places=2)
 
+        lines = result.line_ids
+        self.assertEqual(len(lines), CLAIMS)
+        self.assertAlmostEqual(sum(lines.mapped("amount_difference")), 480.0)
+        self.assertAlmostEqual(result.amount_lines_untaxed, 480.0)
         rows = result.error_ids
         self.assertEqual(len(rows), 105)
+        self.assertEqual(lines.error_ids, rows)
+        self.assertFalse(result.document_error_ids)
         self.assertEqual(
             Counter(rows.mapped("level")), Counter({"linha": 96, "prestacao": 9})
         )
@@ -234,6 +240,17 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
                     "prescricao": 1,
                 }
             ),
+        )
+        # the three claim-anchored errors hang from the single line, the
+        # document and lot ones from the result itself
+        self.assertEqual(len(result.line_ids), 1)
+        self.assertEqual(
+            Counter(result.line_ids.error_ids.mapped("level")),
+            Counter({"prestacao": 1, "linha": 1, "prescricao": 1}),
+        )
+        self.assertEqual(
+            Counter(result.document_error_ids.mapped("level")),
+            Counter({"invoice": 1, "lote": 1}),
         )
         # the unknown code arrived: catalogue entry auto-created
         # carrying the official message straight from the wire

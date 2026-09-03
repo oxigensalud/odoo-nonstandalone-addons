@@ -26,9 +26,15 @@
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
 
-    <record id="spms_invoice_check_error_rule_company" model="ir.rule">
-        <field name="name">SPMS Invoice Check Error: multi-company</field>
-        <field name="model_id" ref="model_spms_invoice_check_error" />
+    <record id="spms_invoice_check_line_rule_company" model="ir.rule">
+        <field name="name">SPMS Invoice Check Line: multi-company</field>
+        <field name="model_id" ref="model_spms_invoice_check_line" />
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <record id="spms_invoice_check_line_error_rule_company" model="ir.rule">
+        <field name="name">SPMS Invoice Check Line Error: multi-company</field>
+        <field name="model_id" ref="model_spms_invoice_check_line_error" />
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
 </odoo>
