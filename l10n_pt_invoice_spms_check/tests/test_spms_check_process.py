@@ -245,26 +245,38 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertIn("Documento conferido", result.oficio)
         self.assertTrue(result.fetch_date)
         self.assertFalse(result.completeness_warning)
+        # one line per claim, carrying the money and the lot
+        line = result.line_ids
+        self.assertEqual(len(line), 1)
+        self.assertEqual(line.prescription, "TESTP001")
+        self.assertEqual(line.lot_type, "992")
+        self.assertEqual(line.lot_number, "1")
+        self.assertAlmostEqual(line.amount_billed, 41.0)
+        self.assertAlmostEqual(line.amount_allowed, 5.0)
+        self.assertAlmostEqual(line.amount_difference, 36.0)
+        self.assertAlmostEqual(line.days_billed, 31.0)
+        self.assertEqual(line.move_line_id.spms_prescription, "TESTP001")
+        self.assertAlmostEqual(result.amount_lines_untaxed, 36.0)
+        # every error at its level: the ones anchored under the claim
+        # hang from the line, the document and lot ones from the result
         self.assertEqual(result.error_count, 5)
-        by_level = {row.level: row for row in result.error_ids}
+        by_level = {error.level: error for error in result.error_ids}
         self.assertEqual(
             set(by_level), {"invoice", "lote", "prestacao", "linha", "prescricao"}
         )
+        self.assertEqual(
+            result.document_error_ids, by_level["invoice"] | by_level["lote"]
+        )
+        self.assertFalse(result.document_error_ids.line_id)
         self.assertFalse(by_level["invoice"].prescription)
-        self.assertEqual(by_level["lote"].lot_type, "992")
-        self.assertEqual(by_level["lote"].lot_number, "1")
-        for level in ("prestacao", "linha", "prescricao"):
-            row = by_level[level]
-            self.assertEqual(row.prescription, "TESTP001")
-            self.assertAlmostEqual(row.amount_billed, 41.0)
-            self.assertAlmostEqual(row.amount_allowed, 5.0)
-            self.assertAlmostEqual(row.amount_difference, 36.0)
-            self.assertAlmostEqual(row.days_billed, 31.0)
-            self.assertEqual(
-                row.move_line_id.spms_prescription,
-                "TESTP001",
-            )
+        self.assertEqual(
+            line.error_ids,
+            by_level["prestacao"] | by_level["linha"] | by_level["prescricao"],
+        )
+        self.assertEqual(set(line.error_ids.mapped("prescription")), {"TESTP001"})
+        self.assertEqual(line.error_ids.result_id, result)
         self.assertEqual(by_level["linha"].provider_system_ref, "REF1")
+        self.assertEqual(line.error_codes, "C011 / C012 / C010")
         attachment = self._attachments(result)
         self.assertEqual(len(attachment), 1)
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
@@ -329,18 +341,18 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             claims=_prestacao("TESTP001", errors=_erro("Z998", "Nova mensagem"))
         )
         self._process(document)
-        row = self._result().error_ids
-        self.assertEqual(row.code, "Z998")
-        self.assertEqual(row.error_type_id.description, "Nova mensagem")
+        error = self._result().error_ids
+        self.assertEqual(error.code, "Z998")
+        self.assertEqual(error.error_type_id.description, "Nova mensagem")
 
     def test_unmatched_prescription_has_no_link_and_no_parse_error(self):
         document = _document(claims=_prestacao("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
         result = self._result()
-        row = result.error_ids
-        self.assertEqual(row.prescription, "TESTMISSING")
-        self.assertFalse(row.move_line_id)
+        line = result.line_ids
+        self.assertEqual(line.prescription, "TESTMISSING")
+        self.assertFalse(line.move_line_id)
         # parsing never blocks; the generation reports the unmatched
         self.assertEqual(result.state, "error")
         self.assertIn("not matched", result.generation_error)
@@ -353,8 +365,8 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         document = _document(claims=_prestacao("TESTPDUP", errors=_erro("C011")))
         self._process(document, invoice=invoice)
-        row = self._result(invoice).error_ids
-        self.assertFalse(row.move_line_id)
+        line = self._result(invoice).line_ids
+        self.assertFalse(line.move_line_id)
 
     def test_multi_claim_counts_per_level(self):
         document = _document(
@@ -378,6 +390,35 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         )
         codes = set(result.error_codes.split(" / "))
         self.assertEqual(codes, {"C011", "D306", "C012"})
+        # the errors sit under their own claim, in document order
+        self.assertEqual(
+            result.line_ids.mapped("prescription"), ["TESTP001", "TESTP002"]
+        )
+        first, second = result.line_ids
+        self.assertEqual(len(first.error_ids), 4)
+        self.assertEqual(first.error_codes, "C011 / D306 / C012")
+        self.assertEqual(len(second.error_ids), 1)
+        self.assertEqual(second.error_codes, "C011")
+        self.assertFalse(result.document_error_ids)
+
+    def test_claim_without_errors_gets_a_line(self):
+        # the document lists claims with errors AND differences: a claim
+        # reported with a difference and no Erro is still a claim, so it
+        # gets its line and is credited like any other
+        document = _document(claims=_prestacao("TESTP001"))
+        child = self._process(document)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        result = self._result()
+        self.assertEqual(result.error_count, 0)
+        self.assertFalse(result.completeness_warning)
+        line = result.line_ids
+        self.assertEqual(line.prescription, "TESTP001")
+        self.assertAlmostEqual(line.amount_difference, 36.0)
+        self.assertFalse(line.error_ids)
+        self.assertFalse(line.error_codes)
+        self.assertEqual(result.state, "done")
+        self.assertAlmostEqual(result.credit_note_move_id.amount_total, 36.0)
+        self.assertEqual(line.refund_move_line_id.spms_prescription, "TESTP001")
 
     def test_completeness_warning_fires_on_unknown_position(self):
         document = _document(
@@ -414,6 +455,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.backend.exchange_process(child)
         result = self._result()
         self.assertEqual(len(result), 1)
+        self.assertEqual(result.line_count, 1)
         self.assertEqual(result.error_count, 1)
         self.assertEqual(len(self._attachments(result)), 1)
 
@@ -501,7 +543,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         result = self._result()
         self.assertIn("ValorTotalLido", result.completeness_warning)
         self.assertIn("TESTP001", result.completeness_warning)
-        by_prescription = {row.prescription: row for row in result.error_ids}
+        by_prescription = {line.prescription: line for line in result.line_ids}
         self.assertAlmostEqual(by_prescription["TESTP001"].amount_billed, 0.0)
         self.assertAlmostEqual(by_prescription["TESTP002"].amount_billed, 10.0)
 

@@ -5,22 +5,20 @@ from odoo import api, fields, models
 from odoo.tools import float_compare, float_is_zero
 
 
-class SpmsInvoiceCheckError(models.Model):
-    """One row per error reported by the check document.
+class SpmsInvoiceCheckLine(models.Model):
+    """One row per claim (prestação) reported by the check document.
 
-    The document's Erro element is identical everywhere — {Codigo,
-    Mensagem} — only its anchor changes, so a single table mirrors that:
-    the `level` selection says where the error hangs and the anchor
-    columns of that level carry its context. Rows anchored to a
-    prescription (claim, line and prescription-data levels) all carry the
-    claim totals, so a prescription's credit base is readable from any of
-    its rows.
+    The claim element is the only place of the document carrying money
+    and quantities, once per prescription, so the amounts live here and
+    nowhere else: a sum over the lines is a sum over the prescriptions.
+    The errors the document anchors under the claim (claim, line and
+    prescription-data levels) hang from the line.
     """
 
-    _name = "spms.invoice.check.error"
-    _description = "SPMS Invoice Check Error"
-    _order = "result_id, level, prescription, id"
-    _rec_name = "code"
+    _name = "spms.invoice.check.line"
+    _description = "SPMS Invoice Check Line"
+    _order = "result_id, id"
+    _rec_name = "prescription"
     _check_company_auto = True
 
     result_id = fields.Many2one(
@@ -40,74 +38,34 @@ class SpmsInvoiceCheckError(models.Model):
         store=True,
         readonly=True,
     )
-    level = fields.Selection(
-        selection=[
-            ("invoice", "Invoice"),
-            ("lote", "Lot"),
-            ("prestacao", "Claim"),
-            ("linha", "Line"),
-            ("prescricao", "Prescription Data"),
-        ],
-        string="Level",
-        required=True,
-        readonly=True,
-        help="Nesting point of the check document the error is " "anchored to.",
-    )
-    error_type_id = fields.Many2one(
-        comodel_name="spms.error.type",
-        string="Error Type",
-        required=True,
-        readonly=True,
-        index=True,
-        ondelete="restrict",
-        help="Type of this error in the shared SPMS error-type master; "
-        "unknown codes are auto-created there as pending "
-        "classification.",
-    )
-    code = fields.Char(
-        related="error_type_id.code",
-        store=True,
-        index=True,
-        string="Error Code",
-        help="Error code reported by the check (Erro/Codigo), "
-        "e.g. C010, C012, C313.",
-    )
-    description = fields.Char(
-        string="Error Description",
-        readonly=True,
-        help="Error description as reported (Erro/Mensagem).",
-    )
     lot_type = fields.Char(
         string="Lot Type",
         readonly=True,
-        help="Lot-level anchor: type of the lot the error is anchored to.",
+        help="Type of the lot the claim belongs to (TipoLote).",
     )
     lot_number = fields.Char(
         string="Lot Number",
         readonly=True,
-        help="Lot-level anchor: number of the lot the error is anchored to.",
+        help="Number of the lot the claim belongs to (Numero).",
     )
     prescription = fields.Char(
         string="Prescription",
         index=True,
         readonly=True,
         help="Prescription number (NumeroPrescricao), the billing-line key "
-        "of the claim the error is anchored to. Patient-linked: treat as "
-        "an opaque identifier.",
+        "of the claim. Patient-linked: treat as an opaque identifier.",
     )
     amount_billed = fields.Monetary(
         string="Billed Amount",
         readonly=True,
-        help="Claim total as read by the check, untaxed. Identical on "
-        "every row of the same prescription; read from the document, "
-        "never recomputed.",
+        help="Claim total as read by the check, untaxed (ValorTotalLido); "
+        "read from the document, never recomputed.",
     )
     amount_allowed = fields.Monetary(
         string="Allowed Amount",
         readonly=True,
-        help="Claim total recomputed by the check, untaxed. Identical "
-        "on every row of the same prescription; read from the document, "
-        "never recomputed.",
+        help="Claim total recomputed by the check, untaxed "
+        "(ValorTotalCalculado); read from the document, never recomputed.",
     )
     amount_difference = fields.Monetary(
         string="Difference",
@@ -120,19 +78,13 @@ class SpmsInvoiceCheckError(models.Model):
     days_billed = fields.Float(
         string="Billed Days",
         readonly=True,
-        help="Billed quantity in days for the claim.",
+        help="Billed quantity in days for the claim (QuantidadeLida).",
     )
     days_paid = fields.Float(
         string="Paid Days",
         readonly=True,
-        help="Allowed/paid days for the claim; may be empty in the " "document.",
-    )
-    provider_system_ref = fields.Char(
-        string="Provider System Ref",
-        readonly=True,
-        help="Line-level anchor: provider-system reference of the service "
-        "line the error is anchored to. Kept as audit of which line came "
-        "flagged, never used as a dedup key.",
+        help="Allowed/paid days for the claim (QuantidadeCalculado); may be "
+        "empty in the document.",
     )
     move_line_id = fields.Many2one(
         comodel_name="account.move.line",
@@ -147,13 +99,46 @@ class SpmsInvoiceCheckError(models.Model):
         string="Refund Line",
         readonly=True,
         check_company=True,
-        help="Credit-note line generated from this prescription (audit " "only).",
+        help="Credit-note line generated from this claim (audit only).",
+    )
+    error_ids = fields.One2many(
+        comodel_name="spms.invoice.check.line.error",
+        inverse_name="line_id",
+        string="Errors",
+    )
+    error_codes = fields.Char(
+        string="Error Codes",
+        compute="_compute_error_codes",
+        store=True,
+        help="Distinct error codes reported under this claim.",
     )
 
     @api.depends("amount_billed", "amount_allowed")
     def _compute_amount_difference(self):
         for rec in self:
             rec.amount_difference = rec.amount_billed - rec.amount_allowed
+
+    @api.depends("error_ids.code")
+    def _compute_error_codes(self):
+        for rec in self:
+            codes = []
+            for code in rec.error_ids.mapped("code"):
+                if code and code not in codes:
+                    codes.append(code)
+            rec.error_codes = " / ".join(codes)
+
+    def _is_creditable(self):
+        """A claim the credit note must carry: keyed by prescription and
+        over-billed (positive difference)."""
+        self.ensure_one()
+        return bool(self.prescription) and (
+            float_compare(
+                self.amount_difference,
+                0.0,
+                precision_rounding=self.currency_id.rounding or 0.01,
+            )
+            > 0
+        )
 
     def _get_refund_line_values(self):
         """Values to write on the copied refund line, empty to keep it as-is.

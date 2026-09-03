@@ -13,9 +13,11 @@ error count, opening the result directly (one result per invoice — the
 first definitive answer closes the invoice permanently).
 
 The result form carries the check state, the official totals and the
-computed official credit value. The *Errors* smart button opens the real
-error list — searchable, filterable and grouped by level by default —
-since a result can carry hundreds of error rows.
+computed official credit value. The *Lines* smart button opens the claim
+lines — one per prescription, with the billed, allowed and difference
+amounts summed at the bottom and the error codes of each — and each line
+lists its own errors, code and message; the errors the document anchors
+to the invoice itself or to a lot are listed on the result form.
 
 For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the

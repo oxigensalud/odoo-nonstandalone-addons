@@ -14,11 +14,9 @@ from odoo.tools import mute_logger
 class TestSpmsCheck(SavepointCase):
     """Exercise the check-result store and the credit-note generation.
 
-    The web-service transport and the check-document parser are not
-    wired yet, so the tests build the results and their error rows the way
-    the parser will; generation is then driven through its business method,
-    the deepest public entry point available until the automatic trigger
-    lands.
+    The tests build the results, their lines and their errors the way
+    the parser does, then drive the generation through its business
+    method; the parser and the automatic trigger have their own suites.
     """
 
     @classmethod
@@ -113,49 +111,64 @@ class TestSpmsCheck(SavepointCase):
         return move
 
     @classmethod
-    def _create_result(cls, move, rows, credit_official=0.0, check_state="with_errors"):
-        """Build a check result the way the parser will.
+    def _create_result(
+        cls, move, lines, credit_official=0.0, check_state="with_errors"
+    ):
+        """Build a check result the way the parser does.
 
-        rows: list of dicts keyed like the future parser output; the claim
-        totals are identical on every row of the same prescription and each
-        row is linked to the original invoice line by prescription number.
-        The invoice-level taxed totals are set so the computed official
-        credit equals `credit_official` exactly.
+        lines: list of dicts keyed like the parser output, one per claim
+        (prescription), each linked to the original invoice line by
+        prescription number and carrying its errors: one C010 at claim
+        level unless `errors` says otherwise. The invoice-level taxed
+        totals are set so the computed official credit equals
+        `credit_official` exactly.
         """
         result = cls.env["spms.invoice.check"].create(
             {
                 "move_id": move.id,
                 "check_state": check_state,
                 "fetch_date": fields.Datetime.now(),
-                "total_billed": sum(row.get("billed", 0.0) for row in rows),
-                "total_allowed": sum(row.get("allowed", 0.0) for row in rows),
+                "total_billed": sum(line.get("billed", 0.0) for line in lines),
+                "total_allowed": sum(line.get("allowed", 0.0) for line in lines),
                 "total_billed_taxed": move.amount_total,
                 "total_allowed_taxed": move.amount_total - credit_official,
             }
         )
-        error_vals_list = []
-        for row in rows:
+        error_type_model = cls.env["spms.error.type"]
+        line_vals_list = []
+        for line in lines:
             move_lines = move.invoice_line_ids.filtered(
-                lambda line: line.spms_prescription == row.get("prescription")
+                lambda move_line: move_line.spms_prescription
+                == line.get("prescription")
             )
-            error_vals_list.append(
+            line_vals_list.append(
                 {
                     "result_id": result.id,
-                    "level": row.get("level", "prestacao"),
-                    "error_type_id": cls.env["spms.error.type"]
-                    ._get_or_create(row.get("code", "C010"))
-                    .id,
-                    "description": row.get("description", "Test error"),
-                    "prescription": row.get("prescription"),
-                    "amount_billed": row.get("billed", 0.0),
-                    "amount_allowed": row.get("allowed", 0.0),
-                    "days_billed": row.get("days_billed", 0.0),
-                    "days_paid": row.get("days_paid", 0.0),
-                    "provider_system_ref": row.get("provider_ref"),
+                    "prescription": line.get("prescription"),
+                    "amount_billed": line.get("billed", 0.0),
+                    "amount_allowed": line.get("allowed", 0.0),
+                    "days_billed": line.get("days_billed", 0.0),
+                    "days_paid": line.get("days_paid", 0.0),
                     "move_line_id": (move_lines.id if len(move_lines) == 1 else False),
+                    "error_ids": [
+                        (
+                            0,
+                            0,
+                            {
+                                "result_id": result.id,
+                                "level": error.get("level", "prestacao"),
+                                "error_type_id": error_type_model._get_or_create(
+                                    error.get("code", "C010")
+                                ).id,
+                                "description": error.get("description", "Test error"),
+                                "provider_system_ref": error.get("provider_ref"),
+                            },
+                        )
+                        for error in line.get("errors", [{}])
+                    ],
                 }
             )
-        cls.env["spms.invoice.check.error"].create(error_vals_list)
+        cls.env["spms.invoice.check.line"].create(line_vals_list)
         return result
 
     @classmethod
@@ -207,9 +220,12 @@ class TestSpmsCheck(SavepointCase):
         self.assertAlmostEqual(result.credit_official, 38.16)
         self.assertAlmostEqual(result.amount_lines_untaxed, 36.0)
         self.assertEqual(result.error_codes, "C010")
+        self.assertEqual(result.line_count, 3)
         self.assertEqual(result.error_count, 3)
-        for row in result.error_ids:
-            self.assertEqual(row.move_line_id.spms_prescription, row.prescription)
+        for line in result.line_ids:
+            self.assertEqual(line.move_line_id.spms_prescription, line.prescription)
+            self.assertEqual(line.error_ids.line_id, line)
+            self.assertEqual(line.error_ids.result_id, result)
 
     def test_result_move_unique(self):
         move = self._standard_invoice()
@@ -262,10 +278,10 @@ class TestSpmsCheck(SavepointCase):
         self.assertEqual(fallback.quantity, 1)
         self.assertAlmostEqual(fallback.price_unit, 1.0)
         self.assertFalse(fallback.spms_start_date)
-        for row in result.error_ids:
+        for line in result.line_ids:
             self.assertEqual(
-                row.refund_move_line_id,
-                by_prescription[row.prescription],
+                line.refund_move_line_id,
+                by_prescription[line.prescription],
             )
 
     def test_generate_twice_blocks(self):
@@ -345,39 +361,33 @@ class TestSpmsCheck(SavepointCase):
             self.assertEqual(line.qty_invoiced, line.product_uom_qty)
             self.assertEqual(line.qty_to_invoice, 0)
 
-    def test_generate_dedupes_multi_error_rows(self):
-        # a prescription reported by several error rows (e.g. C010 at
-        # prescription-data level plus C012 at line level) is credited once:
-        # every row carries the same claim totals by construction
+    def test_generate_credits_multi_error_line_once(self):
+        # a prescription reported with several errors (e.g. C010 at
+        # prescription-data level plus C012 at line level) is one claim,
+        # so one line and one credit-note line: the errors carry no money
         move = self._create_invoice("FT 2026/00126", [("TESTP006", 31, 1.0)])
-        rows = [
+        lines = [
             {
                 "prescription": "TESTP006",
                 "billed": 31.0,
                 "allowed": 0.0,
                 "days_billed": 31.0,
-                "code": "C010",
-                "level": "prescricao",
-            },
-            {
-                "prescription": "TESTP006",
-                "billed": 31.0,
-                "allowed": 0.0,
-                "days_billed": 31.0,
-                "code": "C012",
-                "level": "linha",
-            },
+                "errors": [
+                    {"code": "C010", "level": "prescricao"},
+                    {"code": "C012", "level": "linha"},
+                ],
+            }
         ]
-        result = self._create_result(move, rows, credit_official=32.86)
+        result = self._create_result(move, lines, credit_official=32.86)
+        self.assertEqual(result.line_count, 1)
+        self.assertEqual(result.error_count, 2)
         self.assertAlmostEqual(result.amount_lines_untaxed, 31.0)
         self.assertEqual(result.error_codes, "C010 / C012")
+        self.assertEqual(result.line_ids.error_codes, "C010 / C012")
         draft = result._generate_credit_note()
         self.assertAlmostEqual(draft.amount_total, 32.86)
         self.assertEqual(len(draft.invoice_line_ids), 1)
-        self.assertEqual(
-            result.error_ids.mapped("refund_move_line_id"),
-            draft.invoice_line_ids,
-        )
+        self.assertEqual(result.line_ids.refund_move_line_id, draft.invoice_line_ids)
 
     def test_generate_skips_zero_difference_prescriptions(self):
         # C012-style noise where read equals computed cuts nothing: the
@@ -385,7 +395,7 @@ class TestSpmsCheck(SavepointCase):
         move = self._create_invoice(
             "FT 2026/00127", [("TESTP007", 31, 1.0), ("TESTP008", 10, 1.0)]
         )
-        rows = [
+        lines = [
             {
                 "prescription": "TESTP007",
                 "billed": 31.0,
@@ -396,28 +406,29 @@ class TestSpmsCheck(SavepointCase):
                 "prescription": "TESTP008",
                 "billed": 10.0,
                 "allowed": 10.0,
-                "code": "C012",
-                "level": "linha",
+                "errors": [{"code": "C012", "level": "linha"}],
             },
         ]
-        result = self._create_result(move, rows, credit_official=32.86)
+        result = self._create_result(move, lines, credit_official=32.86)
         draft = result._generate_credit_note()
         self.assertEqual(len(draft.invoice_line_ids), 1)
         self.assertEqual(draft.invoice_line_ids.spms_prescription, "TESTP007")
-        zero_row = result.error_ids.filtered(lambda row: row.prescription == "TESTP008")
-        self.assertFalse(zero_row.refund_move_line_id)
+        zero_line = result.line_ids.filtered(
+            lambda line: line.prescription == "TESTP008"
+        )
+        self.assertFalse(zero_line.refund_move_line_id)
 
     def test_generate_without_positive_difference_blocks(self):
         move = self._create_invoice("FT 2026/00128", [("TESTP009", 10, 1.0)])
-        rows = [
+        lines = [
             {
                 "prescription": "TESTP009",
                 "billed": 10.0,
                 "allowed": 10.0,
-                "code": "C012",
+                "errors": [{"code": "C012"}],
             }
         ]
-        result = self._create_result(move, rows, credit_official=1.0)
+        result = self._create_result(move, lines, credit_official=1.0)
         with self.assertRaisesRegex(UserError, "positive difference"):
             result._generate_credit_note()
 
@@ -682,7 +693,7 @@ class TestSpmsCheck(SavepointCase):
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         self.assertEqual(result.state, "ready")
 
-    def test_error_row_autocreates_unknown_type(self):
+    def test_error_autocreates_unknown_type(self):
         move = self._create_invoice("FT 2026/00132", [("TESTP013", 10, 1.0)])
         result = self._create_result(
             move,
@@ -692,10 +703,10 @@ class TestSpmsCheck(SavepointCase):
                     "billed": 10.0,
                     "allowed": 0.0,
                     "days_billed": 10.0,
-                    "code": "Z999",
+                    "errors": [{"code": "Z999"}],
                 }
             ],
         )
-        row = result.error_ids
-        self.assertEqual(row.code, "Z999")
-        self.assertTrue(row.error_type_id)
+        error = result.error_ids
+        self.assertEqual(error.code, "Z999")
+        self.assertTrue(error.error_type_id)

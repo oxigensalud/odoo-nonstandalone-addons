@@ -119,15 +119,34 @@ class SpmsInvoiceCheck(models.Model):
         readonly=True,
         copy=False,
     )
+    line_ids = fields.One2many(
+        comodel_name="spms.invoice.check.line",
+        inverse_name="result_id",
+        string="Lines",
+        copy=False,
+    )
+    line_count = fields.Integer(
+        string="# Lines",
+        compute="_compute_line_count",
+    )
     error_ids = fields.One2many(
-        comodel_name="spms.invoice.check.error",
+        comodel_name="spms.invoice.check.line.error",
         inverse_name="result_id",
         string="Errors",
         copy=False,
+        help="Every error the document reports, with and without line.",
     )
     error_count = fields.Integer(
         string="# Errors",
         compute="_compute_error_count",
+    )
+    document_error_ids = fields.One2many(
+        comodel_name="spms.invoice.check.line.error",
+        inverse_name="result_id",
+        string="Document Errors",
+        domain=[("line_id", "=", False)],
+        help="Errors anchored to the document itself or to a lot: they "
+        "carry no prescription, so no line.",
     )
     official_locked = fields.Boolean(
         compute="_compute_official_locked",
@@ -199,6 +218,11 @@ class SpmsInvoiceCheck(models.Model):
                 precision_rounding=rec.currency_id.rounding or 0.01,
             )
 
+    @api.depends("line_ids")
+    def _compute_line_count(self):
+        for rec in self:
+            rec.line_count = len(rec.line_ids)
+
     @api.depends("error_ids")
     def _compute_error_count(self):
         for rec in self:
@@ -213,18 +237,12 @@ class SpmsInvoiceCheck(models.Model):
                 and rec.credit_note_move_id.state != "cancel"
             )
 
-    @api.depends("error_ids.amount_difference", "error_ids.prescription")
+    @api.depends("line_ids.amount_difference", "line_ids.prescription")
     def _compute_amount_lines_untaxed(self):
         for rec in self:
-            seen = set()
-            total = 0.0
-            for row in rec.error_ids:
-                if not row.prescription or row.prescription in seen:
-                    continue
-                seen.add(row.prescription)
-                if row.amount_difference > 0:
-                    total += row.amount_difference
-            rec.amount_lines_untaxed = total
+            rec.amount_lines_untaxed = sum(
+                line.amount_difference for line in rec.line_ids if line._is_creditable()
+            )
 
     @api.depends("error_ids.code")
     def _compute_error_codes(self):
@@ -479,37 +497,19 @@ class SpmsInvoiceCheck(models.Model):
         refund_line_map = {}
         for draft_line in draft.invoice_line_ids:
             refund_line_map.setdefault(draft_line.spms_prescription, draft_line)
-        credited_prescriptions = set(lines.mapped("prescription"))
-        for row in self.error_ids:
-            if row.prescription in credited_prescriptions:
-                row.refund_move_line_id = refund_line_map.get(
-                    row.prescription, self.env["account.move.line"]
-                )
+        for line in lines:
+            line.refund_move_line_id = refund_line_map.get(
+                line.prescription, self.env["account.move.line"]
+            )
         self.credit_note_move_id = draft
         self.state = "done"
         return draft
 
     def _get_creditable_lines(self):
-        """One representative error row per prescription with a positive
-        difference.
-
-        Every error row of a prescription carries the same claim totals by
-        construction (they all mirror the same check claim), so the
-        first row stands for the whole prescription.
-        """
+        """The claims with a positive difference, each matched to its
+        original invoice line."""
         self.ensure_one()
-        rounding = self.currency_id.rounding or 0.01
-        seen = set()
-        lines = self.env["spms.invoice.check.error"]
-        for row in self.error_ids.sorted("id"):
-            if not row.prescription or row.prescription in seen:
-                continue
-            seen.add(row.prescription)
-            if (
-                float_compare(row.amount_difference, 0.0, precision_rounding=rounding)
-                > 0
-            ):
-                lines |= row
+        lines = self.line_ids.filtered(lambda line: line._is_creditable())
         if not lines:
             raise UserError(_("There is no prescription with a positive difference."))
         unmatched = lines.filtered(lambda line: not line.move_line_id)
@@ -823,13 +823,12 @@ class SpmsInvoiceCheck(models.Model):
             "view_mode": "form",
         }
 
-    def action_view_errors(self):
+    def action_view_lines(self):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
-            "name": _("Check Errors"),
-            "res_model": "spms.invoice.check.error",
+            "name": _("Check Lines"),
+            "res_model": "spms.invoice.check.line",
             "view_mode": "tree,form",
             "domain": [("result_id", "=", self.id)],
-            "context": {"search_default_groupby_level": 1},
         }
