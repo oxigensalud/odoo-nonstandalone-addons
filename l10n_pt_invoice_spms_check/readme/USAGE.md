@@ -1,11 +1,11 @@
-Results arrive on their own: an hourly scheduled action (*SPMS: obtain
-check results*) asks the CCF web service about every posted invoice
-sent to SPMS that has no definitive check result yet. A fetched check
-document is stored as an input exchange record on the SPMS EDI backend
-and processed from there. When the CCF answers that it does not know
-an invoice that was sent successfully (return code 301), its result is
-created and held in *Error*, with the incident explained on the result
-form, until a definitive check result supersedes it.
+Results arrive on their own: an hourly scheduled action (*SPMS: get
+conference results from the CCF*) asks the CCF web service about every
+posted invoice sent to SPMS that has no definitive check result yet. A
+fetched check document is stored as an input exchange record on the
+SPMS EDI backend and processed from there. When the CCF answers that it
+does not know an invoice that was sent successfully (return code 301),
+its result is created and held in *Error*, with the incident explained
+on the result form, until a definitive check result supersedes it.
 
 Every invoice sent to SPMS gets its check result attached the moment
 the check resolves it: the invoice form shows an *SPMS Check* smart
