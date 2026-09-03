@@ -98,9 +98,10 @@
                     </group>
                     <group
                         name="oficio"
+                        string="Ofício"
                         attrs="{'invisible': [('oficio', '=', False)]}"
                     >
-                        <field name="oficio" />
+                        <field name="oficio" nolabel="1" />
                     </group>
                     <notebook attrs="{'invisible': [('document_error_ids', '=', [])]}">
                         <page name="document_errors" string="Document Errors">
