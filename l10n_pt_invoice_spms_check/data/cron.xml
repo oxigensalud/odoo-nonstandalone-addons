@@ -6,7 +6,7 @@
          the gate — with no sent SPMS invoices awaiting a result it makes
          no calls. Its Active field is the polling pause switch. -->
     <record id="cron_spms_check_update" model="ir.cron">
-        <field name="name">SPMS: obtain check results</field>
+        <field name="name">SPMS: get conference results from the CCF</field>
         <field name="active" eval="True" />
         <field name="user_id" ref="base.user_root" />
         <field name="interval_number">1</field>

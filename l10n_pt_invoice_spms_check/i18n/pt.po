@@ -753,8 +753,8 @@ msgstr ""
 #: model:ir.actions.server,name:l10n_pt_invoice_spms_check.cron_spms_check_update_ir_actions_server
 #: model:ir.cron,cron_name:l10n_pt_invoice_spms_check.cron_spms_check_update
 #: model:ir.cron,name:l10n_pt_invoice_spms_check.cron_spms_check_update
-msgid "SPMS: obtain check results"
-msgstr "SPMS: obter resultados da conferência"
+msgid "SPMS: get conference results from the CCF"
+msgstr "SPMS: obter resultados da conferência do CCF"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_product_id
