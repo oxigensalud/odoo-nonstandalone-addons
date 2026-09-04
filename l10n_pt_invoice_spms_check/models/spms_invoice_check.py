@@ -106,9 +106,10 @@ class SpmsInvoiceCheck(models.Model):
         "carry exactly this value.",
     )
     oficio = fields.Text(
-        string="Ofício",
+        string="Official Result Notice",
         readonly=True,
-        help="Ofício text communicated with the check result, as " "received.",
+        help="The ofício, the official letter the CCF communicates with the "
+        "check result, as received.",
     )
     credit_note_move_id = fields.Many2one(
         comodel_name="account.move",
