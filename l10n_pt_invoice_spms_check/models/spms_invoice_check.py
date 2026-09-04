@@ -120,7 +120,7 @@ class SpmsInvoiceCheck(models.Model):
         copy=False,
     )
     line_ids = fields.One2many(
-        comodel_name="spms.invoice.check.line",
+        comodel_name="spms.invoice.line.check",
         inverse_name="result_id",
         string="Lines",
         copy=False,
@@ -827,8 +827,8 @@ class SpmsInvoiceCheck(models.Model):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
-            "name": _("Check Lines"),
-            "res_model": "spms.invoice.check.line",
+            "name": _("Line Checks"),
+            "res_model": "spms.invoice.line.check",
             "view_mode": "tree,form",
             "domain": [("result_id", "=", self.id)],
         }

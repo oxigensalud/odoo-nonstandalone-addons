@@ -298,7 +298,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                 dict(result_vals, move_id=move.id)
             )
         if lines:
-            self.env["spms.invoice.check.line"].create(
+            self.env["spms.invoice.line.check"].create(
                 [
                     dict(
                         line_vals,

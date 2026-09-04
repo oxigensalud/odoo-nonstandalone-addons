@@ -2,9 +2,9 @@
 <!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
-    <record id="spms_invoice_check_line_view_tree" model="ir.ui.view">
-        <field name="name">spms.invoice.check.line.tree</field>
-        <field name="model">spms.invoice.check.line</field>
+    <record id="spms_invoice_line_check_view_tree" model="ir.ui.view">
+        <field name="name">spms.invoice.line.check.tree</field>
+        <field name="model">spms.invoice.line.check</field>
         <field name="arch" type="xml">
             <tree create="false" delete="false">
                 <field name="result_id" optional="hide" />
@@ -24,9 +24,9 @@
         </field>
     </record>
 
-    <record id="spms_invoice_check_line_view_form" model="ir.ui.view">
-        <field name="name">spms.invoice.check.line.form</field>
-        <field name="model">spms.invoice.check.line</field>
+    <record id="spms_invoice_line_check_view_form" model="ir.ui.view">
+        <field name="name">spms.invoice.line.check.form</field>
+        <field name="model">spms.invoice.line.check</field>
         <field name="arch" type="xml">
             <form>
                 <sheet>
@@ -71,9 +71,9 @@
         </field>
     </record>
 
-    <record id="spms_invoice_check_line_view_search" model="ir.ui.view">
-        <field name="name">spms.invoice.check.line.search</field>
-        <field name="model">spms.invoice.check.line</field>
+    <record id="spms_invoice_line_check_view_search" model="ir.ui.view">
+        <field name="name">spms.invoice.line.check.search</field>
+        <field name="model">spms.invoice.line.check</field>
         <field name="arch" type="xml">
             <search>
                 <field name="prescription" />

@@ -28,7 +28,7 @@ class SpmsInvoiceCheckLineError(models.Model):
         ondelete="cascade",
     )
     line_id = fields.Many2one(
-        comodel_name="spms.invoice.check.line",
+        comodel_name="spms.invoice.line.check",
         string="Line",
         index=True,
         ondelete="cascade",
