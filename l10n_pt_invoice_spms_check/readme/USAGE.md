@@ -8,9 +8,11 @@ its result is created and held in *Error*, with the incident explained
 on the result form, until a definitive check result supersedes it.
 
 Every invoice sent to SPMS gets its check result attached the moment
-the check resolves it: the invoice form shows an *SPMS Check* smart
-button opening the result directly (one result per invoice — the first
-definitive answer closes the invoice permanently).
+the check resolves it (one result per invoice — the first definitive
+answer closes the invoice permanently). When the check reports errors,
+the invoice form shows an *SPMS Errors* smart button that opens the
+result directly; a check without errors adds no button, and its result
+is reached from the *Invoice Checks* list.
 
 The result form carries the check state, the official totals and the
 computed official credit value. The *Lines* smart button opens the claim

@@ -441,9 +441,11 @@ not know an invoice that was sent successfully (return code 301), its
 result is created and held in <em>Error</em>, with the incident explained on
 the result form, until a definitive check result supersedes it.</p>
 <p>Every invoice sent to SPMS gets its check result attached the moment the
-check resolves it: the invoice form shows an <em>SPMS Check</em> smart button
-opening the result directly (one result per invoice — the first
-definitive answer closes the invoice permanently).</p>
+check resolves it (one result per invoice — the first definitive answer
+closes the invoice permanently). When the check reports errors, the
+invoice form shows an <em>SPMS Errors</em> smart button that opens the result
+directly; a check without errors adds no button, and its result is
+reached from the <em>Invoice Checks</em> list.</p>
 <p>The result form carries the check state, the official totals and the
 computed official credit value. The <em>Lines</em> smart button opens the claim
 lines — one per prescription, with the billed, allowed and difference
