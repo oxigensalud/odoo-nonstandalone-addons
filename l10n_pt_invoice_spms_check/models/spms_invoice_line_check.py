@@ -106,26 +106,11 @@ class SpmsInvoiceLineCheck(models.Model):
         inverse_name="line_id",
         string="Errors",
     )
-    error_codes = fields.Char(
-        string="Error Codes",
-        compute="_compute_error_codes",
-        store=True,
-        help="Distinct error codes reported under this claim.",
-    )
 
     @api.depends("amount_billed", "amount_allowed")
     def _compute_amount_difference(self):
         for rec in self:
             rec.amount_difference = rec.amount_billed - rec.amount_allowed
-
-    @api.depends("error_ids.code")
-    def _compute_error_codes(self):
-        for rec in self:
-            codes = []
-            for code in rec.error_ids.mapped("code"):
-                if code and code not in codes:
-                    codes.append(code)
-            rec.error_codes = " / ".join(codes)
 
     def _is_creditable(self):
         """A claim the credit note must carry: keyed by prescription and

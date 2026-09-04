@@ -158,12 +158,6 @@ class SpmsInvoiceCheck(models.Model):
         help="Sum of the per-prescription credit bases, without taxes: "
         "what the generated credit-note lines will add up to.",
     )
-    error_codes = fields.Char(
-        string="Error Codes",
-        compute="_compute_error_codes",
-        store=True,
-        help="Distinct error codes reported for this invoice.",
-    )
     error_message = fields.Char(
         string="Error Message",
         compute="_compute_error_message",
@@ -243,15 +237,6 @@ class SpmsInvoiceCheck(models.Model):
             rec.amount_lines_untaxed = sum(
                 line.amount_difference for line in rec.line_ids if line._is_creditable()
             )
-
-    @api.depends("error_ids.code")
-    def _compute_error_codes(self):
-        for rec in self:
-            codes = []
-            for code in rec.error_ids.mapped("code"):
-                if code and code not in codes:
-                    codes.append(code)
-            rec.error_codes = " / ".join(codes)
 
     @api.model_create_multi
     def create(self, vals_list):
