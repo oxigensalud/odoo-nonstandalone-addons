@@ -276,7 +276,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(set(line.error_ids.mapped("prescription")), {"TESTP001"})
         self.assertEqual(line.error_ids.result_id, result)
         self.assertEqual(by_level["linha"].provider_system_ref, "REF1")
-        self.assertEqual(line.error_codes, "C011 / C012 / C010")
+        self.assertEqual(line.error_ids.mapped("code"), ["C011", "C012", "C010"])
         attachment = self._attachments(result)
         self.assertEqual(len(attachment), 1)
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
@@ -388,17 +388,16 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(
             len(result.error_ids.filtered(lambda r: r.level == "linha")), 2
         )
-        codes = set(result.error_codes.split(" / "))
-        self.assertEqual(codes, {"C011", "D306", "C012"})
+        self.assertEqual(set(result.error_ids.mapped("code")), {"C011", "D306", "C012"})
         # the errors sit under their own claim, in document order
         self.assertEqual(
             result.line_ids.mapped("prescription"), ["TESTP001", "TESTP002"]
         )
         first, second = result.line_ids
         self.assertEqual(len(first.error_ids), 4)
-        self.assertEqual(first.error_codes, "C011 / D306 / C012")
+        self.assertEqual(set(first.error_ids.mapped("code")), {"C011", "D306", "C012"})
         self.assertEqual(len(second.error_ids), 1)
-        self.assertEqual(second.error_codes, "C011")
+        self.assertEqual(second.error_ids.mapped("code"), ["C011"])
         self.assertFalse(result.document_error_ids)
 
     def test_claim_without_errors_gets_a_line(self):
@@ -415,7 +414,6 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(line.prescription, "TESTP001")
         self.assertAlmostEqual(line.amount_difference, 36.0)
         self.assertFalse(line.error_ids)
-        self.assertFalse(line.error_codes)
         self.assertEqual(result.state, "done")
         self.assertAlmostEqual(result.credit_note_move_id.amount_total, 36.0)
         self.assertEqual(line.refund_move_line_id.spms_prescription, "TESTP001")

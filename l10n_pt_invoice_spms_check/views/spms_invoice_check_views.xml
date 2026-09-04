@@ -15,8 +15,7 @@
                 <field name="check_state" />
                 <field name="fetch_date" optional="hide" />
                 <field name="ws_incident_code" optional="hide" />
-                <field name="error_codes" />
-                <field name="error_count" optional="hide" />
+                <field name="error_count" />
                 <field name="credit_official" />
                 <field name="credit_note_move_id" optional="hide" />
                 <field name="currency_id" invisible="1" />
@@ -128,7 +127,7 @@
         <field name="arch" type="xml">
             <search>
                 <field name="move_id" />
-                <field name="error_codes" />
+                <field name="error_ids" />
                 <filter
                     name="filter_ready"
                     string="Ready"
