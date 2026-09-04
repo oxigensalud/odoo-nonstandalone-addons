@@ -4,9 +4,9 @@
 <odoo>
     <!-- Errors are reached from their line (or from the result, when
          they have none): this form is what opens from those lists. -->
-    <record id="spms_invoice_check_line_error_view_form" model="ir.ui.view">
-        <field name="name">spms.invoice.check.line.error.form</field>
-        <field name="model">spms.invoice.check.line.error</field>
+    <record id="spms_invoice_check_error_view_form" model="ir.ui.view">
+        <field name="name">spms.invoice.check.error.form</field>
+        <field name="model">spms.invoice.check.error</field>
         <field name="arch" type="xml">
             <form>
                 <group>

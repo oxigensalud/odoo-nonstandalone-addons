@@ -130,7 +130,7 @@ class SpmsInvoiceCheck(models.Model):
         compute="_compute_line_count",
     )
     error_ids = fields.One2many(
-        comodel_name="spms.invoice.check.line.error",
+        comodel_name="spms.invoice.check.error",
         inverse_name="result_id",
         string="Errors",
         copy=False,
@@ -141,7 +141,7 @@ class SpmsInvoiceCheck(models.Model):
         compute="_compute_error_count",
     )
     document_error_ids = fields.One2many(
-        comodel_name="spms.invoice.check.line.error",
+        comodel_name="spms.invoice.check.error",
         inverse_name="result_id",
         string="Document Errors",
         domain=[("line_id", "=", False)],
