@@ -26,9 +26,9 @@
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
 
-    <record id="spms_invoice_check_line_rule_company" model="ir.rule">
-        <field name="name">SPMS Invoice Check Line: multi-company</field>
-        <field name="model_id" ref="model_spms_invoice_check_line" />
+    <record id="spms_invoice_line_check_rule_company" model="ir.rule">
+        <field name="name">SPMS Invoice Line Check: multi-company</field>
+        <field name="model_id" ref="model_spms_invoice_line_check" />
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
     </record>
 
