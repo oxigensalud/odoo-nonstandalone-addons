@@ -110,7 +110,7 @@
                     </group>
                     <group
                         name="oficio"
-                        string="Ofício"
+                        string="Official Result Notice"
                         attrs="{'invisible': [('oficio', '=', False)]}"
                     >
                         <field name="oficio" nolabel="1" />
