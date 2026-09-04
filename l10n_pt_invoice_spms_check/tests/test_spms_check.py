@@ -217,6 +217,8 @@ class TestSpmsCheck(SavepointCase):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         self.assertEqual(result.state, "ready")
+        self.assertFalse(result.name)
+        self.assertEqual(result.display_name, move.display_name)
         self.assertAlmostEqual(result.credit_official, 38.16)
         self.assertAlmostEqual(result.amount_lines_untaxed, 36.0)
         self.assertEqual(set(result.error_ids.mapped("code")), {"C010"})

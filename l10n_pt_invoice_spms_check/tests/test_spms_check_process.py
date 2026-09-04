@@ -85,6 +85,7 @@ def _document(
         '<ApplicationResponse xmlns="urn:oasis:names:specification:ubl:'
         'schema:xsd:ApplicationResponse-2">'
         "<ID>999999999</ID>"
+        "<IssueDate>2026-05-14</IssueDate>"
         "<DocumentResponse><Response>"
         "<ReferenceID>FT TEST/00001</ReferenceID>"
         "<Description>%s</Description>"
@@ -236,6 +237,9 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(child.edi_exchange_state, "input_processed")
         result = self._result()
         self.assertEqual(len(result), 1)
+        self.assertEqual(result.name, "999999999")
+        self.assertEqual(result.display_name, "999999999")
+        self.assertEqual(result.document_date, date(2026, 5, 14))
         self.assertEqual(result.check_state, "with_errors")
         self.assertAlmostEqual(result.total_billed, 41.0)
         self.assertAlmostEqual(result.total_allowed, 5.0)
@@ -462,10 +466,12 @@ class TestSpmsCheckProcess(SavepointComponentCase):
             {"move_id": self.invoice.id, "ws_incident_code": "301"}
         )
         self.assertEqual(self._result().state, "error")
+        self.assertEqual(self._result().display_name, self.invoice.display_name)
         self._process(_document(claims=_prestacao("TESTP001", errors=_erro("C011"))))
         result = self._result()
         self.assertFalse(result.ws_incident_code)
         self.assertFalse(result.error_message)
+        self.assertEqual(result.name, "999999999")
         self.assertEqual(result.state, "done")
         self.assertTrue(result.credit_note_move_id)
 
@@ -544,6 +550,18 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         by_prescription = {line.prescription: line for line in result.line_ids}
         self.assertAlmostEqual(by_prescription["TESTP001"].amount_billed, 0.0)
         self.assertAlmostEqual(by_prescription["TESTP002"].amount_billed, 10.0)
+
+    def test_unparseable_document_date_warns_and_continues(self):
+        # the document date is a reference, not a value: a bad IssueDate
+        # leaves it empty with a completeness warning
+        document = _document(claims=_prestacao("TESTP001", errors=_erro("C011")))
+        document = document.replace("2026-05-14", "yesterday")
+        child = self._process(document)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        result = self._result()
+        self.assertEqual(result.name, "999999999")
+        self.assertFalse(result.document_date)
+        self.assertIn("IssueDate", result.completeness_warning)
 
     def test_trigger_holds_on_missing_adjustment_product(self):
         self.company.spms_adjustment_product_id = False
