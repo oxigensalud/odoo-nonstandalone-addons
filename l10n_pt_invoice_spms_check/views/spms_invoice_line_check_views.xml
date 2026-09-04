@@ -28,7 +28,7 @@
         <field name="name">spms.invoice.line.check.form</field>
         <field name="model">spms.invoice.line.check</field>
         <field name="arch" type="xml">
-            <form>
+            <form create="false" edit="false" delete="false">
                 <sheet>
                     <div class="oe_title">
                         <h1><field name="prescription" /></h1>
@@ -52,7 +52,7 @@
                     </group>
                     <notebook>
                         <page name="errors" string="Errors">
-                            <field name="error_ids" readonly="1">
+                            <field name="error_ids">
                                 <tree
                                     decoration-primary="level == 'prestacao'"
                                     decoration-info="level == 'linha'"
