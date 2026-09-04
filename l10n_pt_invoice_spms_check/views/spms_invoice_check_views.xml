@@ -81,6 +81,8 @@
                                 name="company_id"
                                 groups="base.group_multi_company"
                             />
+                        </group>
+                        <group name="check">
                             <field name="check_state" />
                             <field name="document_date" />
                             <field name="fetch_date" />
@@ -89,13 +91,20 @@
                                 attrs="{'invisible': [('ws_incident_code', '=', False)]}"
                             />
                         </group>
-                        <group name="official">
-                            <field name="total_billed" />
-                            <field name="total_allowed" />
-                            <field name="total_billed_taxed" />
-                            <field name="total_allowed_taxed" />
-                            <field name="amount_lines_untaxed" />
-                            <field name="credit_official" />
+                    </group>
+                    <!-- one concept per row, one tax version per column: the
+                         group title carries the tax axis, so the labels drop
+                         the suffix the field strings keep for lists and search -->
+                    <group>
+                        <group name="amounts_untaxed" string="Tax Excluded">
+                            <field name="total_billed" string="Billed" />
+                            <field name="total_allowed" string="Allowed" />
+                            <field name="amount_lines_untaxed" string="Claims Credit" />
+                        </group>
+                        <group name="amounts_taxed" string="Tax Included">
+                            <field name="total_billed_taxed" string="Billed" />
+                            <field name="total_allowed_taxed" string="Allowed" />
+                            <field name="credit_official" string="Official Credit" />
                             <field name="currency_id" invisible="1" />
                         </group>
                     </group>
