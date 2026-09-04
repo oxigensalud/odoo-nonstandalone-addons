@@ -18,15 +18,17 @@ class AccountMove(models.Model):
         inverse_name="credit_note_move_id",
         string="SPMS Invoice Checks (Credit Note)",
     )
-    spms_invoice_check_count = fields.Integer(
-        string="# SPMS Invoice Checks",
-        compute="_compute_spms_invoice_check_count",
+    spms_invoice_check_error_count = fields.Integer(
+        string="# SPMS Check Errors",
+        compute="_compute_spms_invoice_check_error_count",
     )
 
-    @api.depends("spms_invoice_check_ids")
-    def _compute_spms_invoice_check_count(self):
+    @api.depends("spms_invoice_check_ids.error_count")
+    def _compute_spms_invoice_check_error_count(self):
         for rec in self:
-            rec.spms_invoice_check_count = len(rec.spms_invoice_check_ids)
+            rec.spms_invoice_check_error_count = sum(
+                rec.spms_invoice_check_ids.mapped("error_count")
+            )
 
     def action_view_spms_invoice_check(self):
         """Open the invoice's check result form directly (1:1)."""
