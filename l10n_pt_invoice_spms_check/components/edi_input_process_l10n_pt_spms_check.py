@@ -93,6 +93,8 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         lines, errors = self._parse_lines(move, fact, problems)
         error_count = len(errors) + sum(len(line_errors) for _, line_errors in lines)
         result_vals = {
+            "name": _child_text(root, "ID") or False,
+            "document_date": self._parse_document_date(root, problems),
             "check_state": check_state,
             "fetch_date": fields.Datetime.now(),
             "total_billed": self._parse_total(move, fact, "TotalFaturaLido"),
@@ -271,6 +273,18 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             )
         warnings.extend(problems)
         return "\n".join(warnings) or False
+
+    def _parse_document_date(self, root, problems):
+        text = _child_text(root, "IssueDate")
+        if not text:
+            return False
+        try:
+            return fields.Date.to_date(text)
+        except ValueError:
+            problems.append(
+                _("IssueDate %r is not a date: the document date is left empty.") % text
+            )
+            return False
 
     def _parse_oficio(self, root):
         response = _find_first(root, "Response")

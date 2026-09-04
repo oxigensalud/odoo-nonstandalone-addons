@@ -11,8 +11,10 @@
                 decoration-muted="state == 'zero_official'"
                 decoration-success="state in ('ready', 'done')"
             >
+                <field name="name" />
                 <field name="move_id" />
                 <field name="check_state" />
+                <field name="document_date" optional="hide" />
                 <field name="fetch_date" optional="hide" />
                 <field name="ws_incident_code" optional="hide" />
                 <field name="error_count" />
@@ -69,16 +71,18 @@
                         </button>
                     </div>
                     <div class="oe_title">
-                        <h1><field name="move_id" /></h1>
+                        <h1><field name="name" /></h1>
                     </div>
                     <group>
                         <group name="links">
+                            <field name="move_id" />
                             <field name="credit_note_move_id" />
                             <field
                                 name="company_id"
                                 groups="base.group_multi_company"
                             />
                             <field name="check_state" />
+                            <field name="document_date" />
                             <field name="fetch_date" />
                             <field
                                 name="ws_incident_code"
@@ -126,6 +130,7 @@
         <field name="model">spms.invoice.check</field>
         <field name="arch" type="xml">
             <search>
+                <field name="name" />
                 <field name="move_id" />
                 <field name="error_ids" />
                 <filter

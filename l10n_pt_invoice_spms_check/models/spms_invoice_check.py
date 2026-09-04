@@ -21,9 +21,21 @@ class SpmsInvoiceCheck(models.Model):
     _name = "spms.invoice.check"
     _description = "SPMS Invoice Check"
     _order = "fetch_date desc, id desc"
-    _rec_name = "move_id"
     _check_company_auto = True
 
+    name = fields.Char(
+        string="Number",
+        readonly=True,
+        copy=False,
+        help="Number the CCF gave the check document (its ApplicationResponse "
+        "ID). Empty while the result only holds a web-service incident.",
+    )
+    document_date = fields.Date(
+        string="Document Date",
+        readonly=True,
+        copy=False,
+        help="Date the CCF issued the check document.",
+    )
     move_id = fields.Many2one(
         comodel_name="account.move",
         string="Original Invoice",
@@ -238,6 +250,11 @@ class SpmsInvoiceCheck(models.Model):
                 line.amount_difference for line in rec.line_ids if line._is_creditable()
             )
 
+    def name_get(self):
+        # a result that only holds a web-service incident has no document
+        # yet: name it after its invoice so the user still knows what it is
+        return [(rec.id, rec.name or rec.move_id.display_name) for rec in self]
+
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
@@ -263,7 +280,7 @@ class SpmsInvoiceCheck(models.Model):
                             "credit note; cancel that credit note first to "
                             "change it."
                         )
-                        % rec.display_name
+                        % rec.move_id.display_name
                     )
         res = super().write(vals)
         if state_touched:
@@ -402,7 +419,7 @@ class SpmsInvoiceCheck(models.Model):
             except Exception:
                 _logger.exception(
                     "Credit-note generation of %s failed unexpectedly",
-                    rec.display_name,
+                    rec.move_id.display_name,
                 )
                 rec.generation_error = _(
                     "Unexpected generation failure; see the server log."
