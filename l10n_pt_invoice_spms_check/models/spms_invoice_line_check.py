@@ -102,7 +102,7 @@ class SpmsInvoiceLineCheck(models.Model):
         help="Credit-note line generated from this claim (audit only).",
     )
     error_ids = fields.One2many(
-        comodel_name="spms.invoice.check.line.error",
+        comodel_name="spms.invoice.check.error",
         inverse_name="line_id",
         string="Errors",
     )

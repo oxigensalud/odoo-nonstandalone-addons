@@ -312,7 +312,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                 ]
             )
         if errors:
-            self.env["spms.invoice.check.line.error"].create(
+            self.env["spms.invoice.check.error"].create(
                 [dict(error_vals, result_id=result.id) for error_vals in errors]
             )
         return result

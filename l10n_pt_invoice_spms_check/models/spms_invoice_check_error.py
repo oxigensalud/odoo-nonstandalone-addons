@@ -4,7 +4,7 @@
 from odoo import fields, models
 
 
-class SpmsInvoiceCheckLineError(models.Model):
+class SpmsInvoiceCheckError(models.Model):
     """One row per error (Erro) reported by the check document.
 
     The Erro element is identical everywhere — {Codigo, Mensagem} — only
@@ -14,8 +14,8 @@ class SpmsInvoiceCheckLineError(models.Model):
     money: the amounts live on the line.
     """
 
-    _name = "spms.invoice.check.line.error"
-    _description = "SPMS Invoice Check Line Error"
+    _name = "spms.invoice.check.error"
+    _description = "SPMS Invoice Check Error"
     _order = "result_id, line_id, id"
     _rec_name = "code"
     _check_company_auto = True
