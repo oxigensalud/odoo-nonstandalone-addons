@@ -187,12 +187,19 @@
         <field name="view_mode">tree,form</field>
     </record>
 
+    <!-- an SPMS section of the Customers menu, like the one Configuration has -->
+    <menuitem
+        id="spms_customers_menu"
+        name="SPMS"
+        parent="account.menu_finance_receivables"
+        sequence="200"
+    />
     <menuitem
         id="spms_invoice_check_menu"
-        name="SPMS Invoice Checks"
-        parent="account.menu_finance_receivables"
+        name="Invoice Checks"
+        parent="spms_customers_menu"
         action="spms_invoice_check_action"
-        sequence="5"
+        sequence="10"
         groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation"
     />
 </odoo>
