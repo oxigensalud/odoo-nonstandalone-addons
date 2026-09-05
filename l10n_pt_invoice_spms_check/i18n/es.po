@@ -27,13 +27,6 @@ msgid "# Lines"
 msgstr "Nº de líneas"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_error_count
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_error_count
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_error_count
-msgid "# SPMS Check Errors"
-msgstr "Nº de errores de conferencia SPMS"
-
-#. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
 #, python-format
 msgid ""
@@ -263,6 +256,9 @@ msgid "Date the CCF issued the check document."
 msgstr "Fecha en que el CCF emitió el documento de conferencia."
 
 #. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_state
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_state
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_state
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__check_state
 msgid ""
 "Definitive state reported by the check document (Conferida Com Erros / "
@@ -763,6 +759,13 @@ msgstr "SPMS"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_product_id
 msgid "SPMS Adjustment Line Product"
 msgstr "Producto de línea de ajuste SPMS"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_state
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_state
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_state
+msgid "SPMS Check State"
+msgstr "Estado de conferencia SPMS"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.actions.act_window,name:l10n_pt_invoice_spms_check.spms_error_type_act_window
