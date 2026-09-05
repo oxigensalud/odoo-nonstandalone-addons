@@ -1,7 +1,7 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _, api, fields, models
+from odoo import _, fields, models
 from odoo.tools import html_escape
 
 
@@ -18,17 +18,10 @@ class AccountMove(models.Model):
         inverse_name="credit_note_move_id",
         string="SPMS Invoice Checks (Credit Note)",
     )
-    spms_invoice_check_error_count = fields.Integer(
-        string="# SPMS Check Errors",
-        compute="_compute_spms_invoice_check_error_count",
+    spms_invoice_check_state = fields.Selection(
+        related="spms_invoice_check_ids.check_state",
+        string="SPMS Check State",
     )
-
-    @api.depends("spms_invoice_check_ids.error_count")
-    def _compute_spms_invoice_check_error_count(self):
-        for rec in self:
-            rec.spms_invoice_check_error_count = sum(
-                rec.spms_invoice_check_ids.mapped("error_count")
-            )
 
     def action_view_spms_invoice_check(self):
         """Open the invoice's check result form directly (1:1)."""
