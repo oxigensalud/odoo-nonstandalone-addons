@@ -12,8 +12,8 @@
                 <field name="lot_number" optional="hide" />
                 <field name="prescription" />
                 <field name="error_ids" widget="many2many_tags" />
-                <field name="amount_billed" />
-                <field name="amount_allowed" />
+                <field name="amount_billed" sum="Total Billed" />
+                <field name="amount_allowed" sum="Total Allowed" />
                 <field name="amount_difference" sum="Total Difference" />
                 <field name="days_billed" optional="hide" />
                 <field name="days_paid" optional="hide" />

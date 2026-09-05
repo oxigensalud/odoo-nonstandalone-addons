@@ -1061,6 +1061,7 @@ msgstr "No hi ha cap prescripció amb diferència positiva."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_tree
 msgid "Total Allowed"
 msgstr "Total admès"
 
@@ -1071,6 +1072,7 @@ msgstr "Total admès (amb impostos)"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_billed
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_tree
 msgid "Total Billed"
 msgstr "Total facturat"
 
