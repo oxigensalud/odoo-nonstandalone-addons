@@ -46,7 +46,9 @@ class EdiExchangeRecord(models.Model):
         clients = {}
         for exchange in exchanges:
             move = exchange.record
-            if not move or move.state != "posted":
+            # The sending type also carries credit notes; the CCF checks
+            # invoices only, so a nota is never asked for a result.
+            if not move or move.move_type != "out_invoice" or move.state != "posted":
                 continue
             if any(move.spms_invoice_check_ids.mapped("check_state")):
                 continue

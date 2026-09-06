@@ -296,6 +296,47 @@ class TestSpmsCheckTransport(SavepointCase):
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
         factory.assert_not_called()
 
+    def test_credit_note_not_polled(self):
+        """A sent credit note travels through the same exchange type, but
+        the CCF checks invoices only: a nota is never polled."""
+        self.env["spms.invoice.check"].create(
+            {"move_id": self.invoice.id, "check_state": "without_errors"}
+        )
+        credit_note = self.env["account.move"].create(
+            {
+                "name": "NC TEST/00001",
+                "move_type": "out_refund",
+                "partner_id": self.partner.id,
+                "journal_id": self.journal.id,
+                "invoice_date": "2026-06-30",
+                "invoice_line_ids": [
+                    (
+                        0,
+                        0,
+                        {
+                            "name": "Test service",
+                            "quantity": 1,
+                            "price_unit": 10.0,
+                            "account_id": self.income_account.id,
+                            "tax_ids": [(5, 0, 0)],
+                        },
+                    )
+                ],
+            }
+        )
+        credit_note.action_post()
+        self.backend.create_record(
+            "l10n_pt_spms",
+            {
+                "edi_exchange_state": "output_sent_and_processed",
+                "model": "account.move",
+                "res_id": credit_note.id,
+            },
+        )
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        factory.assert_not_called()
+
     def test_output_sent_also_polled(self):
         self.exchange.edi_exchange_state = "output_sent"
         client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
