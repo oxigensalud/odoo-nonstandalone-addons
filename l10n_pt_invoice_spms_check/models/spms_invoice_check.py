@@ -100,10 +100,12 @@ class SpmsInvoiceCheck(models.Model):
         string="Official Credit",
         compute="_compute_credit_official",
         store=True,
-        help="Official credit-note value for this invoice, taxes included: "
+        help="Official value for this invoice, taxes included: "
         "TotalFaturaIVALido - TotalFaturaIVACalculado, exactly as the "
-        "check document states it. The generated credit note must "
-        "carry exactly this value.",
+        "check document states it. The generated credit note must carry "
+        "exactly this value; a negative value means the check computed "
+        "more than billed, and the generated debit note carries exactly "
+        "its absolute value.",
     )
     oficio = fields.Text(
         string="Official Result Notice",
@@ -111,15 +113,16 @@ class SpmsInvoiceCheck(models.Model):
         help="The ofício, the official letter the CCF communicates with the "
         "check result, as received.",
     )
-    credit_note_move_id = fields.Many2one(
+    note_move_id = fields.Many2one(
         comodel_name="account.move",
-        string="Credit Note",
+        string="Credit/Debit Note",
         readonly=True,
         check_company=True,
         ondelete="set null",
-        help="Draft credit note generated for this invoice by this module. "
-        "Full pointer means live note: it is released automatically the "
-        "moment the note is cancelled or deleted.",
+        help="Draft credit note, or debit note when the official value is "
+        "negative, generated for this invoice by this module. Full pointer "
+        "means live note: it is released automatically the moment the note "
+        "is cancelled or deleted.",
     )
     state = fields.Selection(
         selection=[
@@ -170,7 +173,8 @@ class SpmsInvoiceCheck(models.Model):
         store=True,
         help="Net sum of the per-prescription differences, without taxes: "
         "over-billed claims minus the claims the check allowed above the "
-        "billed amount, what the generated credit-note lines add up to.",
+        "billed amount, what the generated credit-note lines add up to "
+        "(negated on a debit note).",
     )
     amount_lines_negative_untaxed = fields.Monetary(
         string="Negative Claims Amount (Untaxed)",
@@ -178,17 +182,17 @@ class SpmsInvoiceCheck(models.Model):
         store=True,
         help="Sum of the negative differences, without taxes: the claims "
         "the check allowed above the billed amount. Each one becomes a "
-        "negative line of the credit note, netting against the over-billed "
-        "claims exactly as the official value does.",
+        "negative line of the credit note (a positive line of the debit "
+        "note), netting against the over-billed claims exactly as the "
+        "official value does.",
     )
     error_message = fields.Char(
         string="Error Message",
         compute="_compute_error_message",
-        help="Why the result is held in error: a live credit note this "
-        "module did not create, a web-service incident, or a check "
-        "outcome this module does not recognise. "
-        "Computed live and never stored, so fixing the cause clears it "
-        "on its own.",
+        help="Why the result is held in error: a live credit or debit note "
+        "this module did not create, a web-service incident, or a check "
+        "outcome this module does not recognise. Computed live and never "
+        "stored, so fixing the cause clears it on its own.",
     )
     ws_incident_code = fields.Char(
         string="WS Incident Code",
@@ -213,10 +217,10 @@ class SpmsInvoiceCheck(models.Model):
         string="Generation Error",
         readonly=True,
         copy=False,
-        help="Why the automatic credit-note generation of this result "
-        "failed; the result is held in Error until the cause is fixed "
-        "and the document is reprocessed. Other results of the same "
-        "batch are never dragged along.",
+        help="Why the automatic note generation of this result failed; the "
+        "result is held in Error until the cause is fixed and the document "
+        "is reprocessed. Other results of the same batch are never dragged "
+        "along.",
     )
 
     _sql_constraints = [
@@ -245,13 +249,13 @@ class SpmsInvoiceCheck(models.Model):
         for rec in self:
             rec.error_count = len(rec.error_ids)
 
-    @api.depends("state", "credit_note_move_id.state")
+    @api.depends("state", "note_move_id.state")
     def _compute_official_locked(self):
         for rec in self:
             rec.official_locked = (
                 rec.state == "done"
-                and bool(rec.credit_note_move_id)
-                and rec.credit_note_move_id.state != "cancel"
+                and bool(rec.note_move_id)
+                and rec.note_move_id.state != "cancel"
             )
 
     @api.depends("line_ids.amount_difference", "line_ids.prescription")
@@ -289,13 +293,13 @@ class SpmsInvoiceCheck(models.Model):
             for rec in self:
                 if (
                     rec.state == "done"
-                    and rec.credit_note_move_id
-                    and rec.credit_note_move_id.state != "cancel"
+                    and rec.note_move_id
+                    and rec.note_move_id.state != "cancel"
                 ):
                     raise UserError(
                         _(
                             "The official value of %s is already carried by a "
-                            "credit note; cancel that credit note first to "
+                            "credit or debit note; cancel that note first to "
                             "change it."
                         )
                         % rec.move_id.display_name
@@ -305,19 +309,53 @@ class SpmsInvoiceCheck(models.Model):
             self._update_state()
         return res
 
-    def _get_foreign_credit_notes(self):
-        """Live credit notes of the invoice that this module did not create."""
+    def _is_debit(self):
+        """A negative official value: the check computed more than billed,
+        so the note charges the difference back, as a debit note."""
         self.ensure_one()
         return (
-            self.move_id.reversal_move_id.filtered(
-                lambda move: move.move_type == "out_refund" and move.state != "cancel"
+            float_compare(
+                self.credit_official,
+                0.0,
+                precision_rounding=self.currency_id.rounding or 0.01,
             )
-            - self.credit_note_move_id
+            < 0
+        )
+
+    def _get_note_kind(self):
+        """The kind of note the official value calls for, for messages."""
+        self.ensure_one()
+        return _("debit note") if self._is_debit() else _("credit note")
+
+    def _get_note_total(self):
+        """The total the generated note must carry: the official value
+        without its sign, as a debit note charges back a negative one."""
+        self.ensure_one()
+        return abs(self.credit_official)
+
+    def _get_foreign_notes(self):
+        """Live notes of the invoice, of the kind the official value calls
+        for, that this module did not create: credit notes for a positive
+        value, debit notes (hanging from the invoice as their debit origin)
+        for a negative one. The other kind never blocks: a debit note
+        billing a prescription late has nothing to do with the credit note
+        of the check."""
+        self.ensure_one()
+        if self._is_debit():
+            notes, move_type = self.move_id.debit_note_ids, "out_invoice"
+        else:
+            notes, move_type = self.move_id.reversal_move_id, "out_refund"
+        return (
+            notes.filtered(
+                lambda move: move.move_type == move_type and move.state != "cancel"
+            )
+            - self.note_move_id
         )
 
     @api.depends(
         "move_id.reversal_move_id.state",
-        "credit_note_move_id",
+        "move_id.debit_note_ids.state",
+        "note_move_id",
         "ws_incident_code",
         "check_state",
         "generation_error",
@@ -325,13 +363,16 @@ class SpmsInvoiceCheck(models.Model):
     )
     def _compute_error_message(self):
         for rec in self:
-            foreign_notes = rec._get_foreign_credit_notes()
+            foreign_notes = rec._get_foreign_notes()
             if foreign_notes:
                 rec.error_message = _(
-                    "The invoice already has a live credit note this module "
-                    "did not create: %s. Only one credit note may exist per "
-                    "invoice; fix or cancel it in accounting first."
-                ) % ", ".join(foreign_notes.mapped("display_name"))
+                    "The invoice already has a live %(kind)s this module "
+                    "did not create: %(notes)s. Only one %(kind)s may exist "
+                    "per invoice; fix or cancel it in accounting first."
+                ) % {
+                    "kind": rec._get_note_kind(),
+                    "notes": ", ".join(foreign_notes.mapped("display_name")),
+                }
             elif rec.generation_error:
                 rec.error_message = rec.generation_error
             elif rec.ws_incident_code and not rec.check_state:
@@ -379,15 +420,16 @@ class SpmsInvoiceCheck(models.Model):
         """Single source of truth for the result state (semaphore).
 
         Called after creation, after the official totals are written and
-        after generation. A result whose own credit note is alive is
-        'done'; any other live credit note — made by hand or by anyone
-        else — is an 'error' even alongside our own note, because only
-        one credit note may exist per invoice (a human fixes accounting;
-        the module never adopts a foreign note). Once our credit note is
-        cancelled or deleted, the regular evaluation below reopens the
-        result (the official value is kept) so generation stays
-        reachable. An official value of zero closes the result as
-        'zero_official': legitimately settled, nothing to credit — the
+        after generation. A result whose own note (credit note, or debit
+        note for a negative official value) is alive is 'done'; any other
+        live note of that kind — made by hand or by anyone else — is an
+        'error' even alongside our own note, because only one note may
+        regularize an invoice (a human fixes accounting; the module never
+        adopts a foreign note). Once our note is cancelled or deleted, the
+        regular evaluation below reopens the result (the official value
+        is kept) so generation stays reachable. An official value of zero
+        closes the result as 'zero_official': legitimately settled,
+        nothing to regularize — the
         'Conferida Sem Erros' results land here by construction. A
         web-service incident (301 on a sent invoice) holds the result in
         'error' for human review until a definitive check result
@@ -397,15 +439,13 @@ class SpmsInvoiceCheck(models.Model):
             if rec.ws_incident_code and not rec.check_state:
                 rec.state = "error"
                 continue
-            foreign_notes = rec._get_foreign_credit_notes()
-            own_note_alive = (
-                rec.credit_note_move_id and rec.credit_note_move_id.state != "cancel"
-            )
+            foreign_notes = rec._get_foreign_notes()
+            own_note_alive = rec.note_move_id and rec.note_move_id.state != "cancel"
             if own_note_alive and not foreign_notes:
                 rec.state = "done"
                 continue
-            if rec.credit_note_move_id and not own_note_alive:
-                rec.credit_note_move_id = False
+            if rec.note_move_id and not own_note_alive:
+                rec.note_move_id = False
             if foreign_notes:
                 rec.state = "error"
                 continue
@@ -423,7 +463,7 @@ class SpmsInvoiceCheck(models.Model):
             else:
                 rec.state = "ready"
 
-    def _generate_credit_note_or_hold(self):
+    def _generate_note_or_hold(self):
         """One savepoint per result: a failure holds that result alone
         in Error with its reason; reprocessing the document retries."""
         for rec in self:
@@ -431,30 +471,32 @@ class SpmsInvoiceCheck(models.Model):
                 continue
             try:
                 with self.env.cr.savepoint():
-                    rec._generate_credit_note()
+                    rec._generate_note()
             except UserError as err:
                 rec.generation_error = err.args[0] if err.args else str(err)
             except Exception:
                 _logger.exception(
-                    "Credit-note generation of %s failed unexpectedly",
+                    "Note generation of %s failed unexpectedly",
                     rec.move_id.display_name,
                 )
                 rec.generation_error = _(
                     "Unexpected generation failure; see the server log."
                 )
 
-    def _generate_credit_note(self):
-        """Create the draft credit note for a ready (green) result.
+    def _generate_note(self):
+        """Create the draft note for a ready (green) result: a credit note,
+        or a debit note when the official value is negative.
 
-        Goes through the standard reversal path (Reis/SAF-T PT requirement),
-        then edits the draft down to the affected prescriptions. Raises
+        Goes through the standard reversal or debit-note path (Reis/SAF-T
+        PT requirement), then edits the draft down to the affected
+        prescriptions, with the sign flipped on a debit note. Raises
         UserError with the blocking reason; the caller runs each result in
         its own savepoint, so a raise leaves this result untouched.
         """
         self.ensure_one()
         self.invalidate_cache(["credit_official"], self.ids)
         self.env["account.move"].invalidate_cache(
-            ["state", "reversal_move_id"], self.move_id.ids
+            ["state", "reversal_move_id", "debit_note_ids"], self.move_id.ids
         )
         self._update_state()
         if self.state != "ready":
@@ -467,20 +509,9 @@ class SpmsInvoiceCheck(models.Model):
                 _("The original invoice %s is not posted.") % self.move_id.display_name
             )
         rounding = self.currency_id.rounding or 0.01
-        if float_compare(self.credit_official, 0, precision_rounding=rounding) <= 0:
-            raise UserError(
-                _(
-                    "Nothing to credit on invoice %(invoice)s: the official "
-                    "value is %(value)s."
-                )
-                % {
-                    "invoice": self.move_id.display_name,
-                    "value": formatLang(
-                        self.env, self.credit_official, currency_obj=self.currency_id
-                    ),
-                }
-            )
-        if (
+        # ready means a non-zero official value: its sign picks the note
+        debit = self._is_debit()
+        if not debit and (
             float_compare(
                 self.credit_official,
                 self.move_id.amount_total,
@@ -506,23 +537,23 @@ class SpmsInvoiceCheck(models.Model):
                 }
             )
         lines = self._get_creditable_lines()
-        draft = self._create_reversal_draft()
-        self._edit_reversal_draft(draft, lines)
-        self._check_draft_consistency(draft)
+        draft = self._create_debit_draft() if debit else self._create_reversal_draft()
+        self._edit_note_draft(draft, lines, debit)
+        self._check_draft_consistency(draft, debit)
         difference = float_round(
-            self.credit_official - draft.amount_total, precision_rounding=rounding
+            self._get_note_total() - draft.amount_total, precision_rounding=rounding
         )
         if float_compare(difference, 0.0, precision_rounding=rounding) != 0:
             self._check_adjustment_limit(draft, difference)
             self._impose_official_tax(draft, difference)
-        refund_line_map = {}
+        note_line_map = {}
         for draft_line in draft.invoice_line_ids:
-            refund_line_map.setdefault(draft_line.spms_prescription, draft_line)
+            note_line_map.setdefault(draft_line.spms_prescription, draft_line)
         for line in lines:
-            line.refund_move_line_id = refund_line_map.get(
+            line.note_move_line_id = note_line_map.get(
                 line.prescription, self.env["account.move.line"]
             )
-        self.credit_note_move_id = draft
+        self.note_move_id = draft
         self.state = "done"
         return draft
 
@@ -532,7 +563,9 @@ class SpmsInvoiceCheck(models.Model):
         self.ensure_one()
         lines = self.line_ids.filtered(lambda line: line._is_creditable())
         if not lines:
-            raise UserError(_("There is no prescription with a difference to credit."))
+            raise UserError(
+                _("There is no prescription with a difference to regularize.")
+            )
         unmatched = lines.filtered(lambda line: not line.move_line_id)
         if unmatched:
             raise UserError(
@@ -567,12 +600,47 @@ class SpmsInvoiceCheck(models.Model):
             )
         return draft
 
-    def _edit_reversal_draft(self, draft, lines):
+    def _create_debit_draft(self):
+        """The standard debit-note path, the mirror of the reversal: a full
+        copy of the invoice hanging from it as its debit origin, cut down
+        afterwards like the credit-note draft."""
+        self.ensure_one()
+        wizard = (
+            self.env["account.debit.note"]
+            .with_context(active_model="account.move", active_ids=self.move_id.ids)
+            .create(
+                {
+                    "date": fields.Date.context_today(self),
+                    "reason": _("SPMS check %s") % self.move_id.name,
+                    "copy_lines": True,
+                }
+            )
+        )
+        action = wizard.create_debit()
+        draft = self.env["account.move"].browse(action.get("res_id"))
+        if (
+            len(draft) != 1
+            or draft.debit_origin_id != self.move_id
+            or draft.move_type != "out_invoice"
+        ):
+            raise UserError(
+                _(
+                    "The standard debit-note flow did not create a single "
+                    "draft debit note for %s."
+                )
+                % self.move_id.display_name
+            )
+        return draft
+
+    def _edit_note_draft(self, draft, lines, debit):
         """Cut the full-copy draft down to the affected prescriptions.
 
         The single write goes through the standard invoice business layer
         (`invoice_line_ids`), which recomputes subtotals, taxes and payment
-        terms with the edited lines.
+        terms with the edited lines. A debit note also drops the sale-order
+        link the debit-note flow copies onto its lines: the CCF cut is
+        definitive either way, and a debit line linked to the order would
+        count its quantity as invoiced twice.
         """
         self.ensure_one()
         draft_line_map = {}
@@ -588,12 +656,14 @@ class SpmsInvoiceCheck(models.Model):
                 raise UserError(
                     _(
                         "Prescription %s cannot be mapped to a single line "
-                        "of the credit-note draft."
+                        "of the note draft."
                     )
                     % line.prescription
                 )
             kept_draft_line_ids.append(draft_line_ids[0])
-            line_values = line._get_refund_line_values()
+            line_values = line._get_note_line_values(debit)
+            if debit:
+                line_values["sale_line_ids"] = [(5, 0, 0)]
             if line_values:
                 commands.append((1, draft_line_ids[0], line_values))
         for draft_line in draft.invoice_line_ids:
@@ -606,23 +676,26 @@ class SpmsInvoiceCheck(models.Model):
             }
         )
 
-    def _check_draft_consistency(self, draft):
+    def _check_draft_consistency(self, draft, debit):
         """The single generation-time check (design §5): after cutting the
         draft down to the affected prescriptions and BEFORE the tax
         adjustment, the draft must match the claims total computed from
-        the check result. A mismatch reveals a technical discrepancy (tax
-        config, fiscal position, price drift) that the tax adjustment must
-        never absorb.
+        the check result, negated on a debit note. A mismatch reveals a
+        technical discrepancy (tax config, fiscal position, price drift)
+        that the tax adjustment must never absorb.
 
         The expected tax is computed as one globally rounded sum, matching
         the round_globally tax rounding method the SPMS flow relies on.
         """
         self.ensure_one()
         rounding = self.currency_id.rounding or 0.01
+        expected_untaxed = (
+            -self.amount_lines_untaxed if debit else self.amount_lines_untaxed
+        )
         if (
             float_compare(
                 draft.amount_untaxed,
-                self.amount_lines_untaxed,
+                expected_untaxed,
                 precision_rounding=rounding,
             )
             != 0
@@ -635,7 +708,7 @@ class SpmsInvoiceCheck(models.Model):
                 )
                 % {
                     "draft": draft.amount_untaxed,
-                    "expected": self.amount_lines_untaxed,
+                    "expected": expected_untaxed,
                 }
             )
         expected_tax = float_round(
@@ -669,7 +742,7 @@ class SpmsInvoiceCheck(models.Model):
         the check lines and the official value (a claim the check priced
         differently, a line the parser could not read, a company rounding
         its taxes per line) that a human must review; plugging it silently
-        would hide the discrepancy inside the credit note.
+        would hide the discrepancy inside the note.
         """
         self.ensure_one()
         rounding = self.currency_id.rounding or 0.01
@@ -677,12 +750,12 @@ class SpmsInvoiceCheck(models.Model):
         if float_compare(abs(difference), limit, precision_rounding=rounding) > 0:
             raise UserError(
                 _(
-                    "The credit note cannot be generated: its total %(draft)s "
+                    "The %(kind)s cannot be generated: its total %(draft)s "
                     "differs from the official value %(official)s by "
                     "%(difference)s, and the SPMS adjustment limit of company "
                     "%(company)s allows at most %(limit)s.\n\n"
                     "Only the rounding cent of the tax may be written on the "
-                    "tax line of the credit note. A larger difference reveals "
+                    "tax line of the %(kind)s. A larger difference reveals "
                     "a discrepancy to review before retrying: the Claims "
                     "Credit of the result must match its official totals "
                     "before tax (a prescription the check priced differently "
@@ -697,8 +770,9 @@ class SpmsInvoiceCheck(models.Model):
                     "draft": formatLang(
                         self.env, draft.amount_total, currency_obj=self.currency_id
                     ),
+                    "kind": self._get_note_kind(),
                     "official": formatLang(
-                        self.env, self.credit_official, currency_obj=self.currency_id
+                        self.env, self._get_note_total(), currency_obj=self.currency_id
                     ),
                     "difference": formatLang(
                         self.env, difference, currency_obj=self.currency_id
@@ -713,12 +787,13 @@ class SpmsInvoiceCheck(models.Model):
 
         The claim bases come from the check document itself, so after the
         consistency check only the rounding of the tax remains: the CCF
-        computes it once on the invoice total, Odoo once on the credit
-        note total, and the two can differ by one cent. The official value
-        is what the CCF validates the note against, so that cent is written
-        on the tax line, the same correction an accountant would pencil on
-        the tax journal item, compensating the receivable line to keep the
-        entry balanced.
+        computes it once on the invoice total, Odoo once on the note
+        total, and the two can differ by one cent. The official value is
+        what the CCF validates the note against, so that cent is written
+        on the tax line — its debit on a credit note, its credit on a debit
+        note — the same correction an accountant would pencil on the tax
+        journal item, compensating the receivable line to keep the entry
+        balanced.
         """
         self.ensure_one()
         rounding = self.currency_id.rounding or 0.01
@@ -726,11 +801,12 @@ class SpmsInvoiceCheck(models.Model):
         if len(tax_line) != 1:
             raise UserError(
                 _(
-                    "Expected exactly one tax line on the draft credit note "
+                    "Expected exactly one tax line on the draft %(kind)s "
                     "%(move)s to carry the difference with the official "
                     "value, found %(count)d."
                 )
                 % {
+                    "kind": self._get_note_kind(),
                     "move": draft.display_name,
                     "count": len(tax_line),
                 }
@@ -742,13 +818,19 @@ class SpmsInvoiceCheck(models.Model):
             raise UserError(
                 _(
                     "Expected exactly one receivable/payable line on the "
-                    "draft credit note %(move)s, found %(count)d."
+                    "draft %(kind)s %(move)s, found %(count)d."
                 )
                 % {
+                    "kind": self._get_note_kind(),
                     "move": draft.display_name,
                     "count": len(term_line),
                 }
             )
+        # a credit note carries its tax as a debit and its receivable as a
+        # credit; a debit note the other way round
+        debit_note = draft.move_type == "out_invoice"
+        tax_side = "credit" if debit_note else "debit"
+        term_side = "debit" if debit_note else "credit"
         draft.with_context(check_move_validity=False).write(
             {
                 "line_ids": [
@@ -756,8 +838,8 @@ class SpmsInvoiceCheck(models.Model):
                         1,
                         tax_line.id,
                         {
-                            "debit": float_round(
-                                tax_line.debit + difference,
+                            tax_side: float_round(
+                                tax_line[tax_side] + difference,
                                 precision_rounding=rounding,
                             )
                         },
@@ -766,8 +848,8 @@ class SpmsInvoiceCheck(models.Model):
                         1,
                         term_line.id,
                         {
-                            "credit": float_round(
-                                term_line.credit + difference,
+                            term_side: float_round(
+                                term_line[term_side] + difference,
                                 precision_rounding=rounding,
                             )
                         },
@@ -777,31 +859,34 @@ class SpmsInvoiceCheck(models.Model):
         )
         if (
             float_compare(
-                draft.amount_total, self.credit_official, precision_rounding=rounding
+                draft.amount_total, self._get_note_total(), precision_rounding=rounding
             )
             != 0
         ):
             raise UserError(
                 _(
-                    "The credit note total %(total).2f still differs from "
+                    "The %(kind)s total %(total).2f still differs from "
                     "the official value %(official).2f after imposing the "
                     "tax amount."
                 )
                 % {
+                    "kind": self._get_note_kind(),
                     "total": draft.amount_total,
-                    "official": self.credit_official,
+                    "official": self._get_note_total(),
                 }
             )
 
-    def action_view_credit_note(self):
+    def action_view_note(self):
         self.ensure_one()
-        if not self.credit_note_move_id:
+        if not self.note_move_id:
             return False
         return {
             "type": "ir.actions.act_window",
-            "name": _("Credit Note"),
+            "name": _("Debit Note")
+            if self.note_move_id.move_type == "out_invoice"
+            else _("Credit Note"),
             "res_model": "account.move",
-            "res_id": self.credit_note_move_id.id,
+            "res_id": self.note_move_id.id,
             "view_mode": "form",
         }
 

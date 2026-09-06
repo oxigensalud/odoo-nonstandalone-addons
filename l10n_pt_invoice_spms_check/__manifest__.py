@@ -3,7 +3,7 @@
 
 {
     "name": "L10n Pt Invoice Spms Check",
-    "summary": "SPMS check results log and credit note generation",
+    "summary": "SPMS check results log and credit/debit note generation",
     "version": "14.0.1.0.0",
     "development_status": "Beta",
     "license": "AGPL-3",
@@ -11,6 +11,7 @@
     "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
     "category": "Accounting",
     "depends": [
+        "account_debit_note",
         "l10n_pt_invoice_spms",
         "queue_job",
         "sale_line_refund_to_invoice_qty",

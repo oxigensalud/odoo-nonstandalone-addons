@@ -18,7 +18,7 @@
                 <field name="days_billed" optional="hide" />
                 <field name="days_paid" optional="hide" />
                 <field name="move_line_id" optional="hide" />
-                <field name="refund_move_line_id" optional="hide" />
+                <field name="note_move_line_id" optional="hide" />
                 <field name="currency_id" invisible="1" />
             </tree>
         </field>
@@ -39,7 +39,7 @@
                             <field name="lot_type" />
                             <field name="lot_number" />
                             <field name="move_line_id" />
-                            <field name="refund_move_line_id" />
+                            <field name="note_move_line_id" />
                         </group>
                         <group name="amounts">
                             <field name="amount_billed" />

@@ -19,15 +19,15 @@
                 <field name="ws_incident_code" optional="hide" />
                 <field name="error_count" />
                 <field name="credit_official" />
-                <field name="credit_note_move_id" optional="hide" />
+                <field name="note_move_id" optional="hide" />
                 <field name="currency_id" invisible="1" />
                 <field name="state" />
                 <button
-                    name="action_view_credit_note"
+                    name="action_view_note"
                     type="object"
                     icon="fa-external-link"
-                    title="Credit Note"
-                    attrs="{'invisible': [('credit_note_move_id', '=', False)]}"
+                    title="Credit/Debit Note"
+                    attrs="{'invisible': [('note_move_id', '=', False)]}"
                 />
             </tree>
         </field>
@@ -76,7 +76,7 @@
                     <group>
                         <group name="links">
                             <field name="move_id" />
-                            <field name="credit_note_move_id" />
+                            <field name="note_move_id" />
                             <field
                                 name="company_id"
                                 groups="base.group_multi_company"

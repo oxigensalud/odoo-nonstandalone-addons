@@ -374,7 +374,7 @@ ul.auto-toc {
 <p><a class="reference external image-reference" href="https://odoo-community.org/page/development-status"><img alt="Beta" src="https://img.shields.io/badge/maturity-Beta-yellow.png" /></a> <a class="reference external image-reference" href="http://www.gnu.org/licenses/agpl-3.0-standalone.html"><img alt="License: AGPL-3" src="https://img.shields.io/badge/license-AGPL--3-blue.png" /></a> <a class="reference external image-reference" href="https://github.com/oxigensalud/odoo-nonstandalone-addons/tree/14.0/l10n_pt_invoice_spms_check"><img alt="oxigensalud/odoo-nonstandalone-addons" src="https://img.shields.io/badge/github-oxigensalud%2Fodoo--nonstandalone--addons-lightgray.png?logo=github" /></a></p>
 <p>This module stores the SPMS/CCMSNS invoice check results (“Conferência
 de Faturas”) of the customer invoices sent to SPMS and manages the
-resulting rectifying credit notes:</p>
+resulting rectifying credit and debit notes:</p>
 <ul class="simple">
 <li>Stores one check result per invoice — the CCF document number and
 date, the check state, the read and recomputed totals, the official
@@ -388,14 +388,16 @@ its level (claim, line, prescription data); the errors anchored to the
 invoice itself or to a lot hang from the result. A sum over the lines
 is a sum over the prescriptions, and “all C012 errors” is one filter
 away.</li>
-<li>Generates the draft rectifying invoice (credit note) for the results
-that came back with errors, through the standard reversal mechanism,
-carrying exactly the official value: one line per affected
-prescription, with the rounding cent of the tax written on the tax
-line when needed.</li>
+<li>Generates the draft rectifying document for the results that came back
+with errors — a credit note through the standard reversal mechanism,
+or a debit note through the standard debit-note flow when the official
+value is negative (the check computed more than billed) — carrying
+exactly the official value: one line per affected prescription, with
+the rounding cent of the tax written on the tax line when needed.</li>
 <li>Keeps the sale order closed: the CCF cut is definitive, so the
 credited quantities are not returned as pending to invoice on the sale
-order the invoice came from.</li>
+order the invoice came from, and the debit note’s lines carry no link
+to it.</li>
 </ul>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
@@ -417,7 +419,7 @@ order the invoice came from.</li>
 <ul class="simple">
 <li>Assign the <em>SPMS / Consultation</em> group to users who can read the check
 results, and <em>SPMS / Responsible</em> to the users allowed to work with
-them and with the generated credit notes.</li>
+them and with the generated credit and debit notes.</li>
 <li>The polling scheduled action (<em>SPMS: get conference results from the
 CCF</em>, under <em>Settings → Technical → Automation → Scheduled Actions</em>)
 runs hourly out of the box. It only acts on invoices already sent to
@@ -430,10 +432,10 @@ polling, deactivate the scheduled action — never uninstall the module
 just to stop the calls.</li>
 <li>Set the <em>SPMS Adjustment Limit</em> on the company (SPMS page, visible to
 <em>Technical Settings</em> users; 0.01 by default): the largest difference,
-taxes included, between the official value and the draft credit note
-that is written on its tax line. A larger difference holds the result
-in <em>Error</em> for review instead of generating the credit note; raise the
-limit only when a larger difference is legitimate and strictly
+taxes included, between the official value and the draft credit or
+debit note that is written on its tax line. A larger difference holds
+the result in <em>Error</em> for review instead of generating the note; raise
+the limit only when a larger difference is legitimate and strictly
 necessary.</li>
 <li>Keep the tax rounding method of the company (<em>Accounting → Settings →
 Taxes → Rounding Method</em>) on <em>Round Globally</em>: the CCF computes the
@@ -469,34 +471,42 @@ to the invoice itself or to a lot are listed on the result form.</p>
 created automatically the moment the result is processed, through the
 standard reversal path, cut down to the affected prescriptions, and
 linked back to the result. When the generation of a result fails (a
-prescription with no matching invoice line, a foreign credit note, a
-residual beyond the adjustment limit), that result alone is held in
-<em>Error</em> with the reason on its form; fix the cause and reprocess the
-document to retry — the rest of the batch is never dragged along. A
-prescription the check priced above the billed amount (a negative
-difference) gets its own negative line, so the credit note nets it
-against the rejected claims exactly as the official value does; the
-result form shows their sum as <em>Negative Claims</em>. The claim bases come
-from the check document itself, so the draft can only differ from the
-official value by the rounding of the tax, which the CCF computes once
-on the invoice total: that cent is written on the tax line of the draft,
-the same correction an accountant would pencil on the tax journal item,
-with no extra line, so the total matches the official value exactly. A
-residual beyond the <em>SPMS Adjustment Limit</em> of the company (0.01 by
-default) holds the result in <em>Error</em> with the reason, because it reveals
-a discrepancy to review rather than rounding noise: a claim priced
-differently (the <em>Claims Credit</em> of the result then differs from its
-official totals before tax), or a company rounding its taxes per line;
-raise the limit only when the difference is legitimate and strictly
-necessary. Drafts stay drafts: the accounting team reviews and posts
-them; the EDI circuit takes over from there.</p>
-<p>Once a credit note is generated and alive, the official totals of its
-result are locked; cancel the credit note first to change them.
-Cancelling or deleting a generated credit note releases its result
-immediately — no manual step — and the cancellation leaves a note in the
-original invoice’s chatter. A live credit note the module did not create
-holds the result in <em>Error</em> (the result form names it by number): the
-module never adopts or decides — a human fixes accounting first.</p>
+prescription with no matching invoice line, a foreign note, a residual
+beyond the adjustment limit), that result alone is held in <em>Error</em> with
+the reason on its form; fix the cause and reprocess the document to
+retry — the rest of the batch is never dragged along. A prescription the
+check priced above the billed amount (a negative difference) gets its
+own negative line, so the credit note nets it against the rejected
+claims exactly as the official value does; the result form shows their
+sum as <em>Negative Claims</em>. The claim bases come from the check document
+itself, so the draft can only differ from the official value by the
+rounding of the tax, which the CCF computes once on the invoice total:
+that cent is written on the tax line of the draft, the same correction
+an accountant would pencil on the tax journal item, with no extra line,
+so the total matches the official value exactly. A residual beyond the
+<em>SPMS Adjustment Limit</em> of the company (0.01 by default) holds the
+result in <em>Error</em> with the reason, because it reveals a discrepancy to
+review rather than rounding noise: a claim priced differently (the
+<em>Claims Credit</em> of the result then differs from its official totals
+before tax), or a company rounding its taxes per line; raise the limit
+only when the difference is legitimate and strictly necessary. Drafts
+stay drafts: the accounting team reviews and posts them; the EDI circuit
+takes over from there.</p>
+<p>A negative official value — the check computed more than the invoice
+billed — calls for a debit note instead. The module generates it through
+the standard debit-note flow, hanging from the invoice as its debit
+origin, with the same lines and the sign flipped, the same rounding cent
+on the tax line and the same adjustment limit; its lines carry no link
+to the sale order, which stays fully invoiced. Everything below applies
+to that debit note as it does to the credit note.</p>
+<p>Once a note is generated and alive, the official totals of its result
+are locked; cancel the note first to change them. Cancelling or deleting
+a generated note releases its result immediately — no manual step — and
+the cancellation leaves a message in the original invoice’s chatter. A
+live note of the same kind the module did not create — a credit note for
+a positive official value, a debit note for a negative one — holds the
+result in <em>Error</em> (the result form names it by number): the module never
+adopts or decides — a human fixes accounting first.</p>
 </div>
 <div class="section" id="known-issues-roadmap">
 <h2><a class="toc-backref" href="#toc-entry-3">Known issues / Roadmap</a></h2>

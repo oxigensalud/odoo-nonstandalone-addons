@@ -1,6 +1,6 @@
 - Assign the *SPMS / Consultation* group to users who can read the
   check results, and *SPMS / Responsible* to the users allowed to work
-  with them and with the generated credit notes.
+  with them and with the generated credit and debit notes.
 - The polling scheduled action (*SPMS: get conference results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
   runs hourly out of the box. It only acts on invoices already sent to
@@ -13,9 +13,9 @@
   the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
   *Technical Settings* users; 0.01 by default): the largest difference,
-  taxes included, between the official value and the draft credit note
-  that is written on its tax line. A larger difference holds the result
-  in *Error* for review instead of generating the credit note; raise
+  taxes included, between the official value and the draft credit or
+  debit note that is written on its tax line. A larger difference holds
+  the result in *Error* for review instead of generating the note; raise
   the limit only when a larger difference is legitimate and strictly
   necessary.
 - Keep the tax rounding method of the company (*Accounting → Settings →

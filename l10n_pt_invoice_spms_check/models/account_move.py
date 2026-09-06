@@ -13,10 +13,10 @@ class AccountMove(models.Model):
         inverse_name="move_id",
         string="SPMS Invoice Checks",
     )
-    spms_credit_note_invoice_check_ids = fields.One2many(
+    spms_note_invoice_check_ids = fields.One2many(
         comodel_name="spms.invoice.check",
-        inverse_name="credit_note_move_id",
-        string="SPMS Invoice Checks (Credit Note)",
+        inverse_name="note_move_id",
+        string="SPMS Invoice Checks (Credit/Debit Note)",
     )
     spms_invoice_check_state = fields.Selection(
         related="spms_invoice_check_ids.check_state",
@@ -40,31 +40,31 @@ class AccountMove(models.Model):
     def button_cancel(self):
         """Release the linked check results in the same transaction.
 
-        The pointer means 'live credit note': once the note is cancelled
+        The pointer means 'live note': once the note is cancelled
         the result must become generable again on its own — no manual
         step — leaving a trace in the original invoice's chatter.
         """
         res = super().button_cancel()
-        results = self.spms_credit_note_invoice_check_ids
+        results = self.spms_note_invoice_check_ids
         for result in results:
             result.move_id.message_post(
                 body=_(
-                    "Credit note %(note)s was cancelled: the check "
+                    "The generated note %(note)s was cancelled: the check "
                     "result of invoice %(invoice)s is ready for generation "
                     "again."
                 )
                 % {
-                    "note": html_escape(result.credit_note_move_id.display_name),
+                    "note": html_escape(result.note_move_id.display_name),
                     "invoice": html_escape(result.move_id.display_name),
                 },
                 subtype_xmlid="mail.mt_note",
             )
-        results.write({"credit_note_move_id": False})
+        results.write({"note_move_id": False})
         results._update_state()
         return res
 
     def unlink(self):
-        results = self.spms_credit_note_invoice_check_ids
+        results = self.spms_note_invoice_check_ids
         res = super().unlink()
         # the database already dropped the pointers (ondelete='set null');
         # the semaphore has to follow without waiting for a manual refresh

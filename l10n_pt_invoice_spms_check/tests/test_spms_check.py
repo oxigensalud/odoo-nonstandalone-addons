@@ -233,8 +233,8 @@ class TestSpmsCheck(SavepointCase):
         result = self._create_result(move, self._standard_rows())
         self.assertEqual(result.state, "zero_official")
         with self.assertRaisesRegex(UserError, "no longer ready"):
-            result._generate_credit_note()
-        self.assertFalse(result.credit_note_move_id)
+            result._generate_note()
+        self.assertFalse(result.note_move_id)
 
     def test_without_errors_result_closes_as_zero(self):
         move = self._standard_invoice()
@@ -245,14 +245,14 @@ class TestSpmsCheck(SavepointCase):
     def test_generate_creates_credit_note(self):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertTrue(draft)
         self.assertEqual(draft.state, "draft")
         self.assertEqual(draft.move_type, "out_refund")
         self.assertEqual(draft.reversed_entry_id, move)
         self.assertEqual(draft.invoice_origin, move.name)
         self.assertAlmostEqual(draft.amount_total, 38.16)
-        self.assertEqual(result.credit_note_move_id, draft)
+        self.assertEqual(result.note_move_id, draft)
         self.assertEqual(result.state, "done")
         by_prescription = {
             line.spms_prescription: line for line in draft.invoice_line_ids
@@ -273,17 +273,17 @@ class TestSpmsCheck(SavepointCase):
         self.assertFalse(fallback.spms_start_date)
         for line in result.line_ids:
             self.assertEqual(
-                line.refund_move_line_id,
+                line.note_move_line_id,
                 by_prescription[line.prescription],
             )
 
     def test_generate_twice_blocks(self):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         with self.assertRaisesRegex(UserError, "no longer ready"):
-            result._generate_credit_note()
-        self.assertEqual(result.credit_note_move_id, draft)
+            result._generate_note()
+        self.assertEqual(result.note_move_id, draft)
         self.assertEqual(result.state, "done")
 
     def test_generate_unmatched_prescription_blocks(self):
@@ -292,8 +292,8 @@ class TestSpmsCheck(SavepointCase):
         rows[0]["prescription"] = "TESTMISSING"
         result = self._create_result(move, rows, credit_official=38.16)
         with self.assertRaisesRegex(UserError, "not matched"):
-            result._generate_credit_note()
-        self.assertFalse(result.credit_note_move_id)
+            result._generate_note()
+        self.assertFalse(result.note_move_id)
         self.assertEqual(result.state, "ready")
 
     def test_generate_does_not_return_quantities_to_the_sale_order(self):
@@ -302,16 +302,13 @@ class TestSpmsCheck(SavepointCase):
         # the sale order they were invoiced from
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         credited = draft.invoice_line_ids.filtered("spms_prescription")
         self.assertEqual(len(credited), 3)
         self.assertFalse(any(credited.mapped("sale_qty_to_reinvoice")))
 
-    def test_generate_keeps_the_sale_order_fully_invoiced(self):
-        # the same three line rewrites as production (total rejection,
-        # partial with days, money-only fallback), this time on an invoice
-        # made from a sale order: none of them may bring quantities back
-        # to invoice on that order
+    def _sale_order_invoice(self):
+        """The standard invoice, this time made from a sale order."""
         self.product.invoice_policy = "order"
         order = self.env["sale.order"].create(
             {
@@ -346,13 +343,24 @@ class TestSpmsCheck(SavepointCase):
             line.spms_prescription = line.sale_line_ids.name
         move.action_post()
         self.assertEqual(order.invoice_status, "invoiced")
-        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        draft = result._generate_credit_note()
-        self.assertEqual(len(draft.invoice_line_ids), 3)
+        return order, move
+
+    def _assert_order_fully_invoiced(self, order):
         self.assertEqual(order.invoice_status, "invoiced")
         for line in order.order_line:
             self.assertEqual(line.qty_invoiced, line.product_uom_qty)
             self.assertEqual(line.qty_to_invoice, 0)
+
+    def test_generate_keeps_the_sale_order_fully_invoiced(self):
+        # the same three line rewrites as production (total rejection,
+        # partial with days, money-only fallback), this time on an invoice
+        # made from a sale order: none of them may bring quantities back
+        # to invoice on that order
+        order, move = self._sale_order_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_note()
+        self.assertEqual(len(draft.invoice_line_ids), 3)
+        self._assert_order_fully_invoiced(order)
 
     def test_generate_credits_multi_error_line_once(self):
         # a prescription reported with several errors (e.g. C010 at
@@ -377,10 +385,10 @@ class TestSpmsCheck(SavepointCase):
         self.assertAlmostEqual(result.amount_lines_untaxed, 31.0)
         self.assertEqual(result.error_ids.mapped("code"), ["C010", "C012"])
         self.assertEqual(result.line_ids.error_ids.mapped("code"), ["C010", "C012"])
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertAlmostEqual(draft.amount_total, 32.86)
         self.assertEqual(len(draft.invoice_line_ids), 1)
-        self.assertEqual(result.line_ids.refund_move_line_id, draft.invoice_line_ids)
+        self.assertEqual(result.line_ids.note_move_line_id, draft.invoice_line_ids)
 
     def test_generate_skips_zero_difference_prescriptions(self):
         # C012-style noise where read equals computed cuts nothing: the
@@ -403,13 +411,13 @@ class TestSpmsCheck(SavepointCase):
             },
         ]
         result = self._create_result(move, lines, credit_official=32.86)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertEqual(len(draft.invoice_line_ids), 1)
         self.assertEqual(draft.invoice_line_ids.spms_prescription, "TESTP007")
         zero_line = result.line_ids.filtered(
             lambda line: line.prescription == "TESTP008"
         )
-        self.assertFalse(zero_line.refund_move_line_id)
+        self.assertFalse(zero_line.note_move_line_id)
 
     def test_generate_without_difference_blocks(self):
         move = self._create_invoice("FT 2026/00128", [("TESTP009", 10, 1.0)])
@@ -423,7 +431,7 @@ class TestSpmsCheck(SavepointCase):
         ]
         result = self._create_result(move, lines, credit_official=1.0)
         with self.assertRaisesRegex(UserError, "no prescription with a difference"):
-            result._generate_credit_note()
+            result._generate_note()
 
     def test_generate_official_one_cent_below_imposes_tax(self):
         # claims 36,00 + 6% global tax 2,16 = 38,16 naturally; the CCF
@@ -431,7 +439,7 @@ class TestSpmsCheck(SavepointCase):
         # line, the entry stays balanced and no extra line appears
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.15)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertAlmostEqual(draft.amount_total, 38.15)
         self.assertAlmostEqual(draft.amount_untaxed, 36.0)
         self.assertAlmostEqual(draft.amount_tax, 2.15)
@@ -447,7 +455,7 @@ class TestSpmsCheck(SavepointCase):
     def test_generate_official_one_cent_above_imposes_tax(self):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.17)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertAlmostEqual(draft.amount_total, 38.17)
         self.assertAlmostEqual(draft.amount_untaxed, 36.0)
         self.assertAlmostEqual(draft.amount_tax, 2.17)
@@ -474,7 +482,7 @@ class TestSpmsCheck(SavepointCase):
 
     def test_generate_single_line_half_cent_tax(self):
         result = self._single_line_result("FT 2026/00130", "TESTP011", 11.39)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertAlmostEqual(draft.amount_total, 11.39)
         self.assertEqual(len(draft.invoice_line_ids), 1)
         tax_line = draft.line_ids.filtered(lambda line: line.tax_line_id == self.tax6)
@@ -517,7 +525,7 @@ class TestSpmsCheck(SavepointCase):
         # claims 41,00 + 6% of 31,00 + 23% of 10,00 = 45,16 naturally
         result = self._create_result(move, rows, credit_official=45.15)
         with self.assertRaisesRegex(UserError, "exactly one tax line"):
-            result._generate_credit_note()
+            result._generate_note()
 
     def test_generate_negative_claim_gets_own_negative_line(self):
         # the check allowed TESTP021 above the billed amount: its negative
@@ -546,7 +554,7 @@ class TestSpmsCheck(SavepointCase):
         result = self._create_result(move, lines, credit_official=30.74)
         self.assertAlmostEqual(result.amount_lines_untaxed, 29.0)
         self.assertAlmostEqual(result.amount_lines_negative_untaxed, -2.0)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertEqual(len(draft.invoice_line_ids), 2)
         negative = draft.invoice_line_ids.filtered(
             lambda line: line.spms_prescription == "TESTP021"
@@ -560,7 +568,7 @@ class TestSpmsCheck(SavepointCase):
         negative_claim = result.line_ids.filtered(
             lambda line: line.prescription == "TESTP021"
         )
-        self.assertEqual(negative_claim.refund_move_line_id, negative)
+        self.assertEqual(negative_claim.note_move_line_id, negative)
         self.assertEqual(result.state, "done")
 
     def test_generate_residual_beyond_limit_holds(self):
@@ -572,11 +580,11 @@ class TestSpmsCheck(SavepointCase):
         with self.assertRaisesRegex(
             UserError, "SPMS adjustment limit of company"
         ), self.env.cr.savepoint():
-            result._generate_credit_note()
-        result._generate_credit_note_or_hold()
+            result._generate_note()
+        result._generate_note_or_hold()
         self.assertEqual(result.state, "error")
         self.assertIn("adjustment limit", result.generation_error)
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
         self.assertFalse(
             self.env["account.move"].search(
                 [
@@ -587,7 +595,7 @@ class TestSpmsCheck(SavepointCase):
         )
         self.company.spms_adjustment_limit = 0.10
         result.generation_error = False
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertAlmostEqual(draft.amount_total, 38.22)
         self.assertAlmostEqual(draft.amount_tax, 2.22)
         self.assertEqual(len(draft.invoice_line_ids), 3)
@@ -598,7 +606,7 @@ class TestSpmsCheck(SavepointCase):
         self.company.spms_adjustment_limit = 0.05
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.21)
-        draft = result._generate_credit_note()
+        draft = result._generate_note()
         self.assertAlmostEqual(draft.amount_total, 38.21)
         self.assertAlmostEqual(draft.amount_tax, 2.21)
         self.assertEqual(len(draft.invoice_line_ids), 3)
@@ -619,8 +627,8 @@ class TestSpmsCheck(SavepointCase):
         with self.assertRaisesRegex(
             UserError, "exceeds the total of the original invoice"
         ):
-            result._generate_credit_note()
-        self.assertFalse(result.credit_note_move_id)
+            result._generate_note()
+        self.assertFalse(result.note_move_id)
 
     def test_generate_official_equals_total_allowed(self):
         # a full rejection is legitimate: official == invoice total must
@@ -649,19 +657,19 @@ class TestSpmsCheck(SavepointCase):
             },
         ]
         result = self._create_result(move, rows, credit_official=move.amount_total)
-        result._generate_credit_note()
+        result._generate_note()
         self.assertEqual(result.state, "done")
-        credit_note = result.credit_note_move_id
+        credit_note = result.note_move_id
         self.assertEqual(len(credit_note.invoice_line_ids), 3)
         self.assertAlmostEqual(credit_note.amount_total, move.amount_total)
 
     def test_official_locked_while_credit_note_alive(self):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        result._generate_credit_note()
-        with self.assertRaisesRegex(UserError, "cancel that credit note"):
+        result._generate_note()
+        with self.assertRaisesRegex(UserError, "cancel that note"):
             result.total_allowed_taxed = move.amount_total - 40.0
-        result.credit_note_move_id.button_cancel()
+        result.note_move_id.button_cancel()
         result.total_allowed_taxed = move.amount_total - 40.0
         self.assertAlmostEqual(result.credit_official, 40.0)
         self.assertEqual(result.state, "ready")
@@ -672,9 +680,9 @@ class TestSpmsCheck(SavepointCase):
         # note in the original invoice's chatter
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        result._generate_credit_note()
-        result.credit_note_move_id.button_cancel()
-        self.assertFalse(result.credit_note_move_id)
+        result._generate_note()
+        result.note_move_id.button_cancel()
+        self.assertFalse(result.note_move_id)
         self.assertEqual(result.state, "ready")
         self.assertAlmostEqual(result.credit_official, 38.16)
         self.assertTrue(
@@ -684,19 +692,19 @@ class TestSpmsCheck(SavepointCase):
     def test_credit_note_delete_releases_result_immediately(self):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        result._generate_credit_note()
-        result.credit_note_move_id.unlink()
-        self.assertFalse(result.credit_note_move_id)
+        result._generate_note()
+        result.note_move_id.unlink()
+        self.assertFalse(result.note_move_id)
         self.assertEqual(result.state, "ready")
         self.assertAlmostEqual(result.credit_official, 38.16)
 
     def test_credit_note_cancelled_regenerates(self):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        first_draft = result._generate_credit_note()
+        first_draft = result._generate_note()
         first_draft.button_cancel()
         self.assertEqual(result.state, "ready")
-        second_draft = result._generate_credit_note()
+        second_draft = result._generate_note()
         self.assertEqual(result.state, "done")
         self.assertNotEqual(second_draft, first_draft)
         self.assertEqual(second_draft.state, "draft")
@@ -730,10 +738,10 @@ class TestSpmsCheck(SavepointCase):
             credit_official=move.amount_total,
         )
         self.assertEqual(result.state, "error")
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
         self.assertIn(foreign.display_name, result.error_message)
         with self.assertRaisesRegex(UserError, "no longer ready"):
-            result._generate_credit_note()
+            result._generate_note()
 
     def test_second_credit_note_beside_own_marks_error(self):
         # one credit note per invoice (manual p.33): a second live note
@@ -741,7 +749,7 @@ class TestSpmsCheck(SavepointCase):
         # pointer survives untouched; fixing accounting heals the result
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
-        own = result._generate_credit_note()
+        own = result._generate_note()
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, move.ids)],
@@ -754,7 +762,7 @@ class TestSpmsCheck(SavepointCase):
         wizard.reverse_moves()
         result._update_state()
         self.assertEqual(result.state, "error")
-        self.assertEqual(result.credit_note_move_id, own)
+        self.assertEqual(result.note_move_id, own)
         foreign = move.reversal_move_id - own
         self.assertIn(foreign.display_name, result.error_message)
         foreign.button_cancel()
@@ -783,6 +791,193 @@ class TestSpmsCheck(SavepointCase):
         )
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         self.assertEqual(result.state, "ready")
+
+    def _debit_invoice(self):
+        """One claim the check allowed above the billed amount, alone: the
+        official value comes out negative (33 computed for 31 billed, taxes
+        apart), so the note must charge the 2 (plus tax) back."""
+        move = self._create_invoice("FT 2026/00150", [("TESTP010", 31, 1.0)])
+        rows = [
+            {
+                "prescription": "TESTP010",
+                "billed": 31.0,
+                "allowed": 33.0,
+                "days_billed": 31.0,
+                "days_paid": 31.0,
+                "errors": [{"code": "C011"}],
+            }
+        ]
+        return move, rows
+
+    def _foreign_debit_note(self, move):
+        wizard = (
+            self.env["account.debit.note"]
+            .with_context(active_model="account.move", active_ids=move.ids)
+            .create({"date": fields.Date.context_today(move), "copy_lines": True})
+        )
+        wizard.create_debit()
+        return move.debit_note_ids
+
+    def test_generate_negative_official_creates_debit_note(self):
+        move, rows = self._debit_invoice()
+        result = self._create_result(move, rows, credit_official=-2.12)
+        self.assertEqual(result.state, "ready")
+        draft = result._generate_note()
+        self.assertEqual(draft.move_type, "out_invoice")
+        self.assertEqual(draft.state, "draft")
+        self.assertEqual(draft.debit_origin_id, move)
+        self.assertEqual(move.debit_note_ids, draft)
+        self.assertFalse(move.reversal_move_id)
+        self.assertEqual(len(draft.invoice_line_ids), 1)
+        line = draft.invoice_line_ids
+        self.assertEqual(line.spms_prescription, "TESTP010")
+        self.assertEqual(line.quantity, 1)
+        self.assertAlmostEqual(line.price_unit, 2.0)
+        self.assertAlmostEqual(draft.amount_untaxed, 2.0)
+        self.assertAlmostEqual(draft.amount_total, 2.12)
+        self.assertEqual(result.state, "done")
+        self.assertEqual(result.note_move_id, draft)
+        self.assertEqual(result.line_ids.note_move_line_id, line)
+        self.assertTrue(result.official_locked)
+
+    def test_generate_negative_official_mixed_claims(self):
+        # an over-billed claim and a larger one the check allowed above the
+        # billed amount: the net is negative, so the debit note carries
+        # both with their signs flipped, the same netting as the official
+        # value
+        move = self._create_invoice(
+            "FT 2026/00151", [("TESTP010", 31, 1.0), ("TESTP011", 31, 2.0)]
+        )
+        rows = [
+            {
+                "prescription": "TESTP010",
+                "billed": 31.0,
+                "allowed": 29.0,
+                "days_billed": 31.0,
+                "days_paid": 29.0,
+                "errors": [{"code": "C011"}],
+            },
+            {
+                "prescription": "TESTP011",
+                "billed": 62.0,
+                "allowed": 67.0,
+                "days_billed": 31.0,
+                "days_paid": 31.0,
+                "errors": [{"code": "C011"}],
+            },
+        ]
+        result = self._create_result(move, rows, credit_official=-3.18)
+        self.assertAlmostEqual(result.amount_lines_untaxed, -3.0)
+        self.assertAlmostEqual(result.amount_lines_negative_untaxed, -5.0)
+        draft = result._generate_note()
+        self.assertEqual(draft.move_type, "out_invoice")
+        by_prescription = {
+            line.spms_prescription: line for line in draft.invoice_line_ids
+        }
+        self.assertEqual(set(by_prescription), {"TESTP010", "TESTP011"})
+        over_billed = by_prescription["TESTP010"]
+        self.assertEqual(over_billed.quantity, 2)
+        self.assertAlmostEqual(over_billed.price_unit, -1.0)
+        self.assertAlmostEqual(over_billed.price_subtotal, -2.0)
+        allowed_above = by_prescription["TESTP011"]
+        self.assertEqual(allowed_above.quantity, 1)
+        self.assertAlmostEqual(allowed_above.price_unit, 5.0)
+        self.assertAlmostEqual(draft.amount_untaxed, 3.0)
+        self.assertAlmostEqual(draft.amount_total, 3.18)
+        self.assertEqual(result.state, "done")
+
+    def test_generate_negative_official_one_cent_imposes_tax(self):
+        # the mirror of the credit-note cent: written on the tax line, on
+        # its credit side this time, and compensated on the receivable line
+        move, rows = self._debit_invoice()
+        result = self._create_result(move, rows, credit_official=-2.13)
+        draft = result._generate_note()
+        self.assertAlmostEqual(draft.amount_untaxed, 2.0)
+        self.assertAlmostEqual(draft.amount_tax, 0.13)
+        self.assertAlmostEqual(draft.amount_total, 2.13)
+        tax_line = draft.line_ids.filtered("tax_line_id")
+        self.assertEqual(len(tax_line), 1)
+        self.assertAlmostEqual(tax_line.credit, 0.13)
+        self.assertAlmostEqual(tax_line.debit, 0.0)
+        self.assertAlmostEqual(
+            sum(draft.line_ids.mapped("debit")), sum(draft.line_ids.mapped("credit"))
+        )
+        self.assertEqual(result.state, "done")
+
+    def test_generate_negative_official_keeps_the_sale_order_fully_invoiced(self):
+        # the debit-note flow copies the sale-order link onto the lines;
+        # kept, the debit line would count as invoiced again on the order
+        order, move = self._sale_order_invoice()
+        rows = [
+            {
+                "prescription": "TESTP001",
+                "billed": 31.0,
+                "allowed": 33.0,
+                "days_billed": 31.0,
+                "days_paid": 31.0,
+                "errors": [{"code": "C011"}],
+            }
+        ]
+        result = self._create_result(move, rows, credit_official=-2.12)
+        draft = result._generate_note()
+        self.assertEqual(draft.move_type, "out_invoice")
+        self.assertEqual(len(draft.invoice_line_ids), 1)
+        self.assertFalse(draft.invoice_line_ids.sale_line_ids)
+        self._assert_order_fully_invoiced(order)
+
+    def test_preexisting_debit_note_marks_error(self):
+        # the same rule as for credit notes, on the debit side: a live debit
+        # note of the invoice this module did not create is an error
+        move, rows = self._debit_invoice()
+        foreign = self._foreign_debit_note(move)
+        self.assertEqual(len(foreign), 1)
+        result = self._create_result(move, rows, credit_official=-2.12)
+        self.assertEqual(result.state, "error")
+        self.assertFalse(result.note_move_id)
+        self.assertIn(foreign.display_name, result.error_message)
+        self.assertIn("debit note", result.error_message)
+        with self.assertRaisesRegex(UserError, "no longer ready"):
+            result._generate_note()
+        foreign.button_cancel()
+        result._update_state()
+        self.assertEqual(result.state, "ready")
+
+    def test_foreign_note_of_the_other_kind_does_not_block(self):
+        # only the kind the official value calls for counts: a debit note
+        # billing a prescription late never blocks the credit note of the
+        # check, and a credit note never blocks a debit result
+        move = self._standard_invoice()
+        self._foreign_debit_note(move)
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        self.assertEqual(result.state, "ready")
+        debit_move, rows = self._debit_invoice()
+        wizard = self.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, debit_move.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": fields.Date.context_today(debit_move),
+                "company_id": self.company.id,
+            }
+        )
+        wizard.reverse_moves()
+        self.assertTrue(debit_move.reversal_move_id)
+        result = self._create_result(debit_move, rows, credit_official=-2.12)
+        self.assertEqual(result.state, "ready")
+
+    def test_debit_note_cancel_releases_result(self):
+        move, rows = self._debit_invoice()
+        result = self._create_result(move, rows, credit_official=-2.12)
+        draft = result._generate_note()
+        with self.assertRaisesRegex(UserError, "cancel that note"):
+            result.total_allowed_taxed = move.amount_total + 3.0
+        draft.button_cancel()
+        self.assertFalse(result.note_move_id)
+        self.assertEqual(result.state, "ready")
+        self.assertAlmostEqual(result.credit_official, -2.12)
+        self.assertTrue(
+            any("was cancelled" in body for body in move.message_ids.mapped("body"))
+        )
 
     def test_error_autocreates_unknown_type(self):
         move = self._create_invoice("FT 2026/00132", [("TESTP013", 10, 1.0)])

@@ -95,12 +95,13 @@ class SpmsInvoiceLineCheck(models.Model):
         help="Original invoice line matched by prescription number within "
         "the invoice.",
     )
-    refund_move_line_id = fields.Many2one(
+    note_move_line_id = fields.Many2one(
         comodel_name="account.move.line",
-        string="Refund Line",
+        string="Note Line",
         readonly=True,
         check_company=True,
-        help="Credit-note line generated from this claim (audit only).",
+        help="Line of the generated credit or debit note carrying this claim "
+        "(audit only).",
     )
     error_ids = fields.One2many(
         comodel_name="spms.invoice.check.error",
@@ -176,3 +177,17 @@ class SpmsInvoiceLineCheck(models.Model):
             "spms_start_date": False,
             "spms_end_date": False,
         }
+
+    def _get_note_line_values(self, debit):
+        """The refund values as they are on a credit note; on a debit note
+        the same line with the sign of its amount flipped (the quantity
+        stays positive), so the note charges back what the check allowed
+        above the billed amount. A total rejection keeps the copied line
+        as-is on a credit note, so on a debit note its price is negated."""
+        self.ensure_one()
+        values = self._get_refund_line_values()
+        if debit:
+            values["price_unit"] = -values.get(
+                "price_unit", self.move_line_id.price_unit
+            )
+        return values

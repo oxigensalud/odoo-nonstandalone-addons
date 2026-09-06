@@ -211,8 +211,6 @@ msgstr "Criado em"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_note_move_id
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_tree
 #, python-format
 msgid "Credit Note"
 msgstr "Nota de crédito"
@@ -221,17 +219,19 @@ msgstr "Nota de crédito"
 #: code:addons/l10n_pt_invoice_spms_check/models/account_move.py:0
 #, python-format
 msgid ""
-"Credit note %(note)s was cancelled: the check result of invoice %(invoice)s "
-"is ready for generation again."
+"The generated note %(note)s was cancelled: the check result of invoice "
+"%(invoice)s is ready for generation again."
 msgstr ""
-"A nota de crédito %(note)s foi cancelada: o resultado da conferência da "
-"fatura %(invoice)s está novamente pronto para geração."
+"A nota gerada %(note)s foi cancelada: o resultado da conferência da fatura "
+"%(invoice)s está novamente pronto para geração."
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__refund_move_line_id
-msgid "Credit-note line generated from this claim (audit only)."
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__note_move_line_id
+msgid ""
+"Line of the generated credit or debit note carrying this claim (audit only)."
 msgstr ""
-"Linha da nota de crédito gerada a partir desta prestação (apenas auditoria)."
+"Linha da nota de crédito ou de débito gerada que transporta esta prestação "
+"(apenas auditoria)."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__currency_id
@@ -290,15 +290,16 @@ msgid "Done"
 msgstr "Concluído"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_note_move_id
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__note_move_id
 msgid ""
-"Draft credit note generated for this invoice by this module. Full pointer "
-"means live note: it is released automatically the moment the note is "
-"cancelled or deleted."
+"Draft credit note, or debit note when the official value is negative, "
+"generated for this invoice by this module. Full pointer means live note: it "
+"is released automatically the moment the note is cancelled or deleted."
 msgstr ""
-"Nota de crédito em rascunho gerada para esta fatura por este módulo. "
-"Ponteiro preenchido significa nota viva: é libertado automaticamente assim "
-"que a nota é cancelada ou eliminada."
+"Nota de crédito em rascunho, ou nota de débito quando o valor oficial é "
+"negativo, gerada para esta fatura por este módulo. Ponteiro preenchido "
+"significa nota viva: é libertado automaticamente assim que a nota é "
+"cancelada ou eliminada."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model,name:l10n_pt_invoice_spms_check.model_edi_exchange_record
@@ -376,20 +377,20 @@ msgstr "Todos os erros que o documento reporta, com e sem linha."
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"Expected exactly one receivable/payable line on the draft credit note "
-"%(move)s, found %(count)d."
+"Expected exactly one receivable/payable line on the draft %(kind)s %(move)s,"
+" found %(count)d."
 msgstr ""
-"Era esperada exatamente uma linha a receber/pagar no rascunho da nota de "
-"crédito %(move)s; foram encontradas %(count)d."
+"Era esperada exatamente uma linha a receber/pagar no rascunho de %(kind)s "
+"%(move)s; foram encontradas %(count)d."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"Expected exactly one tax line on the draft credit note %(move)s to carry the"
-" difference with the official value, found %(count)d."
+"Expected exactly one tax line on the draft %(kind)s %(move)s to carry the "
+"difference with the official value, found %(count)d."
 msgstr ""
-"Era esperada exatamente uma linha de imposto no rascunho da nota de crédito "
+"Era esperada exatamente uma linha de imposto no rascunho de %(kind)s "
 "%(move)s para suportar a diferença com o valor oficial; foram encontradas "
 "%(count)d."
 
@@ -573,13 +574,6 @@ msgstr ""
 "Ponto de aninhamento do documento de conferência a que o erro está ancorado."
 
 #. module: l10n_pt_invoice_spms_check
-#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
-#, python-format
-msgid ""
-"Nothing to credit on invoice %(invoice)s: the official value is %(value)s."
-msgstr "Nada a creditar na fatura %(invoice)s: o valor oficial é %(value)s."
-
-#. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__name
 msgid "Number"
 msgstr "Número"
@@ -623,14 +617,17 @@ msgstr "Comunicação oficial do resultado"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_official
 msgid ""
-"Official credit-note value for this invoice, taxes included: "
-"TotalFaturaIVALido - TotalFaturaIVACalculado, exactly as the check document "
-"states it. The generated credit note must carry exactly this value."
+"Official value for this invoice, taxes included: TotalFaturaIVALido - "
+"TotalFaturaIVACalculado, exactly as the check document states it. The "
+"generated credit note must carry exactly this value; a negative value means "
+"the check computed more than billed, and the generated debit note carries "
+"exactly its absolute value."
 msgstr ""
-"Valor oficial da nota de crédito para esta fatura, com impostos: "
-"TotalFaturaIVALido - TotalFaturaIVACalculado, exatamente como o documento de"
-" conferência o indica. A nota de crédito gerada deve transportar exatamente "
-"este valor."
+"Valor oficial para esta fatura, com impostos: TotalFaturaIVALido - "
+"TotalFaturaIVACalculado, exatamente como o documento de conferência o "
+"indica. A nota de crédito gerada deve transportar exatamente este valor; um "
+"valor negativo significa que a conferência calculou mais do que o faturado, "
+"e a nota de débito gerada transporta exatamente o seu valor absoluto."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__move_id
@@ -676,11 +673,10 @@ msgstr "Prescrição"
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
-msgid ""
-"Prescription %s cannot be mapped to a single line of the credit-note draft."
+msgid "Prescription %s cannot be mapped to a single line of the note draft."
 msgstr ""
-"A prescrição %s não pode ser associada a uma única linha do rascunho da nota"
-" de crédito."
+"A prescrição %s não pode ser associada a uma única linha do rascunho da "
+"nota."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__prescricao
@@ -715,9 +711,9 @@ msgid "Ready"
 msgstr "Pronto"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__refund_move_line_id
-msgid "Refund Line"
-msgstr "Linha da nota de crédito"
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__note_move_line_id
+msgid "Note Line"
+msgstr "Linha da nota"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:res.groups,name:l10n_pt_invoice_spms_check.spms_invoice_check_group_responsible
@@ -778,11 +774,11 @@ msgid "SPMS Invoice Checks"
 msgstr "Conferências SPMS de faturas"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_credit_note_invoice_check_ids
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_credit_note_invoice_check_ids
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_credit_note_invoice_check_ids
-msgid "SPMS Invoice Checks (Credit Note)"
-msgstr "Conferências SPMS de faturas (nota de crédito)"
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_note_invoice_check_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_note_invoice_check_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_note_invoice_check_ids
+msgid "SPMS Invoice Checks (Credit/Debit Note)"
+msgstr "Conferências SPMS de faturas (nota de crédito/débito)"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_line_check
@@ -823,11 +819,11 @@ msgstr "Estado"
 msgid ""
 "Net sum of the per-prescription differences, without taxes: over-billed "
 "claims minus the claims the check allowed above the billed amount, what the "
-"generated credit-note lines add up to."
+"generated credit-note lines add up to (negated on a debit note)."
 msgstr ""
 "Soma líquida das diferenças por prescrição, sem IVA: prestações faturadas a "
 "mais menos as prestações que a conferência admitiu acima do faturado, o que "
-"as linhas da nota de crédito gerada somam."
+"as linhas da nota de crédito gerada somam (negado numa nota de débito)."
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
@@ -900,20 +896,20 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
 #, python-format
 msgid ""
-"The check result of %s is already carried by a live credit note; cancel that"
-" credit note before reprocessing the document."
+"The check result of %s is already carried by a live credit or debit note; "
+"cancel that note before reprocessing the document."
 msgstr ""
 "O resultado da conferência de %s já é transportado por uma nota de crédito "
-"viva; cancele essa nota de crédito antes de reprocessar o documento."
+"ou de débito viva; cancele essa nota antes de reprocessar o documento."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"The credit note total %(total).2f still differs from the official value "
+"The %(kind)s total %(total).2f still differs from the official value "
 "%(official).2f after imposing the tax amount."
 msgstr ""
-"O total da nota de crédito %(total).2f continua a diferir do valor oficial "
+"O total da %(kind)s %(total).2f continua a diferir do valor oficial "
 "%(official).2f após impor o valor do imposto."
 
 #. module: l10n_pt_invoice_spms_check
@@ -949,13 +945,13 @@ msgstr "O registo de intercâmbio %s não está ligado a uma fatura."
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"The invoice already has a live credit note this module did not create: %s. "
-"Only one credit note may exist per invoice; fix or cancel it in accounting "
-"first."
+"The invoice already has a live %(kind)s this module did not create: "
+"%(notes)s. Only one %(kind)s may exist per invoice; fix or cancel it in "
+"accounting first."
 msgstr ""
-"A fatura já tem uma nota de crédito viva que este módulo não criou: %s. Só "
-"pode existir uma nota de crédito por fatura; corrija-a ou cancele-a primeiro"
-" na contabilidade."
+"A fatura já tem uma %(kind)s viva que este módulo não criou: %(notes)s. Só "
+"pode existir uma %(kind)s por fatura; corrija-a ou cancele-a primeiro na "
+"contabilidade."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
@@ -971,11 +967,11 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"The official value of %s is already carried by a credit note; cancel that "
-"credit note first to change it."
+"The official value of %s is already carried by a credit or debit note; "
+"cancel that note first to change it."
 msgstr ""
-"O valor oficial de %s já é transportado por uma nota de crédito; cancele "
-"primeiro essa nota de crédito para o alterar."
+"O valor oficial de %s já é transportado por uma nota de crédito ou de "
+"débito; cancele primeiro essa nota para o alterar."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__oficio
@@ -1009,8 +1005,8 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
-msgid "There is no prescription with a difference to credit."
-msgstr "Não há nenhuma prescrição com diferença a creditar."
+msgid "There is no prescription with a difference to regularize."
+msgstr "Não há nenhuma prescrição com diferença a regularizar."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed
@@ -1089,26 +1085,26 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__generation_error
 msgid ""
-"Why the automatic credit-note generation of this result failed; the result "
-"is held in Error until the cause is fixed and the document is reprocessed. "
-"Other results of the same batch are never dragged along."
+"Why the automatic note generation of this result failed; the result is held "
+"in Error until the cause is fixed and the document is reprocessed. Other "
+"results of the same batch are never dragged along."
 msgstr ""
-"Porque falhou a geração automática da nota de crédito deste resultado; o "
-"resultado fica retido em Erro até a causa ser corrigida e o documento "
-"reprocessado. Os outros resultados do mesmo lote nunca são arrastados."
+"Porque falhou a geração automática da nota deste resultado; o resultado fica"
+" retido em Erro até que a causa seja corrigida e o documento reprocessado. "
+"Os outros resultados do mesmo lote nunca são arrastados."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_message
 msgid ""
-"Why the result is held in error: a live credit note this module did not "
-"create, a web-service incident, or a check outcome this module does not "
-"recognise. Computed live and never stored, so fixing the cause clears it on "
-"its own."
+"Why the result is held in error: a live credit or debit note this module did"
+" not create, a web-service incident, or a check outcome this module does not"
+" recognise. Computed live and never stored, so fixing the cause clears it on"
+" its own."
 msgstr ""
-"Porque o resultado está retido em erro: uma nota de crédito viva que este "
-"módulo não criou, um incidente do serviço web ou um desfecho de conferência "
-"que este módulo não reconhece. Calculado em direto e nunca armazenado, pelo "
-"que corrigir a causa limpa-o por si só."
+"Porque o resultado está retido em erro: uma nota de crédito ou de débito "
+"viva que este módulo não criou, uma incidência do serviço web ou um desfecho"
+" de conferência que este módulo não reconhece. É calculado ao vivo e nunca "
+"armazenado, pelo que corrigir a causa limpa-o por si só."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__zero_official
@@ -1125,15 +1121,15 @@ msgstr "Limite de ajuste SPMS"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_limit
 msgid ""
 "Largest difference, taxes included, between the official value and the draft"
-" credit note that is written on its tax line: the rounding cent of a tax "
-"computed once on the invoice total. A larger difference holds the result in "
-"error for review instead of generating the credit note."
+" credit or debit note that is written on its tax line: the rounding cent of "
+"a tax computed once on the invoice total. A larger difference holds the "
+"result in error for review instead of generating the note."
 msgstr ""
 "Maior diferença, com IVA, entre o valor oficial e o rascunho da nota de "
-"crédito que é escrita na sua linha de imposto: o cêntimo de arredondamento "
-"de um imposto calculado uma só vez sobre o total da fatura. Uma diferença "
-"maior deixa o resultado em erro para revisão em vez de gerar a nota de "
-"crédito."
+"crédito ou de débito que é escrita na sua linha de imposto: o cêntimo de "
+"arredondamento de um imposto calculado uma só vez sobre o total da fatura. "
+"Uma diferença maior deixa o resultado em erro para revisão em vez de gerar a"
+" nota."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_check.constraint_res_company_spms_adjustment_limit_positive
@@ -1150,13 +1146,13 @@ msgstr "Valor das prestações negativas (sem impostos)"
 msgid ""
 "Sum of the negative differences, without taxes: the claims the check allowed"
 " above the billed amount. Each one becomes a negative line of the credit "
-"note, netting against the over-billed claims exactly as the official value "
-"does."
+"note (a positive line of the debit note), netting against the over-billed "
+"claims exactly as the official value does."
 msgstr ""
 "Soma das diferenças negativas, sem IVA: as prestações que a conferência "
 "admitiu acima do valor faturado. Cada uma passa a ser uma linha negativa da "
-"nota de crédito, compensando as prestações faturadas a mais exatamente como "
-"faz o valor oficial."
+"nota de crédito (uma linha positiva da nota de débito), compensando as "
+"prestações faturadas a mais exatamente como faz o valor oficial."
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
@@ -1167,10 +1163,41 @@ msgstr "Prestações negativas"
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"The credit note cannot be generated: its total %(draft)s differs from the official value %(official)s by %(difference)s, and the SPMS adjustment limit of company %(company)s allows at most %(limit)s.\n"
+"The %(kind)s cannot be generated: its total %(draft)s differs from the official value %(official)s by %(difference)s, and the SPMS adjustment limit of company %(company)s allows at most %(limit)s.\n"
 "\n"
-"Only the rounding cent of the tax may be written on the tax line of the credit note. A larger difference reveals a discrepancy to review before retrying: the Claims Credit of the result must match its official totals before tax (a prescription the check priced differently from the invoice makes them diverge), and the company must round its taxes globally (Accounting > Settings > Taxes > Rounding Method), as the CCF computes the tax once on the invoice total. Raise the SPMS adjustment limit of the company only when the difference is legitimate and strictly necessary."
+"Only the rounding cent of the tax may be written on the tax line of the %(kind)s. A larger difference reveals a discrepancy to review before retrying: the Claims Credit of the result must match its official totals before tax (a prescription the check priced differently from the invoice makes them diverge), and the company must round its taxes globally (Accounting > Settings > Taxes > Rounding Method), as the CCF computes the tax once on the invoice total. Raise the SPMS adjustment limit of the company only when the difference is legitimate and strictly necessary."
 msgstr ""
-"Não é possível gerar a nota de crédito: o seu total %(draft)s difere do valor oficial %(official)s em %(difference)s, e o limite de ajuste SPMS da empresa %(company)s permite no máximo %(limit)s.\n"
+"Não é possível gerar a %(kind)s: o seu total %(draft)s difere do valor oficial %(official)s em %(difference)s, e o limite de ajuste SPMS da empresa %(company)s permite no máximo %(limit)s.\n"
 "\n"
-"Na linha de imposto da nota de crédito só pode ser escrito o cêntimo de arredondamento do imposto. Uma diferença maior revela uma discrepância a rever antes de tentar novamente: o Crédito das prestações do resultado tem de coincidir com os seus totais oficiais sem impostos (uma prescrição que a conferência valorizou com um preço diferente do da fatura fá-los divergir), e a empresa tem de arredondar os impostos globalmente (Contabilidade > Configurações > Impostos > Método de arredondamento), porque o CCF calcula o imposto uma única vez sobre o total da fatura. Aumente o limite de ajuste SPMS da empresa apenas quando a diferença for legítima e estritamente necessária."
+"Na linha de imposto da %(kind)s só pode ser escrito o cêntimo de arredondamento do imposto. Uma diferença maior revela uma discrepância a rever antes de tentar novamente: o Crédito das prestações do resultado tem de coincidir com os seus totais oficiais sem impostos (uma prescrição que a conferência valorizou com um preço diferente do da fatura fá-los divergir), e a empresa tem de arredondar os impostos globalmente (Contabilidade > Configurações > Impostos > Método de arredondamento), porque o CCF calcula o imposto uma única vez sobre o total da fatura. Aumente o limite de ajuste SPMS da empresa apenas quando a diferença for legítima e estritamente necessária."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__note_move_id
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_tree
+msgid "Credit/Debit Note"
+msgstr "Nota de crédito/débito"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+msgid "credit note"
+msgstr "nota de crédito"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+msgid "debit note"
+msgstr "nota de débito"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+msgid "Debit Note"
+msgstr "Nota de débito"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The standard debit-note flow did not create a single draft debit note for "
+"%s."
+msgstr ""
+"O fluxo padrão de nota de débito não criou uma única nota de débito em "
+"rascunho para %s."
