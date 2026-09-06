@@ -7,6 +7,7 @@ from datetime import date
 from unittest import mock
 
 from odoo.addons.component.tests.common import SavepointComponentCase
+from odoo.addons.queue_job.tests.common import trap_jobs
 
 from .test_spms_check_process import _document, _erro, _linha, _prescricao, _prestacao
 from .test_spms_check_transport import CLIENT_PATH, _mock_client, _result_response
@@ -131,8 +132,9 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
     def test_full_journey_to_draft_credit_note(self):
         document = _complex_document()
         client = _mock_client(_wire_wrap(document))
-        with mock.patch(CLIENT_PATH, return_value=client):
+        with mock.patch(CLIENT_PATH, return_value=client), trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+            trap.perform_enqueued_jobs()
 
         child = self.env["edi.exchange.record"].search(
             [
@@ -213,8 +215,9 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
             ),
         )
         client = _mock_client(_wire_wrap(document))
-        with mock.patch(CLIENT_PATH, return_value=client):
+        with mock.patch(CLIENT_PATH, return_value=client), trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+            trap.perform_enqueued_jobs()
 
         child = self.env["edi.exchange.record"].search(
             [

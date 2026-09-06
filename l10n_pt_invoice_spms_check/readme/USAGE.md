@@ -1,6 +1,7 @@
 Results arrive on their own: an hourly scheduled action (*SPMS: get
-conference results from the CCF*) asks the CCF web service about every
-posted invoice sent to SPMS that has no definitive check result yet. A
+conference results from the CCF*) queues one job per posted invoice
+sent to SPMS that has no definitive check result yet, and each job asks
+the CCF web service about its invoice (*Queue → Jobs* lists them). A
 fetched check document is stored as an input exchange record on the
 SPMS EDI backend and processed from there. When the CCF answers that it
 does not know an invoice that was sent successfully (return code 301),

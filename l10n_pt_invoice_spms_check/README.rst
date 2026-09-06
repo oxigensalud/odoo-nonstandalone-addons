@@ -66,8 +66,11 @@ Configuration
   runs hourly out of the box. It only acts on invoices already sent to
   SPMS that still have no definitive check result, with each company's
   own SPMS credentials, so a database where nothing was sent makes no
-  calls. To pause the polling, deactivate the scheduled action — never
-  uninstall the module just to stop the calls.
+  calls. Each invoice is asked in its own queue job: a transport failure
+  is retried by the job itself, any other failure stays visible under
+  *Queue → Jobs* and the next pass queues a fresh attempt. To pause the
+  polling, deactivate the scheduled action — never uninstall the module
+  just to stop the calls.
 - Set the *SPMS Adjustment Line Product* on the company (SPMS page,
   visible to *Technical Settings* users): a sale service product
   required to append the adjustment line when an official value differs
@@ -78,13 +81,14 @@ Usage
 =====
 
 Results arrive on their own: an hourly scheduled action (*SPMS: get
-conference results from the CCF*) asks the CCF web service about every
-posted invoice sent to SPMS that has no definitive check result yet. A
-fetched check document is stored as an input exchange record on the SPMS
-EDI backend and processed from there. When the CCF answers that it does
-not know an invoice that was sent successfully (return code 301), its
-result is created and held in *Error*, with the incident explained on
-the result form, until a definitive check result supersedes it.
+conference results from the CCF*) queues one job per posted invoice sent
+to SPMS that has no definitive check result yet, and each job asks the
+CCF web service about its invoice (*Queue → Jobs* lists them). A fetched
+check document is stored as an input exchange record on the SPMS EDI
+backend and processed from there. When the CCF answers that it does not
+know an invoice that was sent successfully (return code 301), its result
+is created and held in *Error*, with the incident explained on the
+result form, until a definitive check result supersedes it.
 
 Every invoice sent to SPMS gets its check result attached the moment the
 check resolves it (one result per invoice — the first definitive answer
