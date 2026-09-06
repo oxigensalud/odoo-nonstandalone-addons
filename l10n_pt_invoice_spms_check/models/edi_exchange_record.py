@@ -1,13 +1,12 @@
 # Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-import base64
 import logging
 import re
 
 import requests
-from lxml import etree
-from zeep import Client, Settings
+from zeep import Client
+from zeep.exceptions import Error as ZeepError, Fault
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 
@@ -138,11 +137,12 @@ class EdiExchangeRecord(models.Model):
         """One zeep client per job: the WSSE token carries the portal
         credentials of the invoice's company.
 
-        The shipped WSDL is the live one with its three read-path
-        defects fixed (see api/FacturaCRDWS.wsdl): the live file
-        declares the request without any parameter, omits the
-        <return> wrapper of the response and points to an internal
-        host — zeep against the raw live WSDL cannot work.
+        The shipped WSDL is the live one with its read path fixed
+        (see api/FacturaCRDWS.wsdl): the live file declares the
+        request without any parameter, omits the <return> wrapper of
+        the response, points to an internal host and types the base64
+        conference file as a plain string — zeep against the raw live
+        WSDL cannot work.
         """
         wsdl = get_resource_path(
             "l10n_pt_invoice_spms_check", "api", "FacturaCRDWS.wsdl"
@@ -153,16 +153,16 @@ class EdiExchangeRecord(models.Model):
             transport=Transport(
                 timeout=REQUEST_TIMEOUT, operation_timeout=REQUEST_TIMEOUT
             ),
-            settings=Settings(raw_response=True),
         )
 
     def _l10n_pt_spms_check_poll(self, backend, client, move):
         """Fetch and route the CCF answer for one sent invoice."""
         try:
             code, document = self._l10n_pt_spms_check_fetch(client, move)
-        except (requests.RequestException, etree.XMLSyntaxError) as err:
+        except (requests.RequestException, ZeepError) as err:
             # transport trouble (a timeout, an outage page instead of
-            # SOAP): the job retries by itself, no need to wait a pass
+            # SOAP, an answer off the WSDL contract): the job retries by
+            # itself, no need to wait a pass
             raise RetryableJobError(
                 f"SPMS check of {move.name}: request failed ({err})"
             ) from err
@@ -231,63 +231,39 @@ class EdiExchangeRecord(models.Model):
         dataFactura — the CCF resolves the invoice by (numeroFactura,
         dataFactura), so a poll without the date answers 301 for
         every invoice, issued or not.
+
+        The answer is read by zeep against the shipped WSDL. Real
+        service behaviour (probed July-August 2026): a result carries
+        the base64 conference file in return/documento over HTTP 200
+        — typed base64Binary, so it arrives here already decoded, the
+        bytes the CCF encoded (the encoding its XML declaration
+        announces survives verbatim into the stored file); "factura
+        inexistente" (301), "not yet conferred" (302) and the
+        service's own outage answer (999) arrive as SOAP faults over
+        HTTP 500 whose faultstring starts with the code ("301 -
+        Factura Inexistente."). A fault carrying no code is no verdict
+        of the CCF — an outage page, a refusal of the proxy — and is
+        left to the caller as transport trouble.
         """
         vat = move.company_id.vat
         if vat and len(vat) >= 11:
             vat = vat[-9:]
-        response = client.service.obterResultadoConferencia(
-            factura={
-                "areaConferencia": 3,
-                "codigoPrestador": move.partner_id.sudo().spms_assigned_id,
-                "dataFactura": move.invoice_date,
-                "nif": int(vat) if vat and vat.isdigit() else None,
-                "numeroFactura": move._get_spms_invoice_number(),
-            }
-        )
-        return self._l10n_pt_spms_check_parse_response(response.content)
-
-    def _l10n_pt_spms_check_parse_response(self, content):
-        """Split a WS answer into (return code, check document).
-
-        Real service behaviour (probed July-August 2026): a result
-        carries the base64 conference file in return/documento over
-        HTTP 200, while "factura inexistente" (301) and "not yet
-        conferred" (302) arrive as SOAP faults over HTTP 500 whose
-        faultstring starts with the code ("301 - Factura
-        Inexistente."). Fields are still located tolerantly by local
-        name — the WSDL keeps the response types private — and a
-        base64 document is returned as raw bytes: the encoding its
-        XML declaration announces must survive verbatim into the
-        stored file.
-        """
-        parser = etree.XMLParser(resolve_entities=False)
-        root = etree.fromstring(content, parser)
-        code = None
-        document = None
-        for element in root.iter():
-            if not isinstance(element.tag, str):
-                continue
-            tag = etree.QName(element).localname
-            if tag == "documento" and element.text and element.text.strip():
-                document = element.text.strip()
-            elif tag == "faultstring" and element.text:
-                match = re.match(r"\s*(\d{3})", element.text)
-                if match:
-                    code = match.group(1)
-            elif code is None and tag in (
-                "codigoRetorno",
-                "codigoResposta",
-                "codigo",
-            ):
-                code = (element.text or "").strip()
-        if document:
-            # the live service line-wraps the base64 payload and XSD
-            # base64Binary allows whitespace: strip it, then decode strict
-            try:
-                decoded = base64.b64decode("".join(document.split()), validate=True)
-                etree.fromstring(decoded, parser)
-            except (ValueError, etree.XMLSyntaxError):
-                pass
-            else:
-                document = decoded
-        return code, document
+        try:
+            result = client.service.obterResultadoConferencia(
+                factura={
+                    "areaConferencia": 3,
+                    "codigoPrestador": move.partner_id.sudo().spms_assigned_id,
+                    "dataFactura": move.invoice_date,
+                    "nif": int(vat) if vat and vat.isdigit() else None,
+                    "numeroFactura": move._get_spms_invoice_number(),
+                }
+            )
+        except Fault as fault:
+            match = re.match(r"\s*(\d{3})", str(fault))
+            if not match:
+                raise
+            return match.group(1), None
+        # zeep unwraps the single <return> element of the answer: the
+        # result is the response type itself, or None without <return>
+        document = result.documento if result is not None else None
+        return None, document

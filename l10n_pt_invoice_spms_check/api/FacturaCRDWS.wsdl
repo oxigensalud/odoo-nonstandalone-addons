@@ -18,7 +18,7 @@
   zeep at the URL is not even an option; and a pinned file keeps the
   module deterministic — no runtime fetch, no surprise upstream edits.
 
-  Three defects are fixed here relative to the snapshot, all proven
+  Four changes are made here relative to the snapshot, all proven
   against the live CCF (201 successful obterResultadoConferencia
   calls, 2026-08-05):
 
@@ -34,6 +34,11 @@
   3. Endpoint address: the live WSDL points to the internal
      http://ccfesb01prd.ccf.local:7003/... host, unresolvable from
      outside. Replaced with the public HTTPS address.
+  4. obterResultadoConferenciaWSResponse/documento: the live WSDL
+     declares it xsd:string, while the value is the base64-encoded
+     conference file (line-wrapped by the service). Typed
+     xsd:base64Binary so the client decodes it and hands the file
+     over as bytes.
 
   The write operations (submeter*) are NOT patched here: this module
   only reads.
@@ -142,7 +147,7 @@
         <xsd:complexContent>
           <xsd:extension base="tnsTypes:serviceMessageBase">
             <xsd:sequence>
-              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="documento" type="xsd:base64Binary"/>
             </xsd:sequence>
           </xsd:extension>
         </xsd:complexContent>
