@@ -17,7 +17,7 @@ from .test_spms_check_process import (
     _prescricao,
     _prestacao,
 )
-from .test_spms_check_transport import CLIENT_PATH, _mock_client, _result_response
+from .test_spms_check_transport import TRANSPORT_PATH, _FakeTransport, _result_response
 
 # One wire-faithful journey: the answer envelope carries the check
 # document base64-wrapped in 76-column lines exactly like the live
@@ -136,8 +136,8 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
 
     def test_full_journey_to_draft_credit_note(self):
         document = _complex_document()
-        client = _mock_client(_wire_wrap(document))
-        with mock.patch(CLIENT_PATH, return_value=client), trap_jobs() as trap:
+        transport = _FakeTransport(_wire_wrap(document))
+        with mock.patch(TRANSPORT_PATH, return_value=transport), trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
             trap.perform_enqueued_jobs()
 
@@ -222,8 +222,8 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
                 ),
             ),
         )
-        client = _mock_client(_wire_wrap(document))
-        with mock.patch(CLIENT_PATH, return_value=client), trap_jobs() as trap:
+        transport = _FakeTransport(_wire_wrap(document))
+        with mock.patch(TRANSPORT_PATH, return_value=transport), trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
             trap.perform_enqueued_jobs()
 

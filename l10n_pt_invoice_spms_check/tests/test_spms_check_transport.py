@@ -2,10 +2,11 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import base64
-from datetime import date
+import io
 from unittest import mock
 
 import requests
+from zeep.transports import Transport
 
 from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
@@ -16,6 +17,13 @@ from odoo.addons.queue_job.tests.common import trap_jobs
 
 MODULE = "odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record"
 CLIENT_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_client"
+TRANSPORT_PATH = MODULE + ".Transport"
+SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/"
+WSSE_NS = (
+    "http://docs.oasis-open.org/wss/2004/01/"
+    "oasis-200401-wss-wssecurity-secext-1.0.xsd"
+)
+SERVICE_NS = "http://facturaElectronica.service.cc.ccf/"
 
 DOCUMENT_XML = (
     '<?xml version="1.0" encoding="UTF-8"?>'
@@ -33,13 +41,31 @@ def _result_response(inner):
     """A check answer as the live service sends it: HTTP 200 with the
     JAX-WS <return> wrapper (probed 2026-08-03)."""
     return (
-        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
-        'soap/envelope/"><soapenv:Body>'
-        '<ns2:obterResultadoConferenciaResponse xmlns:ns2="http://'
-        'facturaElectronica.service.cc.ccf/"><return>' + inner + "</return>"
-        "</ns2:obterResultadoConferenciaResponse>"
-        "</soapenv:Body></soapenv:Envelope>"
-    ).encode()
+        200,
+        (
+            '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
+            'soap/envelope/"><soapenv:Body>'
+            '<ns2:obterResultadoConferenciaResponse xmlns:ns2="http://'
+            'facturaElectronica.service.cc.ccf/"><return>' + inner + "</return>"
+            "</ns2:obterResultadoConferenciaResponse>"
+            "</soapenv:Body></soapenv:Envelope>"
+        ).encode(),
+    )
+
+
+def _empty_response():
+    """A check answer without the <return> element, which the WSDL
+    allows (minOccurs=0)."""
+    return (
+        200,
+        (
+            b'<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
+            b'soap/envelope/"><soapenv:Body>'
+            b'<ns2:obterResultadoConferenciaResponse xmlns:ns2="http://'
+            b'facturaElectronica.service.cc.ccf/"/>'
+            b"</soapenv:Body></soapenv:Envelope>"
+        ),
+    )
 
 
 def _fault_response(faultstring):
@@ -47,25 +73,40 @@ def _fault_response(faultstring):
     fault whose faultstring starts with the code — e.g. the real
     "301 - Factura Inexistente." (probed 2026-08-03)."""
     return (
-        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
-        'soap/envelope/"><soapenv:Body><soapenv:Fault>'
-        "<faultcode>soapenv:Server</faultcode>"
-        "<faultstring>" + faultstring + "</faultstring>"
-        "</soapenv:Fault></soapenv:Body></soapenv:Envelope>"
-    ).encode()
+        500,
+        (
+            '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
+            'soap/envelope/"><soapenv:Body><soapenv:Fault>'
+            "<faultcode>soapenv:Server</faultcode>"
+            "<faultstring>" + faultstring + "</faultstring>"
+            "</soapenv:Fault></soapenv:Body></soapenv:Envelope>"
+        ).encode(),
+    )
 
 
-def _mock_client(*responses, side_effect=None):
-    """A fake zeep client: raw_response mode returns requests-like
-    responses, so only .content matters."""
-    client = mock.Mock()
-    if side_effect is not None:
-        client.service.obterResultadoConferencia.side_effect = side_effect
-    else:
-        client.service.obterResultadoConferencia.side_effect = [
-            mock.Mock(content=content) for content in responses
-        ]
-    return client
+class _FakeTransport(Transport):
+    """The wire, canned. The module builds its real zeep client from
+    the shipped WSDL and posts its envelope here; back comes the
+    status code and body the live service would send. The WSSE
+    header, the request shape, the base64 decoding and the fault
+    handling are all zeep's own work, exercised for real."""
+
+    def __init__(self, *answers, side_effect=None):
+        super().__init__()
+        self.answers = list(answers)
+        self.side_effect = side_effect
+        self.envelopes = []
+
+    def post_xml(self, address, envelope, headers):
+        self.envelopes.append(envelope)
+        if self.side_effect is not None:
+            raise self.side_effect
+        status_code, content = self.answers.pop(0)
+        response = requests.Response()
+        response.status_code = status_code
+        response.raw = io.BytesIO(content)
+        response.headers["Content-Type"] = "text/xml"
+        return response
 
 
 class TestSpmsCheckTransport(SavepointCase):
@@ -136,9 +177,9 @@ class TestSpmsCheckTransport(SavepointCase):
             },
         )
 
-    def _run_cron(self, client):
+    def _run_cron(self, transport):
         """Queue the polls as the scheduled action does, then perform them."""
-        with mock.patch(CLIENT_PATH, return_value=client), trap_jobs() as trap:
+        with mock.patch(TRANSPORT_PATH, return_value=transport), trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
             trap.perform_enqueued_jobs()
 
@@ -164,25 +205,37 @@ class TestSpmsCheckTransport(SavepointCase):
 
     def test_request_carries_the_resolution_key(self):
         # the CCF resolves an invoice by (numeroFactura, dataFactura),
-        # wrapped in <factura> — the exact shape production submits with
-        client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
-        self._run_cron(client)
-        client.service.obterResultadoConferencia.assert_called_once()
-        args, kwargs = client.service.obterResultadoConferencia.call_args
-        self.assertFalse(args)
-        factura = kwargs["factura"]
-        self.assertEqual(factura["areaConferencia"], 3)
-        self.assertEqual(factura["codigoPrestador"], "12345678")
-        self.assertEqual(factura["dataFactura"], date(2026, 5, 31))
-        self.assertEqual(factura["nif"], 999999990)
+        # wrapped in <factura> — the exact shape production submits
+        # with, signed with the credentials of the invoice's company
+        transport = _FakeTransport(
+            _fault_response("302 - Factura ainda não conferida.")
+        )
+        self._run_cron(transport)
+        self.assertEqual(len(transport.envelopes), 1)
+        envelope = transport.envelopes[0]
+        username = envelope.find(".//{%s}Username" % WSSE_NS)
+        self.assertEqual(username.text, "test-user")
+        factura = envelope.find(
+            "{%s}Body/{%s}obterResultadoConferencia/factura" % (SOAP_NS, SERVICE_NS)
+        )
+        self.assertIsNotNone(factura)
         self.assertEqual(
-            factura["numeroFactura"], self.invoice._get_spms_invoice_number()
+            [(child.tag, child.text) for child in factura],
+            [
+                ("areaConferencia", "3"),
+                ("codigoPrestador", "12345678"),
+                ("dataFactura", "2026-05-31"),
+                ("nif", "999999990"),
+                ("numeroFactura", self.invoice._get_spms_invoice_number()),
+            ],
         )
 
     def test_not_checked_yet_leaves_no_trace(self):
-        client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
-        self._run_cron(client)
-        client.service.obterResultadoConferencia.assert_called_once()
+        transport = _FakeTransport(
+            _fault_response("302 - Factura ainda não conferida.")
+        )
+        self._run_cron(transport)
+        self.assertEqual(len(transport.envelopes), 1)
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
@@ -191,41 +244,66 @@ class TestSpmsCheckTransport(SavepointCase):
         # retried like a timeout, and once the retries run out the job
         # fails in the queue — nothing is written on the invoice, which
         # is honestly not checked yet
-        client = _mock_client(_fault_response("999 - Erro desconhecido."))
+        transport = _FakeTransport(_fault_response("999 - Erro desconhecido."))
         with self.assertRaises(RetryableJobError):
-            self._run_cron(client)
+            self._run_cron(transport)
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
     def test_timeout_retries_the_job(self):
         # transport trouble is the job's own business: retried, no trace
-        client = _mock_client(side_effect=requests.Timeout("no answer"))
+        transport = _FakeTransport(side_effect=requests.Timeout("no answer"))
         with self.assertRaises(RetryableJobError):
-            self._run_cron(client)
+            self._run_cron(transport)
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
     def test_malformed_answer_retries_the_job(self):
-        # an outage page instead of SOAP is transport trouble too
-        client = _mock_client(b"this is not xml")
+        # an outage page instead of SOAP is transport trouble too,
+        # whether it is not XML at all or an error page without any
+        # CCF verdict in it
+        for answer in (
+            (200, b"this is not xml"),
+            (503, b"<html><body>Service Unavailable</body></html>"),
+            (500, b""),
+        ):
+            with self.subTest(answer=answer):
+                transport = _FakeTransport(answer)
+                with self.assertRaises(RetryableJobError):
+                    self._run_cron(transport)
+                self.assertFalse(self._children())
+                self.assertFalse(self._results())
+
+    def test_answer_off_the_contract_retries_the_job(self):
+        # an answer zeep cannot map on the WSDL is a change of contract,
+        # not a quiet "no result yet": retried like a timeout, visible
+        # in the queue once the retries run out
+        transport = _FakeTransport(_result_response("<somethingElse>x</somethingElse>"))
         with self.assertRaises(RetryableJobError):
-            self._run_cron(client)
+            self._run_cron(transport)
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
     def test_unrecognised_answer_warns_and_leaves_no_trace(self):
-        # an answer with neither documento, fault code nor return code
-        # must never pass for a quiet "no result yet"
-        client = _mock_client(_result_response("<somethingElse>x</somethingElse>"))
-        with self.assertLogs(MODULE, level="WARNING") as capture:
-            self._run_cron(client)
-        self.assertTrue(any("unrecognised answer" in line for line in capture.output))
-        self.assertFalse(self._children())
-        self.assertFalse(self._results())
+        # an answer the WSDL allows but that carries neither a document
+        # nor a fault code must never pass for a quiet "no result yet"
+        for answer in (
+            _result_response("<numeroFactura>FT TEST/00001</numeroFactura>"),
+            _empty_response(),
+        ):
+            with self.subTest(answer=answer):
+                transport = _FakeTransport(answer)
+                with self.assertLogs(MODULE, level="WARNING") as capture:
+                    self._run_cron(transport)
+                self.assertTrue(
+                    any("unrecognised answer" in line for line in capture.output)
+                )
+                self.assertFalse(self._children())
+                self.assertFalse(self._results())
 
     def test_unknown_invoice_flags_incident(self):
-        client = _mock_client(_fault_response("301 - Factura Inexistente."))
-        self._run_cron(client)
+        transport = _FakeTransport(_fault_response("301 - Factura Inexistente."))
+        self._run_cron(transport)
         self.assertFalse(self._children())
         result = self._results()
         self.assertEqual(len(result), 1)
@@ -233,13 +311,13 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertEqual(result.ws_incident_code, "301")
         self.assertIn("301", result.error_message)
         self.assertIn(self.invoice.name, result.error_message)
-        client = _mock_client(_fault_response("301 - Factura Inexistente."))
-        self._run_cron(client)
+        transport = _FakeTransport(_fault_response("301 - Factura Inexistente."))
+        self._run_cron(transport)
         self.assertEqual(len(self._results()), 1)
 
     def test_definitive_result_supersedes_incident(self):
-        client = _mock_client(_fault_response("301 - Factura Inexistente."))
-        self._run_cron(client)
+        transport = _FakeTransport(_fault_response("301 - Factura Inexistente."))
+        self._run_cron(transport)
         result = self._results()
         self.assertEqual(result.state, "error")
         self.assertTrue(result.error_message)
@@ -250,8 +328,10 @@ class TestSpmsCheckTransport(SavepointCase):
     @mute_logger(MODULE)
     def test_document_creates_child_input(self):
         document = base64.b64encode(DOCUMENT_XML.encode()).decode()
-        client = _mock_client(_result_response("<documento>%s</documento>" % document))
-        self._run_cron(client)
+        transport = _FakeTransport(
+            _result_response("<documento>%s</documento>" % document)
+        )
+        self._run_cron(transport)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(child.parent_id, self.exchange)
@@ -262,9 +342,9 @@ class TestSpmsCheckTransport(SavepointCase):
             ["input_received", "input_processed", "input_processed_error"],
         )
         # while the fetched document waits for processing, no re-poll
-        client = _mock_client()
-        self._run_cron(client)
-        client.service.obterResultadoConferencia.assert_not_called()
+        transport = _FakeTransport()
+        self._run_cron(transport)
+        self.assertFalse(transport.envelopes)
         self.assertEqual(len(self._children()), 1)
 
     @mute_logger(MODULE)
@@ -274,17 +354,10 @@ class TestSpmsCheckTransport(SavepointCase):
         # 2026-08-06 carries 3016 newlines inside <documento>
         encoded = base64.b64encode(DOCUMENT_XML.encode()).decode()
         wrapped = "\n".join(encoded[i : i + 76] for i in range(0, len(encoded), 76))
-        client = _mock_client(_result_response("<documento>%s</documento>" % wrapped))
-        self._run_cron(client)
-        child = self._children()
-        self.assertEqual(len(child), 1)
-        self.assertEqual(child._get_file_content(), DOCUMENT_XML)
-
-    @mute_logger(MODULE)
-    def test_inline_document_stored(self):
-        inline = DOCUMENT_XML.replace("&", "&amp;").replace("<", "&lt;")
-        client = _mock_client(_result_response("<documento>%s</documento>" % inline))
-        self._run_cron(client)
+        transport = _FakeTransport(
+            _result_response("<documento>%s</documento>" % wrapped)
+        )
+        self._run_cron(transport)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(child._get_file_content(), DOCUMENT_XML)
@@ -292,8 +365,10 @@ class TestSpmsCheckTransport(SavepointCase):
     @mute_logger(MODULE)
     def test_latin1_document_stored_verbatim(self):
         document = base64.b64encode(LATIN1_XML).decode()
-        client = _mock_client(_result_response("<documento>%s</documento>" % document))
-        self._run_cron(client)
+        transport = _FakeTransport(
+            _result_response("<documento>%s</documento>" % document)
+        )
+        self._run_cron(transport)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(base64.b64decode(child.exchange_file), LATIN1_XML)
@@ -413,9 +488,11 @@ class TestSpmsCheckTransport(SavepointCase):
 
     def test_output_sent_also_polled(self):
         self.exchange.edi_exchange_state = "output_sent"
-        client = _mock_client(_fault_response("302 - Factura ainda não conferida."))
-        self._run_cron(client)
-        client.service.obterResultadoConferencia.assert_called_once()
+        transport = _FakeTransport(
+            _fault_response("302 - Factura ainda não conferida.")
+        )
+        self._run_cron(transport)
+        self.assertEqual(len(transport.envelopes), 1)
 
     def test_cron_ships_active(self):
         # standard polling pattern: always on, the empty work queue is the gate
