@@ -9,7 +9,14 @@ from unittest import mock
 from odoo.addons.component.tests.common import SavepointComponentCase
 from odoo.addons.queue_job.tests.common import trap_jobs
 
-from .test_spms_check_process import _document, _erro, _linha, _prescricao, _prestacao
+from .test_spms_check_process import (
+    _document,
+    _erro,
+    _linha,
+    _linha_prescricao,
+    _prescricao,
+    _prestacao,
+)
 from .test_spms_check_transport import CLIENT_PATH, _mock_client, _result_response
 
 # One wire-faithful journey: the answer envelope carries the check
@@ -194,23 +201,25 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         self.assertAlmostEqual(credit_note.amount_total, CREDIT_OFFICIAL, places=2)
         self.assertEqual(len(credit_note.invoice_line_ids), CLAIMS)
 
-    def test_full_journey_all_five_anchor_levels(self):
-        # the spec defines five anchor levels for errors; no real
-        # document has used all five at once yet, but the wire allows
-        # it and the module must place every row where it belongs.
-        # The unknown code must auto-create its catalogue entry.
+    def test_full_journey_all_anchor_levels(self):
+        # the schema anchors errors at five places (invoice, claim, claim
+        # line, prescription data and its lines); no real document has
+        # used all five at once yet, but the wire allows it and the
+        # module must place every row where it belongs. The unknown
+        # code must auto-create its catalogue entry.
         document = _document(
             total_billed="100.00",
             total_allowed="100.00",
             total_billed_taxed="100.00",
             total_allowed_taxed="100.00",
             invoice_errors=_erro("Z999"),
-            lote_errors=_erro("D306"),
             claims=_prestacao(
                 "TESTP001",
                 errors=_erro("C011"),
                 lines=_linha("REF001", _erro("C012")),
-                prescription_data=_prescricao(_erro("C010")),
+                prescription_data=_prescricao(
+                    _linha_prescricao("REF002", _erro("D306")) + _erro("C010")
+                ),
             ),
         )
         client = _mock_client(_wire_wrap(document))
@@ -233,26 +242,18 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         self.assertEqual(len(rows), 5)
         self.assertEqual(
             Counter(rows.mapped("level")),
-            Counter(
-                {
-                    "invoice": 1,
-                    "lote": 1,
-                    "prestacao": 1,
-                    "linha": 1,
-                    "prescricao": 1,
-                }
-            ),
+            Counter({"invoice": 1, "prestacao": 1, "linha": 1, "prescricao": 2}),
         )
-        # the three claim-anchored errors hang from the single line, the
-        # document and lot ones from the result itself
+        # the four claim-anchored errors hang from the single line, the
+        # invoice one from the result itself
         self.assertEqual(len(result.line_ids), 1)
         self.assertEqual(
             Counter(result.line_ids.error_ids.mapped("level")),
-            Counter({"prestacao": 1, "linha": 1, "prescricao": 1}),
+            Counter({"prestacao": 1, "linha": 1, "prescricao": 2}),
         )
         self.assertEqual(
             Counter(result.document_error_ids.mapped("level")),
-            Counter({"invoice": 1, "lote": 1}),
+            Counter({"invoice": 1}),
         )
         # the unknown code arrived: catalogue entry auto-created
         # carrying the official message straight from the wire

@@ -377,11 +377,11 @@ msgstr "Errores"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__document_error_ids
 msgid ""
-"Errors anchored to the document itself or to a lot: they carry no "
-"prescription, so no line."
+"Errors anchored to the invoice itself: they carry no prescription, so no "
+"line."
 msgstr ""
-"Errores anclados al propio documento o a un lote: no llevan prescripción, "
-"así que no tienen línea."
+"Errores anclados a la propia factura: no llevan prescripción, así que no "
+"tienen línea."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_ids
@@ -559,13 +559,14 @@ msgstr "Conferencias de líneas"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__provider_system_ref
 msgid ""
-"Line-level anchor: provider-system reference of the service line the error "
-"is anchored to. Kept as audit of which line came flagged, never used as a "
-"dedup key."
+"Line-level anchor: provider-system reference of the claim line or "
+"prescription-data line the error is anchored to. Kept as audit of which line"
+" came flagged, never used as a dedup key."
 msgstr ""
 "Ancla a nivel de línea: referencia del sistema del proveedor de la línea de "
-"servicio a la que está anclado el error. Se conserva como auditoría de qué "
-"línea vino marcada; nunca se usa como clave de deduplicación."
+"prestación o de la línea de datos de prescripción a la que está anclado el "
+"error. Se conserva como auditoría de qué línea vino marcada; nunca se usa "
+"como clave de deduplicación."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__line_ids
@@ -574,7 +575,6 @@ msgid "Lines"
 msgstr "Líneas"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check_error__level__lote
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_search
 msgid "Lot"
 msgstr "Lote"
@@ -1271,11 +1271,6 @@ msgstr "Factura sobre la que la conferencia ha informado este error."
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
 msgid "Line Level"
 msgstr "Nivel línea"
-
-#. module: l10n_pt_invoice_spms_check
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
-msgid "Lot Level"
-msgstr "Nivel lote"
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search

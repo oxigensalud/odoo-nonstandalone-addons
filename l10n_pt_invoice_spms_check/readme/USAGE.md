@@ -20,7 +20,7 @@ computed official credit value. The *Lines* smart button opens the claim
 lines — one per prescription, with the billed, allowed and difference
 amounts summed at the bottom and the error codes of each — and each line
 lists its own errors, code and message; the errors the document anchors
-to the invoice itself or to a lot are listed on the result form.
+to the invoice itself are listed on the result form.
 
 *Customers → SPMS → Errors* lists every error the check reported, across
 invoices — one row per error with its level, code and message, its

@@ -27,6 +27,15 @@ def _linha(provider_ref, errors):
     )
 
 
+def _linha_prescricao(provider_ref, errors):
+    return (
+        "<LinhaPrescricaoErrosEDiferencas>"
+        "<SistemaPrescrito>%s</SistemaPrescrito>"
+        "%s"
+        "</LinhaPrescricaoErrosEDiferencas>" % (provider_ref, errors)
+    )
+
+
 def _prescricao(content):
     return (
         "<PrescricaoErrosEDiferencas>"
@@ -77,7 +86,6 @@ def _document(
     total_allowed_taxed="5.00",
     oficio="Documento conferido. Com rectificações.",
     invoice_errors="",
-    lote_errors="",
     claims="",
 ):
     return (
@@ -102,7 +110,7 @@ def _document(
         "<LoteErrosEDiferencas>"
         "<Numero>1</Numero>"
         "<TipoLote>992</TipoLote>"
-        "%s%s"
+        "%s"
         "</LoteErrosEDiferencas>"
         "</FacturasErrosEDiferencas>"
         "</ErrosEDiferencasCRDExtension>"
@@ -116,7 +124,6 @@ def _document(
             total_billed_taxed,
             total_allowed_taxed,
             invoice_errors,
-            lote_errors,
             claims,
         )
     )
@@ -229,12 +236,13 @@ class TestSpmsCheckProcess(SavepointComponentCase):
     def test_full_document_maps_everything(self):
         document = _document(
             invoice_errors=_erro("D306"),
-            lote_errors=_erro("A004"),
             claims=_prestacao(
                 "TESTP001",
                 errors=_erro("C011"),
                 lines=_linha("REF1", _erro("C012")),
-                prescription_data=_prescricao(_erro("C010")),
+                prescription_data=_prescricao(
+                    _linha_prescricao("REF2", _erro("A004")) + _erro("C010")
+                ),
             ),
         )
         child = self._process(document)
@@ -267,25 +275,33 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(line.move_line_id.spms_prescription, "TESTP001")
         self.assertAlmostEqual(result.amount_lines_untaxed, 36.0)
         # every error at its level: the ones anchored under the claim
-        # hang from the line, the document and lot ones from the result
+        # hang from the line, the invoice one from the result
         self.assertEqual(result.error_count, 5)
-        by_level = {error.level: error for error in result.error_ids}
+        by_code = {error.code: error for error in result.error_ids}
         self.assertEqual(
-            set(by_level), {"invoice", "lote", "prestacao", "linha", "prescricao"}
+            {code: error.level for code, error in by_code.items()},
+            {
+                "D306": "invoice",
+                "C011": "prestacao",
+                "C012": "linha",
+                "A004": "prescricao",
+                "C010": "prescricao",
+            },
         )
-        self.assertEqual(
-            result.document_error_ids, by_level["invoice"] | by_level["lote"]
-        )
+        self.assertEqual(result.document_error_ids, by_code["D306"])
         self.assertFalse(result.document_error_ids.line_id)
-        self.assertFalse(by_level["invoice"].prescription)
-        self.assertEqual(
-            line.error_ids,
-            by_level["prestacao"] | by_level["linha"] | by_level["prescricao"],
-        )
+        self.assertFalse(by_code["D306"].prescription)
+        self.assertEqual(line.error_ids, result.error_ids - by_code["D306"])
         self.assertEqual(set(line.error_ids.mapped("prescription")), {"TESTP001"})
         self.assertEqual(line.error_ids.result_id, result)
-        self.assertEqual(by_level["linha"].provider_system_ref, "REF1")
-        self.assertEqual(line.error_ids.mapped("code"), ["C011", "C012", "C010"])
+        # a claim line and a prescription-data line both keep the
+        # prescribed system they came flagged with
+        self.assertEqual(by_code["C012"].provider_system_ref, "REF1")
+        self.assertEqual(by_code["A004"].provider_system_ref, "REF2")
+        self.assertFalse(by_code["C010"].provider_system_ref)
+        self.assertEqual(
+            line.error_ids.mapped("code"), ["C011", "C012", "A004", "C010"]
+        )
         attachment = self._attachments(result)
         self.assertEqual(len(attachment), 1)
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
@@ -431,14 +447,13 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(line.note_move_line_id.spms_prescription, "TESTP001")
 
     def test_completeness_warning_fires_on_unknown_position(self):
+        # an error nested under an element the parser does not know:
+        # the shape a change of the document format would take
         document = _document(
             claims=_prestacao(
                 "TESTP001",
                 errors=_erro("C011"),
-                prescription_data=_prescricao(
-                    "<LinhaPrescricaoErrosEDiferencas>%s"
-                    "</LinhaPrescricaoErrosEDiferencas>" % _erro("C999")
-                ),
+                prescription_data=_prescricao("<Outro>%s</Outro>" % _erro("C999")),
             )
         )
         child = self._process(document)

@@ -14,7 +14,6 @@
                 create="false"
                 delete="false"
                 decoration-danger="level == 'invoice'"
-                decoration-warning="level == 'lote'"
                 decoration-primary="level == 'prestacao'"
                 decoration-info="level == 'linha'"
                 decoration-success="level == 'prescricao'"
@@ -124,11 +123,6 @@
                     name="filter_level_invoice"
                     string="Invoice Level"
                     domain="[('level', '=', 'invoice')]"
-                />
-                <filter
-                    name="filter_level_lote"
-                    string="Lot Level"
-                    domain="[('level', '=', 'lote')]"
                 />
                 <filter
                     name="filter_level_prestacao"
