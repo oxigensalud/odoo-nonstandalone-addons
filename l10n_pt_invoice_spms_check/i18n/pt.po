@@ -814,6 +814,7 @@ msgstr "Conferência SPMS de linha de fatura"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid "SPMS check %s"
 msgstr "Conferência SPMS %s"
@@ -1207,16 +1208,19 @@ msgstr "Nota de crédito/débito"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
 msgid "credit note"
 msgstr "nota de crédito"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
 msgid "debit note"
 msgstr "nota de débito"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
 msgid "Debit Note"
 msgstr "Nota de débito"
 
@@ -1280,3 +1284,20 @@ msgstr "Com diferença"
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
 msgid "Without Difference"
 msgstr "Sem diferença"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check_error.py:0
+#, python-format
+msgid ""
+"Error %(code)s at level %(level)s must hang under a line if and only if the "
+"level is below the claim."
+msgstr ""
+"O erro %(code)s de nível %(level)s deve estar ligado a uma linha se, e só "
+"se, o nível for inferior à prestação."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check_error.py:0
+#, python-format
+msgid "Error %(code)s hangs under a line of another invoice check."
+msgstr ""
+"O erro %(code)s está ligado a uma linha de outra conferência de fatura."
