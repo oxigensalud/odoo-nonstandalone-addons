@@ -3,12 +3,15 @@
 
 from datetime import date
 
+from lxml import etree
 from psycopg2 import IntegrityError
 
 from odoo import fields
 from odoo.exceptions import UserError, ValidationError
+from odoo.osv import expression
 from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
+from odoo.tools.safe_eval import safe_eval
 
 
 class TestSpmsCheck(SavepointCase):
@@ -1039,3 +1042,83 @@ class TestSpmsCheck(SavepointCase):
                     "error_type_id": result.error_ids.error_type_id.id,
                 }
             )
+
+    def test_error_list_defaults_to_the_errors_that_carry_money(self):
+        """Customers > SPMS > Errors: the flat list selects by default the
+        errors of the claims the check cut or raised plus the errors
+        anchored to the document itself, and leaves the informational
+        errors of untouched claims to the *Without Difference* filter."""
+        move = self._create_invoice(
+            "FT 2026/00160", [("TESTP020", 31, 1.0), ("TESTP021", 31, 2.0)]
+        )
+        result = self._create_result(
+            move,
+            [
+                {"prescription": "TESTP020", "billed": 31.0, "allowed": 0.0},
+                {
+                    "prescription": "TESTP021",
+                    "billed": 62.0,
+                    "allowed": 62.0,
+                    "errors": [{"code": "C012", "level": "linha"}],
+                },
+            ],
+        )
+        document_error = self.env["spms.invoice.check.error"].create(
+            {
+                "result_id": result.id,
+                "level": "invoice",
+                "error_type_id": self.env["spms.error.type"]._get_or_create("C313").id,
+                "description": "Test document error",
+            }
+        )
+        lines = {line.prescription: line for line in result.line_ids}
+        cut_error = lines["TESTP020"].error_ids
+        noise_error = lines["TESTP021"].error_ids
+        self.assertEqual(cut_error.move_id, move)
+        self.assertEqual(cut_error.partner_id, move.partner_id)
+        self.assertEqual(cut_error.amount_difference, 31.0)
+        self.assertFalse(document_error.amount_difference)
+        menu = self.env.ref("l10n_pt_invoice_spms_check.spms_invoice_check_error_menu")
+        action = self.env.ref(
+            "l10n_pt_invoice_spms_check.spms_invoice_check_error_action"
+        )
+        self.assertEqual(menu.action, action)
+        self.assertEqual(
+            safe_eval(action.context),
+            {
+                "search_default_filter_with_difference": 1,
+                "search_default_filter_document": 1,
+            },
+        )
+        arch = etree.fromstring(
+            self.env["spms.invoice.check.error"].fields_view_get(view_type="search")[
+                "arch"
+            ]
+        )
+        domains = {
+            node.get("name"): safe_eval(node.get("domain"))
+            for node in arch.iter("filter")
+            if node.get("domain")
+        }
+        errors = self.env["spms.invoice.check.error"]
+        of_result = [("result_id", "=", result.id)]
+        self.assertEqual(
+            errors.search(of_result + domains["filter_with_difference"]), cut_error
+        )
+        self.assertEqual(
+            errors.search(of_result + domains["filter_document"]), document_error
+        )
+        self.assertEqual(
+            errors.search(of_result + domains["filter_without_difference"]),
+            noise_error,
+        )
+        # the two defaults share a filter group, which the client joins with OR
+        self.assertEqual(
+            errors.search(
+                of_result
+                + expression.OR(
+                    [domains["filter_with_difference"], domains["filter_document"]]
+                )
+            ),
+            cut_error | document_error,
+        )

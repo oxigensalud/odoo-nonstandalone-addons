@@ -22,6 +22,15 @@ amounts summed at the bottom and the error codes of each — and each line
 lists its own errors, code and message; the errors the document anchors
 to the invoice itself or to a lot are listed on the result form.
 
+*Customers → SPMS → Errors* lists every error the check reported, across
+invoices — one row per error with its level, code and message, its
+prescription and the billed, allowed and difference amounts of its claim.
+The list opens on the errors that carry money: the claims the check cut
+or priced above the billed amount, plus the errors anchored to the
+document itself; the *Without Difference* filter brings back the
+informational ones. Group by error code, level, invoice, customer or
+document date to read a month's conference at a glance.
+
 For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the
 standard reversal path, cut down to the affected prescriptions, and
