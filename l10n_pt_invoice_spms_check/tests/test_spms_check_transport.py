@@ -11,6 +11,7 @@ from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
 
 from odoo.addons.queue_job.exception import RetryableJobError
+from odoo.addons.queue_job.job import Job
 from odoo.addons.queue_job.tests.common import trap_jobs
 
 MODULE = "odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record"
@@ -185,10 +186,14 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
-    def test_service_illness_leaves_no_trace(self):
-        # the real July-2026 outage answered this exact fault for weeks
+    def test_service_illness_retries_the_job(self):
+        # the real July-2026 outage answered this exact fault for weeks:
+        # retried like a timeout, and once the retries run out the job
+        # fails in the queue — nothing is written on the invoice, which
+        # is honestly not checked yet
         client = _mock_client(_fault_response("999 - Erro desconhecido."))
-        self._run_cron(client)
+        with self.assertRaises(RetryableJobError):
+            self._run_cron(client)
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
@@ -316,6 +321,46 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertEqual(len(jobs), 1)
         self.assertEqual(jobs.record_ids, [self.exchange.id])
         self.assertTrue(jobs.identity_key)
+
+    def _fail_queued_poll(self):
+        """Queue one real poll job and fail it the way queue_job does
+        when its retries run out."""
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        factory.assert_not_called()
+        record = self.env["queue.job"].search(
+            [("method_name", "=", "action_l10n_pt_spms_check_poll")]
+        )
+        self.assertEqual(len(record), 1)
+        job = Job.load(self.env, record.uuid)
+        job.retry = 5
+        job.set_failed(exc_info="Max. retries (5) reached")
+        job.store()
+        self.assertEqual(record.state, "failed")
+        return record
+
+    def test_failed_poll_is_requeued_not_duplicated(self):
+        # a poll that ran out of retries is final for queue_job: the
+        # next pass re-activates that job instead of queueing a second
+        record = self._fail_queued_poll()
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        factory.assert_not_called()
+        jobs = self.env["queue.job"].search(
+            [("method_name", "=", "action_l10n_pt_spms_check_poll")]
+        )
+        self.assertEqual(jobs, record)
+        self.assertEqual(record.state, "pending")
+        self.assertEqual(record.retry, 0)
+
+    def test_failed_poll_of_settled_invoice_left_alone(self):
+        # the failed job of an invoice checked meanwhile is not revived
+        record = self._fail_queued_poll()
+        self.env["spms.invoice.check"].create(
+            {"move_id": self.invoice.id, "check_state": "without_errors"}
+        )
+        self.assertEqual(self._queued_polls(), 0)
+        self.assertEqual(record.state, "failed")
 
     def test_job_skips_invoice_settled_meanwhile(self):
         # a result may land between queueing and running: the job must
