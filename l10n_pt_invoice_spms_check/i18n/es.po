@@ -1308,3 +1308,9 @@ msgstr ""
 msgid "Error %(code)s hangs under a line of another invoice check."
 msgstr ""
 "El error %(code)s está enlazado a una línea de otra conferencia de factura."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid "The check document of %(invoice)s carries no %(field)s"
+msgstr "El documento de conferencia de %(invoice)s no lleva ningún %(field)s"

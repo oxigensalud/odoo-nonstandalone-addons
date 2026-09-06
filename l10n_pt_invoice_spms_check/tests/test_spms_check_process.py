@@ -543,6 +543,24 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertIn("1.234,56", child.exchange_error)
         self.assertFalse(self._result())
 
+    def test_empty_total_marks_processing_error(self):
+        # an empty total is no total: never silently 0.0
+        child = self._process(_document(total_allowed_taxed=""))
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("TotalFaturaIVACalculado", child.exchange_error)
+        self.assertFalse(self._result())
+
+    def test_missing_total_marks_processing_error(self):
+        # the four totals are mandatory: a document without one is a
+        # format change, rejected instead of becoming 0.0
+        document = _document().replace(
+            "<TotalFaturaIVALido>41.00</TotalFaturaIVALido>", ""
+        )
+        child = self._process(document)
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("TotalFaturaIVALido", child.exchange_error)
+        self.assertFalse(self._result())
+
     def test_unparseable_claim_amount_warns_and_continues(self):
         # claim amounts only shape the breakdown: stored as 0 with a
         # completeness warning, and comma decimals keep working

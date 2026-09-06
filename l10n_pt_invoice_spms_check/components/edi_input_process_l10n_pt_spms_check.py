@@ -140,10 +140,16 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         )
 
     def _parse_total(self, move, fact, name):
-        """The official totals are the money: a present but unparseable
-        amount rejects the whole document."""
+        """The official totals are the money: a missing, empty or
+        unparseable amount rejects the whole document."""
+        text = _child_text(fact, name)
+        if not text:
+            raise UserError(
+                _("The check document of %(invoice)s carries no %(field)s")
+                % {"invoice": move.display_name, "field": name}
+            )
         try:
-            return _child_float(fact, name)
+            return float(text.replace(",", "."))
         except ValueError as err:
             raise UserError(
                 _(

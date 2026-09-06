@@ -1306,3 +1306,9 @@ msgid "Error %(code)s hangs under a line of another invoice check."
 msgstr ""
 "L'error %(code)s està enllaçat a una línia d'una altra conferència de "
 "factura."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
+#, python-format
+msgid "The check document of %(invoice)s carries no %(field)s"
+msgstr "El document de conferència de %(invoice)s no porta cap %(field)s"
