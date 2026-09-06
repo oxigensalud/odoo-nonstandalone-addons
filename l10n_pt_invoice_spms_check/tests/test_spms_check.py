@@ -128,7 +128,7 @@ class TestSpmsCheck(SavepointCase):
                 "total_allowed_taxed": move.amount_total - credit_official,
             }
         )
-        error_type_model = cls.env["spms.error.type"]
+        error_type_model = cls.env["spms.invoice.check.error.type"]
         line_vals_list = []
         for line in lines:
             move_lines = move.invoice_line_ids.filtered(
@@ -1067,7 +1067,9 @@ class TestSpmsCheck(SavepointCase):
             {
                 "result_id": result.id,
                 "level": "invoice",
-                "error_type_id": self.env["spms.error.type"]._get_or_create("C313").id,
+                "error_type_id": self.env["spms.invoice.check.error.type"]
+                ._get_or_create("C313")
+                .id,
                 "description": "Test document error",
             }
         )

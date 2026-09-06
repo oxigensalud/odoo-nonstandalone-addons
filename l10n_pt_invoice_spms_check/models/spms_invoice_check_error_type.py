@@ -6,9 +6,9 @@ from psycopg2 import IntegrityError
 from odoo import api, fields, models
 
 
-class SpmsErrorType(models.Model):
-    _name = "spms.error.type"
-    _description = "SPMS Error Type"
+class SpmsInvoiceCheckErrorType(models.Model):
+    _name = "spms.invoice.check.error.type"
+    _description = "SPMS Invoice Check Error Type"
     _order = "code"
     _rec_name = "code"
 

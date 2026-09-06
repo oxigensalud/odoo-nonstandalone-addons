@@ -8,11 +8,11 @@ from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
 
 
-class TestSpmsErrorType(SavepointCase):
+class TestSpmsInvoiceCheckErrorType(SavepointCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.ErrorType = cls.env["spms.error.type"]
+        cls.ErrorType = cls.env["spms.invoice.check.error.type"]
 
     def test_get_or_create_existing_returns_same_record(self):
         c010 = self.ErrorType._get_or_create("C010", "Official text")
