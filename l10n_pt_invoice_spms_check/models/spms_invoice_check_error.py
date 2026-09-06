@@ -1,7 +1,8 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class SpmsInvoiceCheckError(models.Model):
@@ -19,6 +20,9 @@ class SpmsInvoiceCheckError(models.Model):
     _order = "result_id, line_id, id"
     _rec_name = "code"
     _check_company_auto = True
+
+    # levels anchored to a claim of the document, hence to a line
+    _LINE_LEVELS = ("prestacao", "linha", "prescricao")
 
     result_id = fields.Many2one(
         comodel_name="spms.invoice.check",
@@ -89,3 +93,22 @@ class SpmsInvoiceCheckError(models.Model):
         "line the error is anchored to. Kept as audit of which line came "
         "flagged, never used as a dedup key.",
     )
+
+    @api.constrains("result_id", "line_id", "level")
+    def _check_anchor(self):
+        """An error hangs under a line of its own check, and only the
+        levels below the claim have a line."""
+        for rec in self:
+            if rec.line_id and rec.line_id.result_id != rec.result_id:
+                raise ValidationError(
+                    _("Error %(code)s hangs under a line of another invoice check.")
+                    % {"code": rec.error_type_id.code}
+                )
+            if bool(rec.line_id) != (rec.level in self._LINE_LEVELS):
+                raise ValidationError(
+                    _(
+                        "Error %(code)s at level %(level)s must hang under a line "
+                        "if and only if the level is below the claim."
+                    )
+                    % {"code": rec.error_type_id.code, "level": rec.level}
+                )

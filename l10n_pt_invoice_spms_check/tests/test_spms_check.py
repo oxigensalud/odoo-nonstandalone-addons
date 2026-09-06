@@ -6,7 +6,7 @@ from datetime import date
 from psycopg2 import IntegrityError
 
 from odoo import fields
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
 
@@ -712,3 +712,46 @@ class TestSpmsCheck(SavepointCase):
         error = result.error_ids
         self.assertEqual(error.code, "Z999")
         self.assertTrue(error.error_type_id)
+
+    def _single_claim_result(self, name, prescription):
+        move = self._create_invoice(name, [(prescription, 10, 1.0)])
+        return self._create_result(
+            move,
+            [
+                {
+                    "prescription": prescription,
+                    "billed": 10.0,
+                    "allowed": 0.0,
+                    "days_billed": 10.0,
+                }
+            ],
+        )
+
+    def test_error_under_line_of_another_check_blocks(self):
+        result = self._single_claim_result("FT 2026/00133", "TESTP014")
+        other = self._single_claim_result("FT 2026/00134", "TESTP015")
+        with self.assertRaises(ValidationError):
+            result.error_ids.line_id = other.line_ids
+
+    def test_document_error_with_line_blocks(self):
+        result = self._single_claim_result("FT 2026/00135", "TESTP016")
+        with self.assertRaises(ValidationError):
+            self.env["spms.invoice.check.error"].create(
+                {
+                    "result_id": result.id,
+                    "line_id": result.line_ids.id,
+                    "level": "invoice",
+                    "error_type_id": result.error_ids.error_type_id.id,
+                }
+            )
+
+    def test_claim_error_without_line_blocks(self):
+        result = self._single_claim_result("FT 2026/00136", "TESTP017")
+        with self.assertRaises(ValidationError):
+            self.env["spms.invoice.check.error"].create(
+                {
+                    "result_id": result.id,
+                    "level": "prestacao",
+                    "error_type_id": result.error_ids.error_type_id.id,
+                }
+            )
