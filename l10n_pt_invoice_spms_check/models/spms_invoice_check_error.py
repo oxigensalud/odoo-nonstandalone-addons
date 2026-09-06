@@ -12,7 +12,8 @@ class SpmsInvoiceCheckError(models.Model):
     its anchor changes: `level` says where it hangs and `line_id` is the
     claim it hangs under, empty for the errors anchored to the document
     itself or to a lot, which carry no prescription. Errors carry no
-    money: the amounts live on the line.
+    money: the amounts live on the line, and the flat error list reads
+    them through it.
     """
 
     _name = "spms.invoice.check.error"
@@ -92,6 +93,62 @@ class SpmsInvoiceCheckError(models.Model):
         help="Line-level anchor: provider-system reference of the service "
         "line the error is anchored to. Kept as audit of which line came "
         "flagged, never used as a dedup key.",
+    )
+
+    # the flat error list (Customers > SPMS > Errors) reads the invoice,
+    # the customer and the document date through the result and the
+    # money of the claim through the line: stored where the list groups
+    # by them, plain related where it only shows them
+    move_id = fields.Many2one(
+        related="result_id.move_id",
+        string="Invoice",
+        store=True,
+        readonly=True,
+        help="Invoice the check reported this error on.",
+    )
+    partner_id = fields.Many2one(
+        related="result_id.move_id.partner_id",
+        string="Customer",
+        store=True,
+        readonly=True,
+        help="Customer of the invoice.",
+    )
+    document_date = fields.Date(
+        related="result_id.document_date",
+        store=True,
+        readonly=True,
+    )
+    currency_id = fields.Many2one(
+        related="result_id.currency_id",
+        readonly=True,
+    )
+    lot_type = fields.Char(
+        related="line_id.lot_type",
+        readonly=True,
+    )
+    lot_number = fields.Char(
+        related="line_id.lot_number",
+        readonly=True,
+    )
+    amount_billed = fields.Monetary(
+        related="line_id.amount_billed",
+        readonly=True,
+    )
+    amount_allowed = fields.Monetary(
+        related="line_id.amount_allowed",
+        readonly=True,
+    )
+    amount_difference = fields.Monetary(
+        related="line_id.amount_difference",
+        readonly=True,
+    )
+    days_billed = fields.Float(
+        related="line_id.days_billed",
+        readonly=True,
+    )
+    days_paid = fields.Float(
+        related="line_id.days_paid",
+        readonly=True,
     )
 
     @api.constrains("result_id", "line_id", "level")

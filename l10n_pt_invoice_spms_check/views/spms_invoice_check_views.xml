@@ -221,4 +221,12 @@
         sequence="10"
         groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation"
     />
+    <menuitem
+        id="spms_invoice_check_error_menu"
+        name="Errors"
+        parent="spms_customers_menu"
+        action="spms_invoice_check_error_action"
+        sequence="20"
+        groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation"
+    />
 </odoo>
