@@ -187,7 +187,7 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         # official credit by construction: draft credit note, exact total
         self.assertFalse(result.generation_error)
         self.assertEqual(result.state, "done")
-        credit_note = result.credit_note_move_id
+        credit_note = result.note_move_id
         self.assertTrue(credit_note)
         self.assertEqual(credit_note.state, "draft")
         self.assertEqual(credit_note.move_type, "out_refund")
@@ -261,4 +261,4 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         # equal totals: official credit zero, no credit note to draft
         self.assertEqual(result.check_state, "with_errors")
         self.assertEqual(result.state, "zero_official")
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)

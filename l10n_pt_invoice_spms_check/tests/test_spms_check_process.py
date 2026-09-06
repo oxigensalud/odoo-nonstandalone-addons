@@ -291,7 +291,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(base64.b64decode(attachment.datas).decode(), document)
         self.assertFalse(result.generation_error)
         self.assertEqual(result.state, "done")
-        draft = result.credit_note_move_id
+        draft = result.note_move_id
         self.assertEqual(draft.state, "draft")
         self.assertEqual(draft.move_type, "out_refund")
         self.assertAlmostEqual(draft.amount_total, 36.0)
@@ -336,7 +336,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.check_state, "without_errors")
         self.assertEqual(result.state, "error")
         self.assertIn("recognised outcome", result.error_message)
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
         self.assertFalse(result.generation_error)
 
     def test_result_without_verdict_holds_in_error(self):
@@ -367,7 +367,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.state, "error")
         self.assertIn("not matched", result.generation_error)
         self.assertEqual(result.error_message, result.generation_error)
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
 
     def test_ambiguous_prescription_stays_unlinked(self):
         invoice = self._create_invoice(
@@ -427,8 +427,8 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertAlmostEqual(line.amount_difference, 36.0)
         self.assertFalse(line.error_ids)
         self.assertEqual(result.state, "done")
-        self.assertAlmostEqual(result.credit_note_move_id.amount_total, 36.0)
-        self.assertEqual(line.refund_move_line_id.spms_prescription, "TESTP001")
+        self.assertAlmostEqual(result.note_move_id.amount_total, 36.0)
+        self.assertEqual(line.note_move_line_id.spms_prescription, "TESTP001")
 
     def test_completeness_warning_fires_on_unknown_position(self):
         document = _document(
@@ -481,7 +481,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertFalse(result.error_message)
         self.assertEqual(result.name, "999999999")
         self.assertEqual(result.state, "done")
-        self.assertTrue(result.credit_note_move_id)
+        self.assertTrue(result.note_move_id)
 
     def test_locked_result_blocks_reprocessing(self):
         refund = self.env["account.move"].create(
@@ -511,11 +511,11 @@ class TestSpmsCheckProcess(SavepointComponentCase):
                 "total_billed_taxed": 10.0,
             }
         )
-        result.write({"credit_note_move_id": refund.id, "state": "done"})
+        result.write({"note_move_id": refund.id, "state": "done"})
         self.assertTrue(result.official_locked)
         child = self._process(_document())
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
-        self.assertIn("credit note", child.exchange_error)
+        self.assertIn("credit or debit note", child.exchange_error)
         self.assertAlmostEqual(result.total_billed_taxed, 10.0)
 
     def test_garbage_document_marks_processing_error(self):
@@ -584,7 +584,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.state, "error")
         self.assertIn("adjustment limit", result.generation_error)
         self.assertEqual(result.error_message, result.generation_error)
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
 
     def test_trigger_retry_after_raising_limit(self):
         # a taxed claim whose official value sits two cents under the
@@ -607,7 +607,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         result = self._result(invoice)
         self.assertEqual(result.state, "error")
         self.assertIn("adjustment limit", result.generation_error)
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
         self.company.spms_adjustment_limit = 0.05
         child.edi_exchange_state = "input_received"
         self.backend.exchange_process(child)
@@ -615,7 +615,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.state, "done")
         self.assertFalse(result.generation_error)
         self.assertFalse(result.error_message)
-        credit_note = result.credit_note_move_id
+        credit_note = result.note_move_id
         self.assertEqual(len(credit_note.invoice_line_ids), 1)
         self.assertAlmostEqual(credit_note.amount_tax, 1.84)
         self.assertAlmostEqual(credit_note.amount_total, 32.84)
@@ -642,7 +642,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.state, "error")
         self.assertFalse(result.generation_error)
         self.assertIn(foreign.display_name, result.error_message)
-        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(result.note_move_id)
 
     def test_trigger_failure_does_not_drag_other_results(self):
         bad_child = self._process(
@@ -667,4 +667,36 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(self._result().state, "error")
         good_check = self._result(good_invoice)
         self.assertEqual(good_check.state, "done")
-        self.assertAlmostEqual(good_check.credit_note_move_id.amount_total, 31.0)
+        self.assertAlmostEqual(good_check.note_move_id.amount_total, 31.0)
+
+    def test_trigger_negative_official_creates_debit_note(self):
+        # the check computed more than billed: the official value is
+        # negative and the trigger generates a debit note instead
+        invoice = self._create_invoice(
+            "FT TEST/00007", [("TESTP501", 31, 1.0, self.tax6)]
+        )
+        document = _document(
+            total_billed="31.00",
+            total_allowed="33.00",
+            total_billed_taxed="32.86",
+            total_allowed_taxed="34.98",
+            claims=_prestacao(
+                "TESTP501",
+                billed="31.00",
+                allowed="33.00",
+                days_paid="31",
+                errors=_erro("C011"),
+            ),
+        )
+        child = self._process(document, invoice=invoice)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        result = self._result(invoice)
+        self.assertAlmostEqual(result.credit_official, -2.12)
+        self.assertEqual(result.state, "done")
+        self.assertFalse(result.error_message)
+        debit_note = result.note_move_id
+        self.assertEqual(debit_note.move_type, "out_invoice")
+        self.assertEqual(debit_note.debit_origin_id, invoice)
+        self.assertEqual(len(debit_note.invoice_line_ids), 1)
+        self.assertAlmostEqual(debit_note.amount_total, 2.12)
+        self.assertEqual(result.line_ids.note_move_line_id, debit_note.invoice_line_ids)

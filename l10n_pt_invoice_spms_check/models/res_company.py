@@ -12,10 +12,10 @@ class ResCompany(models.Model):
         currency_field="currency_id",
         default=0.01,
         help="Largest difference, taxes included, between the official "
-        "value and the draft credit note that is written on its tax line: "
-        "the rounding cent of a tax computed once on the invoice total. A "
-        "larger difference holds the result in error for review instead "
-        "of generating the credit note.",
+        "value and the draft credit or debit note that is written on its "
+        "tax line: the rounding cent of a tax computed once on the invoice "
+        "total. A larger difference holds the result in error for review "
+        "instead of generating the note.",
     )
 
     _sql_constraints = [

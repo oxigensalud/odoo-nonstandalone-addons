@@ -112,9 +112,9 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         }
         result = self._store_result(move, result_vals, lines, errors)
         self._attach_document(move, result, exchange_record)
-        # a definitive with-errors result goes straight to its draft
-        # credit note; a failure holds this result only, with reason
-        result._generate_credit_note_or_hold()
+        # a definitive with-errors result goes straight to its draft note
+        # (credit or debit); a failure holds this result only, with reason
+        result._generate_note_or_hold()
         return _(
             "SPMS check result of %(invoice)s processed: %(state)s, "
             "%(lines)s lines, %(errors)s errors."
@@ -298,7 +298,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             raise UserError(
                 _(
                     "The check result of %s is already carried by a live "
-                    "credit note; cancel that credit note before "
+                    "credit or debit note; cancel that note before "
                     "reprocessing the document."
                 )
                 % move.display_name

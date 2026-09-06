@@ -26,7 +26,7 @@ For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the
 standard reversal path, cut down to the affected prescriptions, and
 linked back to the result. When the generation of a result fails (a
-prescription with no matching invoice line, a foreign credit note, a
+prescription with no matching invoice line, a foreign note, a
 residual beyond the adjustment limit), that result alone is held in
 *Error* with the reason on its form; fix the cause and reprocess the
 document to retry — the rest of the batch is never dragged along. A
@@ -49,10 +49,19 @@ necessary. Drafts stay drafts: the
 accounting team reviews and posts them; the EDI circuit takes over from
 there.
 
-Once a credit note is generated and alive, the official totals of its
-result are locked; cancel the credit note first to change them. Cancelling
-or deleting a generated credit note releases its result immediately — no
-manual step — and the cancellation leaves a note in the original invoice's
-chatter. A live credit note the module did not create holds the result in
-*Error* (the result form names it by number): the module never adopts or
-decides — a human fixes accounting first.
+A negative official value — the check computed more than the invoice
+billed — calls for a debit note instead. The module generates it through
+the standard debit-note flow, hanging from the invoice as its debit
+origin, with the same lines and the sign flipped, the same rounding cent
+on the tax line and the same adjustment limit; its lines carry no link to
+the sale order, which stays fully invoiced. Everything below applies to
+that debit note as it does to the credit note.
+
+Once a note is generated and alive, the official totals of its result
+are locked; cancel the note first to change them. Cancelling or deleting
+a generated note releases its result immediately — no manual step — and
+the cancellation leaves a message in the original invoice's chatter. A
+live note of the same kind the module did not create — a credit note for
+a positive official value, a debit note for a negative one — holds the
+result in *Error* (the result form names it by number): the module never
+adopts or decides — a human fixes accounting first.
