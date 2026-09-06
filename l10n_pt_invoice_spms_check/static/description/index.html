@@ -432,6 +432,11 @@ visible to <em>Technical Settings</em> users): a sale service product
 required to append the adjustment line when an official value differs
 from the itemised total. Credit notes that need it are skipped with a
 clear message until it is configured.</li>
+<li>Set the <em>SPMS Adjustment Limit</em> on the company (same page, 0.05 by
+default): the largest difference, taxes included, between the official
+value and the credit-note lines total that the adjustment line may
+absorb. A larger difference holds the result in <em>Error</em> for review
+instead of generating the credit note.</li>
 </ul>
 </div>
 <div class="section" id="usage">
@@ -464,13 +469,21 @@ linked back to the result. When the generation of a result fails
 (adjustment product not configured, a prescription with no matching
 invoice line, a foreign credit note), that result alone is held in
 <em>Error</em> with the reason on its form; fix the cause and reprocess the
-document to retry — the rest of the batch is never dragged along. When
-the official value differs from the itemised total, an adjustment line
-(service product configured on the company, SPMS page) is appended so
-the total matches the official value exactly; if no line base can reach
-it (global tax rounding), the group tax amount is forced instead (±0.01
-max deviation from the computed tax). Drafts stay drafts: the accounting
-team reviews and posts them; the EDI circuit takes over from there.</p>
+document to retry — the rest of the batch is never dragged along. A
+prescription the check priced above the billed amount (a negative
+difference) gets its own negative line, so the credit note nets it
+against the rejected claims exactly as the official value does; the
+result form shows their sum as <em>Negative Claims</em>. When the official
+value differs from the itemised total, an adjustment line (service
+product configured on the company, SPMS page) is appended so the total
+matches the official value exactly; if no line base can reach it (global
+tax rounding), the group tax amount is forced instead (±0.01 max
+deviation from the computed tax). The adjustment line absorbs rounding
+cents only: a residual beyond the <em>SPMS Adjustment Limit</em> of the company
+(0.05 by default) holds the result in <em>Error</em> with the reason, because
+it reveals a discrepancy to review rather than rounding noise. Drafts
+stay drafts: the accounting team reviews and posts them; the EDI circuit
+takes over from there.</p>
 <p>Once a credit note is generated and alive, the official totals of its
 result are locked; cancel the credit note first to change them.
 Cancelling or deleting a generated credit note releases its result

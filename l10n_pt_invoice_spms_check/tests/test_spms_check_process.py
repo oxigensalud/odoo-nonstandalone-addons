@@ -568,10 +568,11 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertIn("IssueDate", result.completeness_warning)
 
     def test_trigger_holds_on_missing_adjustment_product(self):
+        # the official value sits one cent above the claim: the
+        # adjustment line is needed and its product is not configured
         self.company.spms_adjustment_product_id = False
         document = _document(
-            total_billed_taxed="43.46",
-            total_allowed_taxed="5.30",
+            total_allowed_taxed="4.99",
             claims=_prestacao("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
@@ -585,8 +586,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
     def test_trigger_retry_after_configuring_adjustment(self):
         self.company.spms_adjustment_product_id = False
         document = _document(
-            total_billed_taxed="43.46",
-            total_allowed_taxed="5.30",
+            total_allowed_taxed="4.99",
             claims=_prestacao("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
@@ -605,7 +605,7 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.state, "done")
         self.assertFalse(result.generation_error)
         self.assertFalse(result.error_message)
-        self.assertAlmostEqual(result.credit_note_move_id.amount_total, 38.16)
+        self.assertAlmostEqual(result.credit_note_move_id.amount_total, 36.01)
 
     def test_trigger_preexisting_foreign_note_blocks_generation(self):
         invoice = self._create_invoice("FT TEST/00004", [("TESTP201", 31, 1.0)])

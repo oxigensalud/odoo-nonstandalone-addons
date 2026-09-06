@@ -16,3 +16,8 @@
   the adjustment line when an official value differs from the itemised
   total. Credit notes that need it are skipped with a clear message until
   it is configured.
+- Set the *SPMS Adjustment Limit* on the company (same page, 0.05 by
+  default): the largest difference, taxes included, between the official
+  value and the credit-note lines total that the adjustment line may
+  absorb. A larger difference holds the result in *Error* for review
+  instead of generating the credit note.

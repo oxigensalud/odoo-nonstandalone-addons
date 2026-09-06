@@ -16,3 +16,20 @@ class ResCompany(models.Model):
         "generated credit note when the official value differs from the "
         "prescription lines total.",
     )
+    spms_adjustment_limit = fields.Monetary(
+        string="SPMS Adjustment Limit",
+        currency_field="currency_id",
+        default=0.05,
+        help="Largest difference, taxes included, between the official "
+        "value and the credit-note lines total that the adjustment line "
+        "may absorb: rounding cents. A larger difference holds the result "
+        "in error for review instead of generating the credit note.",
+    )
+
+    _sql_constraints = [
+        (
+            "spms_adjustment_limit_positive",
+            "CHECK(spms_adjustment_limit >= 0)",
+            "The SPMS adjustment limit cannot be negative.",
+        ),
+    ]

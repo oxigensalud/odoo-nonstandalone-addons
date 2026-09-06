@@ -10,6 +10,7 @@
             <xpath expr="//page[@name='spms']" position="inside">
                 <group>
                     <field name="spms_adjustment_product_id" />
+                    <field name="spms_adjustment_limit" />
                 </group>
             </xpath>
         </field>

@@ -420,7 +420,7 @@ class TestSpmsCheck(SavepointCase):
         )
         self.assertFalse(zero_line.refund_move_line_id)
 
-    def test_generate_without_positive_difference_blocks(self):
+    def test_generate_without_difference_blocks(self):
         move = self._create_invoice("FT 2026/00128", [("TESTP009", 10, 1.0)])
         lines = [
             {
@@ -431,7 +431,7 @@ class TestSpmsCheck(SavepointCase):
             }
         ]
         result = self._create_result(move, lines, credit_official=1.0)
-        with self.assertRaisesRegex(UserError, "positive difference"):
+        with self.assertRaisesRegex(UserError, "no prescription with a difference"):
             result._generate_credit_note()
 
     def test_generate_adjustment_requires_product(self):
@@ -538,6 +538,98 @@ class TestSpmsCheck(SavepointCase):
         with self.assertRaisesRegex(UserError, "exactly one percentage customer tax"):
             result._generate_credit_note()
 
+    def test_generate_negative_claim_gets_own_negative_line(self):
+        # the check allowed TESTP021 above the billed amount: its negative
+        # difference nets against the rejected TESTP020 inside the credit
+        # note, one line per prescription, and no adjustment line is needed
+        move = self._create_invoice(
+            "FT 2026/00140", [("TESTP020", 31, 1.0), ("TESTP021", 10, 2.0)]
+        )
+        lines = [
+            {
+                "prescription": "TESTP020",
+                "billed": 31.0,
+                "allowed": 0.0,
+                "days_billed": 31.0,
+            },
+            {
+                "prescription": "TESTP021",
+                "billed": 20.0,
+                "allowed": 22.0,
+                "days_billed": 10.0,
+                "days_paid": 11.0,
+                "errors": [{"code": "C012", "level": "linha"}],
+            },
+        ]
+        # claims 31,00 - 2,00 = 29,00 + 6% global tax 1,74 = 30,74 official
+        result = self._create_result(move, lines, credit_official=30.74)
+        self.assertAlmostEqual(result.amount_lines_untaxed, 29.0)
+        self.assertAlmostEqual(result.amount_lines_negative_untaxed, -2.0)
+        draft = result._generate_credit_note()
+        self.assertEqual(len(draft.invoice_line_ids), 2)
+        negative = draft.invoice_line_ids.filtered(
+            lambda line: line.spms_prescription == "TESTP021"
+        )
+        self.assertEqual(negative.quantity, 1)
+        self.assertAlmostEqual(negative.price_unit, -2.0)
+        self.assertAlmostEqual(negative.price_subtotal, -2.0)
+        self.assertFalse(negative.spms_start_date)
+        self.assertAlmostEqual(draft.amount_untaxed, 29.0)
+        self.assertAlmostEqual(draft.amount_total, 30.74)
+        negative_claim = result.line_ids.filtered(
+            lambda line: line.prescription == "TESTP021"
+        )
+        self.assertEqual(negative_claim.refund_move_line_id, negative)
+        self.assertEqual(result.state, "done")
+
+    def test_generate_residual_beyond_limit_holds(self):
+        # the natural credit note totals 38,16: an official value 0,06 away
+        # is a discrepancy to review, not rounding noise, until the company
+        # limit says otherwise
+        self.company.spms_adjustment_product_id = self.adjustment_product
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.22)
+        with self.assertRaisesRegex(
+            UserError, "beyond the SPMS adjustment limit"
+        ), self.env.cr.savepoint():
+            result._generate_credit_note()
+        result._generate_credit_note_or_hold()
+        self.assertEqual(result.state, "error")
+        self.assertIn("adjustment limit", result.generation_error)
+        self.assertFalse(result.credit_note_move_id)
+        self.assertFalse(
+            self.env["account.move"].search(
+                [
+                    ("move_type", "=", "out_refund"),
+                    ("journal_id", "=", self.journal.id),
+                ]
+            )
+        )
+        self.company.spms_adjustment_limit = 0.10
+        result.generation_error = False
+        draft = result._generate_credit_note()
+        self.assertAlmostEqual(draft.amount_total, 38.22)
+        self.assertEqual(result.state, "done")
+
+    def test_generate_residual_at_limit_adjusts(self):
+        # exactly the limit still counts as rounding noise
+        self.company.spms_adjustment_product_id = self.adjustment_product
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.21)
+        draft = result._generate_credit_note()
+        self.assertAlmostEqual(draft.amount_total, 38.21)
+        adjustment = draft.invoice_line_ids.filtered(
+            lambda line: line.product_id == self.adjustment_product
+        )
+        self.assertAlmostEqual(adjustment.price_unit, 0.05)
+
+    def test_company_adjustment_limit_not_negative(self):
+        with self.assertRaises(IntegrityError), mute_logger(
+            "odoo.sql_db"
+        ), self.env.cr.savepoint():
+            self.company.spms_adjustment_limit = -0.01
+            self.company.flush()
+
     def test_generate_official_exceeds_total_blocks(self):
         # an official value above the original invoice total can only be a
         # check-data anomaly: the guard fires before the draft, even
@@ -554,17 +646,36 @@ class TestSpmsCheck(SavepointCase):
 
     def test_generate_official_equals_total_allowed(self):
         # a full rejection is legitimate: official == invoice total must
-        # generate (the guard is strictly greater-than)
-        self.company.spms_adjustment_product_id = self.adjustment_product
+        # generate (the guard is strictly greater-than); every claim is
+        # refused in full, so the lines alone reach the official value
+        # and no adjustment line is needed
         move = self._standard_invoice()
-        result = self._create_result(
-            move, self._standard_rows(), credit_official=move.amount_total
-        )
+        rows = [
+            {
+                "prescription": "TESTP001",
+                "billed": 31.0,
+                "allowed": 0.0,
+                "days_billed": 31.0,
+            },
+            {
+                "prescription": "TESTP002",
+                "billed": 62.0,
+                "allowed": 0.0,
+                "days_billed": 31.0,
+            },
+            {
+                "prescription": "TESTP003",
+                "billed": 30.0,
+                "allowed": 0.0,
+                "days_billed": 10.0,
+            },
+        ]
+        result = self._create_result(move, rows, credit_official=move.amount_total)
         result._generate_credit_note()
         self.assertEqual(result.state, "done")
-        self.assertAlmostEqual(
-            result.credit_note_move_id.amount_total, move.amount_total
-        )
+        credit_note = result.credit_note_move_id
+        self.assertEqual(len(credit_note.invoice_line_ids), 3)
+        self.assertAlmostEqual(credit_note.amount_total, move.amount_total)
 
     def test_official_locked_while_credit_note_alive(self):
         move = self._standard_invoice()

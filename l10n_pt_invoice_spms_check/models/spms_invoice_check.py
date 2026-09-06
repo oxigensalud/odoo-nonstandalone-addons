@@ -168,8 +168,19 @@ class SpmsInvoiceCheck(models.Model):
         string="Claims Amount (Untaxed)",
         compute="_compute_amount_lines_untaxed",
         store=True,
-        help="Sum of the per-prescription credit bases, without taxes: "
-        "what the generated credit-note lines will add up to.",
+        help="Net sum of the per-prescription differences, without taxes: "
+        "over-billed claims minus the claims the check allowed above the "
+        "billed amount, what the generated credit-note lines add up to "
+        "before the adjustment line.",
+    )
+    amount_lines_negative_untaxed = fields.Monetary(
+        string="Negative Claims Amount (Untaxed)",
+        compute="_compute_amount_lines_untaxed",
+        store=True,
+        help="Sum of the negative differences, without taxes: the claims "
+        "the check allowed above the billed amount. Each one becomes a "
+        "negative line of the credit note, netting against the over-billed "
+        "claims exactly as the official value does.",
     )
     error_message = fields.Char(
         string="Error Message",
@@ -247,8 +258,15 @@ class SpmsInvoiceCheck(models.Model):
     @api.depends("line_ids.amount_difference", "line_ids.prescription")
     def _compute_amount_lines_untaxed(self):
         for rec in self:
-            rec.amount_lines_untaxed = sum(
+            rounding = rec.currency_id.rounding or 0.01
+            differences = [
                 line.amount_difference for line in rec.line_ids if line._is_creditable()
+            ]
+            rec.amount_lines_untaxed = sum(differences)
+            rec.amount_lines_negative_untaxed = sum(
+                difference
+                for difference in differences
+                if float_compare(difference, 0.0, precision_rounding=rounding) < 0
             )
 
     def name_get(self):
@@ -496,6 +514,7 @@ class SpmsInvoiceCheck(models.Model):
             self.credit_official - draft.amount_total, precision_rounding=rounding
         )
         if float_compare(difference, 0.0, precision_rounding=rounding) != 0:
+            self._check_adjustment_limit(draft, difference)
             self._append_adjustment_line(draft, difference)
         refund_line_map = {}
         for draft_line in draft.invoice_line_ids:
@@ -509,12 +528,12 @@ class SpmsInvoiceCheck(models.Model):
         return draft
 
     def _get_creditable_lines(self):
-        """The claims with a positive difference, each matched to its
-        original invoice line."""
+        """The claims with a difference, positive or negative, each matched
+        to its original invoice line."""
         self.ensure_one()
         lines = self.line_ids.filtered(lambda line: line._is_creditable())
         if not lines:
-            raise UserError(_("There is no prescription with a positive difference."))
+            raise UserError(_("There is no prescription with a difference to credit."))
         unmatched = lines.filtered(lambda line: not line.move_line_id)
         if unmatched:
             raise UserError(
@@ -641,6 +660,41 @@ class SpmsInvoiceCheck(models.Model):
                 % {
                     "draft": draft.amount_tax,
                     "expected": expected_tax,
+                }
+            )
+
+    def _check_adjustment_limit(self, draft, difference):
+        """The adjustment line absorbs rounding cents only.
+
+        A residual beyond the company limit reveals a discrepancy between
+        the check lines and the official value (a claim the check priced
+        differently, a line the parser could not read) that a human must
+        review; plugging it silently would hide the discrepancy inside
+        the credit note.
+        """
+        self.ensure_one()
+        rounding = self.currency_id.rounding or 0.01
+        limit = self.company_id.spms_adjustment_limit
+        if float_compare(abs(difference), limit, precision_rounding=rounding) > 0:
+            raise UserError(
+                _(
+                    "The credit-note total %(draft)s differs from the official "
+                    "value %(official)s by %(difference)s, beyond the SPMS "
+                    "adjustment limit %(limit)s of company %(company)s; review "
+                    "the check lines before retrying."
+                )
+                % {
+                    "draft": formatLang(
+                        self.env, draft.amount_total, currency_obj=self.currency_id
+                    ),
+                    "official": formatLang(
+                        self.env, self.credit_official, currency_obj=self.currency_id
+                    ),
+                    "difference": formatLang(
+                        self.env, difference, currency_obj=self.currency_id
+                    ),
+                    "limit": formatLang(self.env, limit, currency_obj=self.currency_id),
+                    "company": self.company_id.display_name,
                 }
             )
 
