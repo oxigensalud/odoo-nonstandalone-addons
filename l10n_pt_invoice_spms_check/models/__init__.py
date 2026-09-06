@@ -4,4 +4,4 @@ from . import res_company
 from . import spms_invoice_check
 from . import spms_invoice_check_error
 from . import spms_invoice_check_error_type
-from . import spms_invoice_line_check
+from . import spms_invoice_check_line
