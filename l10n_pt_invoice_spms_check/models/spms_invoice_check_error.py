@@ -63,15 +63,14 @@ class SpmsInvoiceCheckError(models.Model):
         help="Nesting point of the check document the error is anchored to.",
     )
     error_type_id = fields.Many2one(
-        comodel_name="spms.error.type",
+        comodel_name="spms.invoice.check.error.type",
         string="Error Type",
         required=True,
         readonly=True,
         index=True,
         ondelete="restrict",
-        help="Type of this error in the shared SPMS error-type master; "
-        "unknown codes are auto-created there as pending "
-        "classification.",
+        help="Type of this error in the catalogue of check error types; "
+        "unknown codes are created there as the documents arrive.",
     )
     code = fields.Char(
         related="error_type_id.code",

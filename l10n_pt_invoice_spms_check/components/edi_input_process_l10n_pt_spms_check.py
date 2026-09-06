@@ -187,7 +187,7 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         """The document's claims as (line values, error values) pairs, in
         document order, plus the errors anchored to the invoice itself,
         which have no line."""
-        error_type_model = self.env["spms.error.type"]
+        error_type_model = self.env["spms.invoice.check.error.type"]
         line_by_prescription = {}
         for line in move.invoice_line_ids:
             if line.spms_prescription:
