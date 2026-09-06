@@ -11,13 +11,14 @@
   under *Queue → Jobs* and the next pass queues a fresh attempt. To
   pause the polling, deactivate the scheduled action — never uninstall
   the module just to stop the calls.
-- Set the *SPMS Adjustment Line Product* on the company (SPMS page, visible
-  to *Technical Settings* users): a sale service product required to append
-  the adjustment line when an official value differs from the itemised
-  total. Credit notes that need it are skipped with a clear message until
-  it is configured.
-- Set the *SPMS Adjustment Limit* on the company (same page, 0.05 by
-  default): the largest difference, taxes included, between the official
-  value and the credit-note lines total that the adjustment line may
-  absorb. A larger difference holds the result in *Error* for review
-  instead of generating the credit note.
+- Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
+  *Technical Settings* users; 0.01 by default): the largest difference,
+  taxes included, between the official value and the draft credit note
+  that is written on its tax line. A larger difference holds the result
+  in *Error* for review instead of generating the credit note; raise
+  the limit only when a larger difference is legitimate and strictly
+  necessary.
+- Keep the tax rounding method of the company (*Accounting → Settings →
+  Taxes → Rounding Method*) on *Round Globally*: the CCF computes the tax
+  once on the invoice total, and per-line rounding drifts away from it by
+  more than a cent on long credit notes, which then hold in *Error*.

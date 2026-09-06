@@ -7,23 +7,15 @@ from odoo import fields, models
 class ResCompany(models.Model):
     _inherit = "res.company"
 
-    spms_adjustment_product_id = fields.Many2one(
-        comodel_name="product.product",
-        string="SPMS Adjustment Line Product",
-        domain="['&', '&', ('sale_ok', '=', True), ('type', '=', 'service'),"
-        " '|', ('company_id', '=', False), ('company_id', '=', id)]",
-        help="Service product used for the adjustment line appended to a "
-        "generated credit note when the official value differs from the "
-        "prescription lines total.",
-    )
     spms_adjustment_limit = fields.Monetary(
         string="SPMS Adjustment Limit",
         currency_field="currency_id",
-        default=0.05,
+        default=0.01,
         help="Largest difference, taxes included, between the official "
-        "value and the credit-note lines total that the adjustment line "
-        "may absorb: rounding cents. A larger difference holds the result "
-        "in error for review instead of generating the credit note.",
+        "value and the draft credit note that is written on its tax line: "
+        "the rounding cent of a tax computed once on the invoice total. A "
+        "larger difference holds the result in error for review instead "
+        "of generating the credit note.",
     )
 
     _sql_constraints = [

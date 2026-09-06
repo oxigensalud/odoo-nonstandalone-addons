@@ -170,8 +170,7 @@ class SpmsInvoiceCheck(models.Model):
         store=True,
         help="Net sum of the per-prescription differences, without taxes: "
         "over-billed claims minus the claims the check allowed above the "
-        "billed amount, what the generated credit-note lines add up to "
-        "before the adjustment line.",
+        "billed amount, what the generated credit-note lines add up to.",
     )
     amount_lines_negative_untaxed = fields.Monetary(
         string="Negative Claims Amount (Untaxed)",
@@ -515,7 +514,7 @@ class SpmsInvoiceCheck(models.Model):
         )
         if float_compare(difference, 0.0, precision_rounding=rounding) != 0:
             self._check_adjustment_limit(draft, difference)
-            self._append_adjustment_line(draft, difference)
+            self._impose_official_tax(draft, difference)
         refund_line_map = {}
         for draft_line in draft.invoice_line_ids:
             refund_line_map.setdefault(draft_line.spms_prescription, draft_line)
@@ -609,10 +608,10 @@ class SpmsInvoiceCheck(models.Model):
 
     def _check_draft_consistency(self, draft):
         """The single generation-time check (design §5): after cutting the
-        draft down to the affected prescriptions and BEFORE any adjustment
-        line, the draft must match the claims total computed from the
-        check result. A mismatch reveals a technical discrepancy (tax
-        config, fiscal position, price drift) that an adjustment line must
+        draft down to the affected prescriptions and BEFORE the tax
+        adjustment, the draft must match the claims total computed from
+        the check result. A mismatch reveals a technical discrepancy (tax
+        config, fiscal position, price drift) that the tax adjustment must
         never absorb.
 
         The expected tax is computed as one globally rounded sum, matching
@@ -664,13 +663,13 @@ class SpmsInvoiceCheck(models.Model):
             )
 
     def _check_adjustment_limit(self, draft, difference):
-        """The adjustment line absorbs rounding cents only.
+        """The tax line absorbs the rounding cent only.
 
         A residual beyond the company limit reveals a discrepancy between
         the check lines and the official value (a claim the check priced
-        differently, a line the parser could not read) that a human must
-        review; plugging it silently would hide the discrepancy inside
-        the credit note.
+        differently, a line the parser could not read, a company rounding
+        its taxes per line) that a human must review; plugging it silently
+        would hide the discrepancy inside the credit note.
         """
         self.ensure_one()
         rounding = self.currency_id.rounding or 0.01
@@ -678,10 +677,21 @@ class SpmsInvoiceCheck(models.Model):
         if float_compare(abs(difference), limit, precision_rounding=rounding) > 0:
             raise UserError(
                 _(
-                    "The credit-note total %(draft)s differs from the official "
-                    "value %(official)s by %(difference)s, beyond the SPMS "
-                    "adjustment limit %(limit)s of company %(company)s; review "
-                    "the check lines before retrying."
+                    "The credit note cannot be generated: its total %(draft)s "
+                    "differs from the official value %(official)s by "
+                    "%(difference)s, and the SPMS adjustment limit of company "
+                    "%(company)s allows at most %(limit)s.\n\n"
+                    "Only the rounding cent of the tax may be written on the "
+                    "tax line of the credit note. A larger difference reveals "
+                    "a discrepancy to review before retrying: the Claims "
+                    "Credit of the result must match its official totals "
+                    "before tax (a prescription the check priced differently "
+                    "from the invoice makes them diverge), and the company "
+                    "must round its taxes globally (Accounting > Settings > "
+                    "Taxes > Rounding Method), as the CCF computes the tax "
+                    "once on the invoice total. Raise the SPMS adjustment "
+                    "limit of the company only when the difference is "
+                    "legitimate and strictly necessary."
                 )
                 % {
                     "draft": formatLang(
@@ -698,108 +708,29 @@ class SpmsInvoiceCheck(models.Model):
                 }
             )
 
-    def _append_adjustment_line(self, draft, difference):
-        self.ensure_one()
-        product = self.company_id.spms_adjustment_product_id
-        if not product:
-            raise UserError(
-                _(
-                    "Configure the SPMS adjustment line product on company "
-                    "%s before generating credit notes that require an "
-                    "adjustment line."
-                )
-                % self.company_id.display_name
-            )
-        taxes = product.taxes_id.filtered(lambda tax: tax.company_id == self.company_id)
-        taxes = draft.fiscal_position_id.map_tax(taxes, product, draft.partner_id)
-        if len(taxes) != 1 or taxes.amount_type != "percent":
-            raise UserError(
-                _(
-                    "The adjustment line product %(product)s must carry "
-                    "exactly one percentage customer tax for company "
-                    "%(company)s."
-                )
-                % {
-                    "product": product.display_name,
-                    "company": self.company_id.display_name,
-                }
-            )
-        rounding = self.currency_id.rounding or 0.01
-        base = float_round(
-            difference / (1 + taxes.amount / 100.0), precision_rounding=rounding
-        )
-        adjustment_vals = {
-            "product_id": product.id,
-            "quantity": 1.0,
-            "price_unit": base,
-            "tax_ids": [(6, 0, taxes.ids)],
-        }
-        draft.write({"invoice_line_ids": [(0, 0, adjustment_vals)]})
-        if self._is_official_total_reached(draft):
-            return
-        for candidate in (base + rounding, base - rounding):
-            # the invoice business layer silently drops (1, id) / (2, id)
-            # commands aimed at the line it just recreated, so replace the
-            # adjustment line instead: drop it through the line model and
-            # create it again with the candidate base
-            draft.invoice_line_ids.filtered(
-                lambda line: line.product_id == product
-            ).with_context(check_move_validity=False).unlink()
-            draft.write(
-                {
-                    "invoice_line_ids": [
-                        (0, 0, dict(adjustment_vals, price_unit=candidate))
-                    ]
-                }
-            )
-            if self._is_official_total_reached(draft):
-                return
-        self._force_group_tax_amount(draft, product, taxes, adjustment_vals)
+    def _impose_official_tax(self, draft, difference):
+        """Write the difference with the official value on the tax line.
 
-    def _force_group_tax_amount(self, draft, product, taxes, adjustment_vals):
-        """Write the group tax-line amount so the total matches the official
-        value.
-
-        With global tax rounding some official totals cannot be reached by
-        moving the adjustment base alone (the rounded tax jumps a full cent):
-        restore the theoretical base and force the remaining cent on the
-        group tax line, compensating the payment term line to keep the
+        The claim bases come from the check document itself, so after the
+        consistency check only the rounding of the tax remains: the CCF
+        computes it once on the invoice total, Odoo once on the credit
+        note total, and the two can differ by one cent. The official value
+        is what the CCF validates the note against, so that cent is written
+        on the tax line, the same correction an accountant would pencil on
+        the tax journal item, compensating the receivable line to keep the
         entry balanced.
         """
         self.ensure_one()
-        draft.invoice_line_ids.filtered(
-            lambda line: line.product_id == product
-        ).with_context(check_move_validity=False).unlink()
-        draft.write({"invoice_line_ids": [(0, 0, dict(adjustment_vals))]})
         rounding = self.currency_id.rounding or 0.01
-        difference = float_round(
-            self.credit_official - draft.amount_total, precision_rounding=rounding
-        )
-        if float_compare(abs(difference), rounding, precision_rounding=rounding) > 0:
-            raise UserError(
-                _(
-                    "The remaining difference %(difference).2f between the "
-                    "official value %(official).2f and the credit note "
-                    "total %(total).2f exceeds one rounding step "
-                    "(%(step).2f); it cannot be absorbed by the imposed "
-                    "tax amount."
-                )
-                % {
-                    "difference": difference,
-                    "official": self.credit_official,
-                    "total": draft.amount_total,
-                    "step": rounding,
-                }
-            )
-        tax_line = draft.line_ids.filtered(lambda line: line.tax_line_id == taxes)
+        tax_line = draft.line_ids.filtered("tax_line_id")
         if len(tax_line) != 1:
             raise UserError(
                 _(
-                    "Expected exactly one tax line for tax %(tax)s on the "
-                    "draft credit note %(move)s, found %(count)d."
+                    "Expected exactly one tax line on the draft credit note "
+                    "%(move)s to carry the difference with the official "
+                    "value, found %(count)d."
                 )
                 % {
-                    "tax": taxes.display_name,
                     "move": draft.display_name,
                     "count": len(tax_line),
                 }
@@ -844,7 +775,12 @@ class SpmsInvoiceCheck(models.Model):
                 ]
             }
         )
-        if not self._is_official_total_reached(draft):
+        if (
+            float_compare(
+                draft.amount_total, self.credit_official, precision_rounding=rounding
+            )
+            != 0
+        ):
             raise UserError(
                 _(
                     "The credit note total %(total).2f still differs from "
@@ -856,17 +792,6 @@ class SpmsInvoiceCheck(models.Model):
                     "official": self.credit_official,
                 }
             )
-
-    def _is_official_total_reached(self, draft):
-        self.ensure_one()
-        return (
-            float_compare(
-                draft.amount_total,
-                self.credit_official,
-                precision_rounding=self.currency_id.rounding or 0.01,
-            )
-            == 0
-        )
 
     def action_view_credit_note(self):
         self.ensure_one()
