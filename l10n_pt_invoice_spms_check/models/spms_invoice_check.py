@@ -161,8 +161,8 @@ class SpmsInvoiceCheck(models.Model):
         inverse_name="result_id",
         string="Document Errors",
         domain=[("line_id", "=", False)],
-        help="Errors anchored to the document itself or to a lot: they "
-        "carry no prescription, so no line.",
+        help="Errors anchored to the invoice itself: they carry no "
+        "prescription, so no line.",
     )
     official_locked = fields.Boolean(
         compute="_compute_official_locked",

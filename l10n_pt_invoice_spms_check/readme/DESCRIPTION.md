@@ -11,9 +11,8 @@ rectifying credit and debit notes:
   per claim (prescription) carrying the read and recomputed claim totals
   and their difference, and under it every error the check reports with
   its level (claim, line, prescription data); the errors anchored to the
-  invoice itself or to a lot hang from the result. A sum over the lines
-  is a sum over the prescriptions, and "all C012 errors" is one filter
-  away.
+  invoice itself hang from the result. A sum over the lines is a sum over
+  the prescriptions, and "all C012 errors" is one filter away.
 - Generates the draft rectifying document for the results that came back
   with errors — a credit note through the standard reversal mechanism, or
   a debit note through the standard debit-note flow when the official

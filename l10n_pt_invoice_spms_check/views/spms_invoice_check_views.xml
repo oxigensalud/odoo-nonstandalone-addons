@@ -123,10 +123,7 @@
                     <notebook attrs="{'invisible': [('document_error_ids', '=', [])]}">
                         <page name="document_errors" string="Document Errors">
                             <field name="document_error_ids" readonly="1">
-                                <tree
-                                    decoration-danger="level == 'invoice'"
-                                    decoration-warning="level == 'lote'"
-                                >
+                                <tree decoration-danger="level == 'invoice'">
                                     <field name="level" />
                                     <field name="code" />
                                     <field name="description" />

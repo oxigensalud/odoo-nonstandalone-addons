@@ -53,7 +53,6 @@ class SpmsInvoiceCheckError(models.Model):
     level = fields.Selection(
         selection=[
             ("invoice", "Invoice"),
-            ("lote", "Lot"),
             ("prestacao", "Claim"),
             ("linha", "Line"),
             ("prescricao", "Prescription Data"),
@@ -90,9 +89,9 @@ class SpmsInvoiceCheckError(models.Model):
     provider_system_ref = fields.Char(
         string="Provider System Ref",
         readonly=True,
-        help="Line-level anchor: provider-system reference of the service "
-        "line the error is anchored to. Kept as audit of which line came "
-        "flagged, never used as a dedup key.",
+        help="Line-level anchor: provider-system reference of the claim "
+        "line or prescription-data line the error is anchored to. Kept as "
+        "audit of which line came flagged, never used as a dedup key.",
     )
 
     # the flat error list (Customers > SPMS > Errors) reads the invoice,

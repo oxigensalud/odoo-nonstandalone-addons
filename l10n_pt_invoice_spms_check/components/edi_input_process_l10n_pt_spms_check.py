@@ -185,8 +185,8 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
 
     def _parse_lines(self, move, fact, problems):
         """The document's claims as (line values, error values) pairs, in
-        document order, plus the errors anchored above the claims (invoice
-        and lot levels), which have no line."""
+        document order, plus the errors anchored to the invoice itself,
+        which have no line."""
         error_type_model = self.env["spms.error.type"]
         line_by_prescription = {}
         for line in move.invoice_line_ids:
@@ -217,7 +217,6 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
         lines = []
         errors = errors_of(fact, "invoice")
         for lote in _children(fact, "LoteErrosEDiferencas"):
-            errors.extend(errors_of(lote, "lote"))
             lot_vals = {
                 "lot_type": _child_text(lote, "TipoLote"),
                 "lot_number": _child_text(lote, "Numero"),
@@ -256,6 +255,22 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
                         )
                     )
                 for prescription_data in _children(claim, "PrescricaoErrosEDiferencas"):
+                    # the prescription data has lines of its own, flagged
+                    # like the claim lines, with the prescribed system
+                    for linha in _children(
+                        prescription_data, "LinhaPrescricaoErrosEDiferencas"
+                    ):
+                        line_errors.extend(
+                            errors_of(
+                                linha,
+                                "prescricao",
+                                {
+                                    "provider_system_ref": _child_text(
+                                        linha, "SistemaPrescrito"
+                                    )
+                                },
+                            )
+                        )
                     line_errors.extend(errors_of(prescription_data, "prescricao"))
                 lines.append((line_vals, line_errors))
         return lines, errors
