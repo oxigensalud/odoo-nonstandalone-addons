@@ -10,6 +10,9 @@ import requests
 from odoo.tests.common import SavepointCase
 from odoo.tools import mute_logger
 
+from odoo.addons.queue_job.exception import RetryableJobError
+from odoo.addons.queue_job.tests.common import trap_jobs
+
 MODULE = "odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record"
 CLIENT_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_client"
 
@@ -133,8 +136,16 @@ class TestSpmsCheckTransport(SavepointCase):
         )
 
     def _run_cron(self, client):
-        with mock.patch(CLIENT_PATH, return_value=client):
+        """Queue the polls as the scheduled action does, then perform them."""
+        with mock.patch(CLIENT_PATH, return_value=client), trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+            trap.perform_enqueued_jobs()
+
+    def _queued_polls(self):
+        """How many polls one pass of the scheduled action queues."""
+        with trap_jobs() as trap:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        return trap.jobs_count()
 
     def _children(self):
         return self.env["edi.exchange.record"].search(
@@ -181,19 +192,19 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
-    def test_timeout_leaves_no_trace(self):
+    def test_timeout_retries_the_job(self):
+        # transport trouble is the job's own business: retried, no trace
         client = _mock_client(side_effect=requests.Timeout("no answer"))
-        with self.assertLogs(MODULE, level="WARNING") as capture:
+        with self.assertRaises(RetryableJobError):
             self._run_cron(client)
-        self.assertTrue(any("request failed" in line for line in capture.output))
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
-    def test_malformed_answer_warns_and_leaves_no_trace(self):
+    def test_malformed_answer_retries_the_job(self):
+        # an outage page instead of SOAP is transport trouble too
         client = _mock_client(b"this is not xml")
-        with self.assertLogs(MODULE, level="WARNING") as capture:
+        with self.assertRaises(RetryableJobError):
             self._run_cron(client)
-        self.assertTrue(any("request failed" in line for line in capture.output))
         self.assertFalse(self._children())
         self.assertFalse(self._results())
 
@@ -286,14 +297,34 @@ class TestSpmsCheckTransport(SavepointCase):
         self.env["spms.invoice.check"].create(
             {"move_id": self.invoice.id, "check_state": "without_errors"}
         )
-        with mock.patch(CLIENT_PATH) as factory:
-            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
-        factory.assert_not_called()
+        self.assertEqual(self._queued_polls(), 0)
 
     def test_cancelled_invoice_not_polled(self):
         self.invoice.button_cancel()
+        self.assertEqual(self._queued_polls(), 0)
+
+    def test_cron_queues_one_poll_per_invoice(self):
+        # the scheduled action never calls the CCF itself: one job per
+        # pending invoice, not repeated while the previous one is pending
         with mock.patch(CLIENT_PATH) as factory:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
+        factory.assert_not_called()
+        jobs = self.env["queue.job"].search(
+            [("method_name", "=", "action_l10n_pt_spms_check_poll")]
+        )
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(jobs.record_ids, [self.exchange.id])
+        self.assertTrue(jobs.identity_key)
+
+    def test_job_skips_invoice_settled_meanwhile(self):
+        # a result may land between queueing and running: the job must
+        # not ask the CCF again
+        self.env["spms.invoice.check"].create(
+            {"move_id": self.invoice.id, "check_state": "without_errors"}
+        )
+        with mock.patch(CLIENT_PATH) as factory:
+            self.exchange.action_l10n_pt_spms_check_poll()
         factory.assert_not_called()
 
     def test_credit_note_not_polled(self):
@@ -333,9 +364,7 @@ class TestSpmsCheckTransport(SavepointCase):
                 "res_id": credit_note.id,
             },
         )
-        with mock.patch(CLIENT_PATH) as factory:
-            self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
-        factory.assert_not_called()
+        self.assertEqual(self._queued_polls(), 0)
 
     def test_output_sent_also_polled(self):
         self.exchange.edi_exchange_state = "output_sent"

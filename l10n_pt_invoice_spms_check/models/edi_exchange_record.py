@@ -14,6 +14,8 @@ from zeep.wsse.username import UsernameToken
 from odoo import models
 from odoo.modules.module import get_resource_path
 
+from odoo.addons.queue_job.exception import RetryableJobError
+
 _logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 60
@@ -23,11 +25,15 @@ class EdiExchangeRecord(models.Model):
     _inherit = "edi.exchange.record"
 
     def _cron_l10n_pt_spms_check_update(self):
-        """Fetch the conference check result of every sent invoice.
+        """Queue the conference check of every sent invoice.
 
         FACE-style polling (precedent: l10n_es_facturae_face): the
         queue is our own sent exchange records whose invoice has no
-        definitive check result yet.
+        definitive check result yet. The scheduled action only queues
+        one job per invoice, the way edi_oca dispatches its own
+        exchanges: every call to the CCF then runs in its own
+        transaction, so a long backlog is never undone as a whole by
+        the cron time limit, and a failed poll is retried on its own.
         """
         backend = self.env.ref("l10n_pt_invoice_spms.spms_backend")
         send_type = self.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
@@ -43,45 +49,57 @@ class EdiExchangeRecord(models.Model):
                 ("model", "=", "account.move"),
             ]
         )
-        clients = {}
         for exchange in exchanges:
-            move = exchange.record
-            # The sending type also carries credit notes; the CCF checks
-            # invoices only, so a nota is never asked for a result.
-            if not move or move.move_type != "out_invoice" or move.state != "posted":
-                continue
-            if any(move.spms_invoice_check_ids.mapped("check_state")):
-                continue
-            if self.search_count(
-                [
-                    ("type_id.code", "=", "l10n_pt_spms_check"),
-                    ("model", "=", "account.move"),
-                    ("res_id", "=", move.id),
-                    (
-                        "edi_exchange_state",
-                        "in",
-                        [
-                            "input_received",
-                            "input_processed",
-                            "input_processed_error",
-                        ],
-                    ),
-                ]
-            ):
-                continue
-            client = clients.get(move.company_id.id)
-            if client is None:
-                client = clients[move.company_id.id] = self._l10n_pt_spms_check_client(
-                    move.company_id
-                )
-            try:
-                self._l10n_pt_spms_check_poll(backend, client, exchange, move)
-            except Exception:
-                _logger.exception("SPMS check of %s: unexpected failure", move.name)
+            if exchange._l10n_pt_spms_check_pending():
+                exchange.with_delay().action_l10n_pt_spms_check_poll()
+
+    def _l10n_pt_spms_check_pending(self):
+        """Whether this sent exchange still awaits its check result."""
+        self.ensure_one()
+        move = self.record
+        # The sending type also carries credit notes; the CCF checks
+        # invoices only, so a nota is never asked for a result.
+        if not move or move.move_type != "out_invoice" or move.state != "posted":
+            return False
+        if any(move.spms_invoice_check_ids.mapped("check_state")):
+            return False
+        return not self.search_count(
+            [
+                ("type_id.code", "=", "l10n_pt_spms_check"),
+                ("model", "=", "account.move"),
+                ("res_id", "=", move.id),
+                (
+                    "edi_exchange_state",
+                    "in",
+                    [
+                        "input_received",
+                        "input_processed",
+                        "input_processed_error",
+                    ],
+                ),
+            ]
+        )
+
+    def action_l10n_pt_spms_check_poll(self):
+        """Ask the CCF for the check result of this sent invoice.
+
+        One queue job per invoice. A transport failure raises
+        RetryableJobError so queue_job retries the poll by itself; any
+        other failure leaves the job failed, visible in the queue, and
+        the next pass of the scheduled action queues a fresh one.
+        """
+        self.ensure_one()
+        if not self._l10n_pt_spms_check_pending():
+            # settled between queueing and running
+            return
+        move = self.record
+        backend = self.env.ref("l10n_pt_invoice_spms.spms_backend")
+        client = self._l10n_pt_spms_check_client(move.company_id)
+        self._l10n_pt_spms_check_poll(backend, client, move)
 
     def _l10n_pt_spms_check_client(self, company):
-        """One zeep client per company and pass: the WSSE token carries
-        that company's portal credentials.
+        """One zeep client per job: the WSSE token carries the portal
+        credentials of the invoice's company.
 
         The shipped WSDL is the live one with its three read-path
         defects fixed (see api/FacturaCRDWS.wsdl): the live file
@@ -101,13 +119,16 @@ class EdiExchangeRecord(models.Model):
             settings=Settings(raw_response=True),
         )
 
-    def _l10n_pt_spms_check_poll(self, backend, client, exchange, move):
+    def _l10n_pt_spms_check_poll(self, backend, client, move):
         """Fetch and route the CCF answer for one sent invoice."""
         try:
             code, document = self._l10n_pt_spms_check_fetch(client, move)
         except (requests.RequestException, etree.XMLSyntaxError) as err:
-            _logger.warning("SPMS check of %s: request failed (%s)", move.name, err)
-            return
+            # transport trouble (a timeout, an outage page instead of
+            # SOAP): the job retries by itself, no need to wait a pass
+            raise RetryableJobError(
+                f"SPMS check of {move.name}: request failed ({err})"
+            ) from err
         if document:
             try:
                 with self.env.cr.savepoint():
@@ -115,9 +136,9 @@ class EdiExchangeRecord(models.Model):
                         "l10n_pt_spms_check",
                         {
                             "edi_exchange_state": "input_received",
-                            "model": exchange.model,
-                            "res_id": exchange.res_id,
-                            "parent_id": exchange.id,
+                            "model": self.model,
+                            "res_id": self.res_id,
+                            "parent_id": self.id,
                         },
                     )
                     child._set_file_content(document)
