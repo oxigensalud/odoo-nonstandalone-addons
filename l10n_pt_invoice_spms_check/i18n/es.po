@@ -189,16 +189,6 @@ msgstr ""
 "este resultado es la autoridad. Nunca bloquea el flujo."
 
 #. module: l10n_pt_invoice_spms_check
-#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
-#, python-format
-msgid ""
-"Configure the SPMS adjustment line product on company %s before generating "
-"credit notes that require an adjustment line."
-msgstr ""
-"Configure el producto de la línea de ajuste SPMS en la compañía %s antes de "
-"generar facturas rectificativas que requieran línea de ajuste."
-
-#. module: l10n_pt_invoice_spms_check
 #: model:res.groups,name:l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation
 msgid "Consultation"
 msgstr "Consulta"
@@ -396,11 +386,12 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"Expected exactly one tax line for tax %(tax)s on the draft credit note "
-"%(move)s, found %(count)d."
+"Expected exactly one tax line on the draft credit note %(move)s to carry the"
+" difference with the official value, found %(count)d."
 msgstr ""
-"Se esperaba exactamente una línea de impuesto para el impuesto %(tax)s en el"
-" borrador de factura rectificativa %(move)s; se han encontrado %(count)d."
+"Se esperaba exactamente una línea de impuesto en el borrador de factura "
+"rectificativa %(move)s para llevar la diferencia con el valor oficial; se "
+"han encontrado %(count)d."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__fetch_date
@@ -758,11 +749,6 @@ msgid "SPMS"
 msgstr "SPMS"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_product_id
-msgid "SPMS Adjustment Line Product"
-msgstr "Producto de línea de ajuste SPMS"
-
-#. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_bank_statement_line__spms_invoice_check_state
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_move__spms_invoice_check_state
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_invoice_check_state
@@ -834,16 +820,6 @@ msgid "SPMS: get conference results from the CCF"
 msgstr "SPMS: obtener resultados de conferencia del CCF"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_product_id
-msgid ""
-"Service product used for the adjustment line appended to a generated credit "
-"note when the official value differs from the prescription lines total."
-msgstr ""
-"Producto de tipo servicio usado para la línea de ajuste añadida a una "
-"factura rectificativa generada cuando el valor oficial difiere del total de "
-"las líneas de prescripción."
-
-#. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__state
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
 msgid "State"
@@ -854,12 +830,12 @@ msgstr "Estado"
 msgid ""
 "Net sum of the per-prescription differences, without taxes: over-billed "
 "claims minus the claims the check allowed above the billed amount, what the "
-"generated credit-note lines add up to before the adjustment line."
+"generated credit-note lines add up to."
 msgstr ""
 "Suma neta de las diferencias por prescripción, sin impuestos: prestaciones "
-"facturadas de más menos las prestaciones que la comprobación ha admitido por "
-"encima de lo facturado, lo que suman las líneas de la nota de crédito "
-"generada antes de la línea de ajuste."
+"facturadas de más menos las prestaciones que la comprobación ha admitido por"
+" encima de lo facturado, lo que suman las líneas de la nota de crédito "
+"generada."
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
@@ -880,16 +856,6 @@ msgid ""
 msgstr ""
 "El CCF respondió %(code)s a la petición del resultado de conferencia: no "
 "reconoce la factura %(invoice)s aunque se envió correctamente."
-
-#. module: l10n_pt_invoice_spms_check
-#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
-#, python-format
-msgid ""
-"The adjustment line product %(product)s must carry exactly one percentage "
-"customer tax for company %(company)s."
-msgstr ""
-"El producto de línea de ajuste %(product)s debe llevar exactamente un "
-"impuesto de cliente porcentual para la compañía %(company)s."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
@@ -1037,19 +1003,6 @@ msgstr "La factura original %s no está publicada."
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
-msgid ""
-"The remaining difference %(difference).2f between the official value "
-"%(official).2f and the credit note total %(total).2f exceeds one rounding "
-"step (%(step).2f); it cannot be absorbed by the imposed tax amount."
-msgstr ""
-"La diferencia restante %(difference).2f entre el valor oficial "
-"%(official).2f y el total de la factura rectificativa %(total).2f supera un "
-"paso de redondeo (%(step).2f); no puede absorberse imponiendo el importe del"
-" impuesto."
-
-#. module: l10n_pt_invoice_spms_check
-#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
-#, python-format
 msgid "The result is no longer ready (current state: %s)."
 msgstr "El resultado ya no está listo (estado actual: %s)."
 
@@ -1181,15 +1134,16 @@ msgstr "Límite de ajuste SPMS"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_limit
 msgid ""
-"Largest difference, taxes included, between the official value and the "
-"credit-note lines total that the adjustment line may absorb: rounding cents. "
-"A larger difference holds the result in error for review instead of "
-"generating the credit note."
+"Largest difference, taxes included, between the official value and the draft"
+" credit note that is written on its tax line: the rounding cent of a tax "
+"computed once on the invoice total. A larger difference holds the result in "
+"error for review instead of generating the credit note."
 msgstr ""
-"Mayor diferencia, impuestos incluidos, entre el valor oficial y el total de "
-"las líneas de la nota de crédito que la línea de ajuste puede absorber: "
-"céntimos de redondeo. Una diferencia mayor deja el resultado en error para "
-"su revisión en lugar de generar la nota de crédito."
+"Mayor diferencia, impuestos incluidos, entre el valor oficial y el borrador "
+"de la nota de crédito que se escribe en su línea de impuesto: el céntimo de "
+"redondeo de un impuesto calculado una sola vez sobre el total de la factura."
+" Una diferencia mayor deja el resultado en error para su revisión en lugar "
+"de generar la nota de crédito."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_check.constraint_res_company_spms_adjustment_limit_positive
@@ -1204,8 +1158,8 @@ msgstr "Importe de prestaciones negativas (sin impuestos)"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__amount_lines_negative_untaxed
 msgid ""
-"Sum of the negative differences, without taxes: the claims the check allowed "
-"above the billed amount. Each one becomes a negative line of the credit "
+"Sum of the negative differences, without taxes: the claims the check allowed"
+" above the billed amount. Each one becomes a negative line of the credit "
 "note, netting against the over-billed claims exactly as the official value "
 "does."
 msgstr ""
@@ -1223,11 +1177,10 @@ msgstr "Prestaciones negativas"
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid ""
-"The credit-note total %(draft)s differs from the official value %(official)s "
-"by %(difference)s, beyond the SPMS adjustment limit %(limit)s of company "
-"%(company)s; review the check lines before retrying."
+"The credit note cannot be generated: its total %(draft)s differs from the official value %(official)s by %(difference)s, and the SPMS adjustment limit of company %(company)s allows at most %(limit)s.\n"
+"\n"
+"Only the rounding cent of the tax may be written on the tax line of the credit note. A larger difference reveals a discrepancy to review before retrying: the Claims Credit of the result must match its official totals before tax (a prescription the check priced differently from the invoice makes them diverge), and the company must round its taxes globally (Accounting > Settings > Taxes > Rounding Method), as the CCF computes the tax once on the invoice total. Raise the SPMS adjustment limit of the company only when the difference is legitimate and strictly necessary."
 msgstr ""
-"El total de la nota de crédito %(draft)s difiere del valor oficial "
-"%(official)s en %(difference)s, más allá del límite de ajuste SPMS %(limit)s "
-"de la empresa %(company)s; revise las líneas de la comprobación antes de "
-"reintentar."
+"No se puede generar la nota de crédito: su total %(draft)s difiere del valor oficial %(official)s en %(difference)s, y el límite de ajuste SPMS de la empresa %(company)s permite como máximo %(limit)s.\n"
+"\n"
+"En la línea de impuesto de la nota de crédito solo puede escribirse el céntimo de redondeo del impuesto. Una diferencia mayor revela una discrepancia a revisar antes de reintentar: el Crédito de prestaciones del resultado debe coincidir con sus totales oficiales sin impuestos (una receta que la conferencia ha valorado con un precio distinto del de la factura los hace divergir), y la empresa debe redondear los impuestos globalmente (Contabilidad > Configuración > Impuestos > Método de redondeo), porque el CCF calcula el impuesto una sola vez sobre el total de la factura. Aumente el límite de ajuste SPMS de la empresa solo cuando la diferencia sea legítima y resulte estrictamente necesario."

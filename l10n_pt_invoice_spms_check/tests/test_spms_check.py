@@ -64,15 +64,6 @@ class TestSpmsCheck(SavepointCase):
         )
         # the SPMS flow relies on global tax rounding (production setting)
         cls.company.tax_calculation_rounding_method = "round_globally"
-        # created but NOT configured on the company: each adjustment test
-        # assigns it explicitly, the rest exercise the unconfigured path
-        cls.adjustment_product = cls.env["product.product"].create(
-            {
-                "name": "SPMS adjustment test",
-                "type": "service",
-                "taxes_id": [(6, 0, cls.tax6.ids)],
-            }
-        )
 
     @classmethod
     def _create_invoice(cls, name, lines):
@@ -434,47 +425,39 @@ class TestSpmsCheck(SavepointCase):
         with self.assertRaisesRegex(UserError, "no prescription with a difference"):
             result._generate_credit_note()
 
-    def test_generate_adjustment_requires_product(self):
-        # the generation contract expects the caller to run each result in
-        # its own savepoint (as the batch action did and the automatic
-        # trigger will): a raise then leaves no half-built draft behind
-        self.company.spms_adjustment_product_id = False
-        move = self._standard_invoice()
-        result = self._create_result(move, self._standard_rows(), credit_official=38.15)
-        with self.assertRaisesRegex(
-            UserError, "Configure the SPMS adjustment line product"
-        ), self.env.cr.savepoint():
-            result._generate_credit_note()
-        self.assertFalse(result.credit_note_move_id)
-        self.assertEqual(result.state, "ready")
-        self.assertFalse(
-            self.env["account.move"].search(
-                [
-                    ("move_type", "=", "out_refund"),
-                    ("journal_id", "=", self.journal.id),
-                ]
-            )
-        )
-
-    def test_generate_adjustment_line_direct_base(self):
-        self.company.spms_adjustment_product_id = self.adjustment_product
+    def test_generate_official_one_cent_below_imposes_tax(self):
+        # claims 36,00 + 6% global tax 2,16 = 38,16 naturally; the CCF
+        # computed its tax one cent lower: the cent is written on the tax
+        # line, the entry stays balanced and no extra line appears
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.15)
         draft = result._generate_credit_note()
         self.assertAlmostEqual(draft.amount_total, 38.15)
-        adjustment = draft.invoice_line_ids.filtered(
-            lambda line: line.product_id == self.adjustment_product
+        self.assertAlmostEqual(draft.amount_untaxed, 36.0)
+        self.assertAlmostEqual(draft.amount_tax, 2.15)
+        self.assertEqual(len(draft.invoice_line_ids), 3)
+        tax_line = draft.line_ids.filtered(lambda line: line.tax_line_id == self.tax6)
+        self.assertAlmostEqual(tax_line.debit, 2.15)
+        self.assertAlmostEqual(
+            sum(draft.line_ids.mapped("debit")),
+            sum(draft.line_ids.mapped("credit")),
         )
-        self.assertEqual(len(adjustment), 1)
-        self.assertAlmostEqual(adjustment.price_unit, -0.01)
-        self.assertEqual(adjustment.tax_ids, self.tax6)
-        self.assertEqual(len(draft.invoice_line_ids), 4)
         self.assertEqual(result.state, "done")
 
-    def _adjustment_single_line_result(self, name, prescription, credit_official):
-        """One-line invoice tuned for cent-edge cases: base 10.75 gives an
-        exact tax of 0.645, so the natural credit note totals 11.40 and the
-        totals reachable by moving the base jump from 11.38 to 11.40."""
+    def test_generate_official_one_cent_above_imposes_tax(self):
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.17)
+        draft = result._generate_credit_note()
+        self.assertAlmostEqual(draft.amount_total, 38.17)
+        self.assertAlmostEqual(draft.amount_untaxed, 36.0)
+        self.assertAlmostEqual(draft.amount_tax, 2.17)
+        self.assertEqual(len(draft.invoice_line_ids), 3)
+        self.assertEqual(result.state, "done")
+
+    def _single_line_result(self, name, prescription, credit_official):
+        """One-line invoice tuned for the half-cent case: base 10.75 gives
+        an exact tax of 0.645, so the natural credit note totals 11.40 and
+        a CCF rounding that half cent the other way states 11.39."""
         move = self._create_invoice(name, [(prescription, 1, 10.75)])
         return self._create_result(
             move,
@@ -489,39 +472,22 @@ class TestSpmsCheck(SavepointCase):
             credit_official=credit_official,
         )
 
-    def test_generate_adjustment_candidate_loop(self):
-        self.company.spms_adjustment_product_id = self.adjustment_product
-        result = self._adjustment_single_line_result("FT 2026/00129", "TESTP010", 11.38)
-        draft = result._generate_credit_note()
-        self.assertAlmostEqual(draft.amount_total, 11.38)
-        adjustment = draft.invoice_line_ids.filtered(
-            lambda line: line.product_id == self.adjustment_product
-        )
-        # the theoretical base -0.02 yields 11.37: the candidate loop must
-        # land on -0.01
-        self.assertAlmostEqual(adjustment.price_unit, -0.01)
-        self.assertEqual(result.state, "done")
-
-    def test_generate_forced_tax_amount(self):
-        self.company.spms_adjustment_product_id = self.adjustment_product
-        result = self._adjustment_single_line_result("FT 2026/00130", "TESTP011", 11.39)
+    def test_generate_single_line_half_cent_tax(self):
+        result = self._single_line_result("FT 2026/00130", "TESTP011", 11.39)
         draft = result._generate_credit_note()
         self.assertAlmostEqual(draft.amount_total, 11.39)
-        adjustment = draft.invoice_line_ids.filtered(
-            lambda line: line.product_id == self.adjustment_product
-        )
-        # no base reaches 11.39: the theoretical base is restored and the
-        # remaining cent is imposed on the group tax line
-        self.assertAlmostEqual(adjustment.price_unit, -0.01)
+        self.assertEqual(len(draft.invoice_line_ids), 1)
         tax_line = draft.line_ids.filtered(lambda line: line.tax_line_id == self.tax6)
-        self.assertAlmostEqual(tax_line.debit, 0.65)
+        self.assertAlmostEqual(tax_line.debit, 0.64)
         self.assertAlmostEqual(
             sum(draft.line_ids.mapped("debit")),
             sum(draft.line_ids.mapped("credit")),
         )
         self.assertEqual(result.state, "done")
 
-    def test_generate_adjustment_product_needs_single_tax(self):
+    def test_generate_needs_single_tax_line(self):
+        # two tax rates on the affected lines give two tax lines: the cent
+        # has no single line to land on, so the result is held for review
         tax23 = self.env["account.tax"].create(
             {
                 "name": "IVA 23% test",
@@ -531,17 +497,32 @@ class TestSpmsCheck(SavepointCase):
                 "company_id": self.company.id,
             }
         )
-        self.adjustment_product.taxes_id = [(6, 0, (self.tax6 | tax23).ids)]
-        self.company.spms_adjustment_product_id = self.adjustment_product
-        move = self._standard_invoice()
-        result = self._create_result(move, self._standard_rows(), credit_official=38.15)
-        with self.assertRaisesRegex(UserError, "exactly one percentage customer tax"):
+        move = self._create_invoice(
+            "FT 2026/00137", [("TESTP030", 31, 1.0), ("TESTP031", 10, 1.0, tax23)]
+        )
+        rows = [
+            {
+                "prescription": "TESTP030",
+                "billed": 31.0,
+                "allowed": 0.0,
+                "days_billed": 31.0,
+            },
+            {
+                "prescription": "TESTP031",
+                "billed": 10.0,
+                "allowed": 0.0,
+                "days_billed": 10.0,
+            },
+        ]
+        # claims 41,00 + 6% of 31,00 + 23% of 10,00 = 45,16 naturally
+        result = self._create_result(move, rows, credit_official=45.15)
+        with self.assertRaisesRegex(UserError, "exactly one tax line"):
             result._generate_credit_note()
 
     def test_generate_negative_claim_gets_own_negative_line(self):
         # the check allowed TESTP021 above the billed amount: its negative
         # difference nets against the rejected TESTP020 inside the credit
-        # note, one line per prescription, and no adjustment line is needed
+        # note, one line per prescription, and no tax adjustment is needed
         move = self._create_invoice(
             "FT 2026/00140", [("TESTP020", 31, 1.0), ("TESTP021", 10, 2.0)]
         )
@@ -586,11 +567,10 @@ class TestSpmsCheck(SavepointCase):
         # the natural credit note totals 38,16: an official value 0,06 away
         # is a discrepancy to review, not rounding noise, until the company
         # limit says otherwise
-        self.company.spms_adjustment_product_id = self.adjustment_product
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.22)
         with self.assertRaisesRegex(
-            UserError, "beyond the SPMS adjustment limit"
+            UserError, "SPMS adjustment limit of company"
         ), self.env.cr.savepoint():
             result._generate_credit_note()
         result._generate_credit_note_or_hold()
@@ -609,19 +589,19 @@ class TestSpmsCheck(SavepointCase):
         result.generation_error = False
         draft = result._generate_credit_note()
         self.assertAlmostEqual(draft.amount_total, 38.22)
+        self.assertAlmostEqual(draft.amount_tax, 2.22)
+        self.assertEqual(len(draft.invoice_line_ids), 3)
         self.assertEqual(result.state, "done")
 
     def test_generate_residual_at_limit_adjusts(self):
         # exactly the limit still counts as rounding noise
-        self.company.spms_adjustment_product_id = self.adjustment_product
+        self.company.spms_adjustment_limit = 0.05
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.21)
         draft = result._generate_credit_note()
         self.assertAlmostEqual(draft.amount_total, 38.21)
-        adjustment = draft.invoice_line_ids.filtered(
-            lambda line: line.product_id == self.adjustment_product
-        )
-        self.assertAlmostEqual(adjustment.price_unit, 0.05)
+        self.assertAlmostEqual(draft.amount_tax, 2.21)
+        self.assertEqual(len(draft.invoice_line_ids), 3)
 
     def test_company_adjustment_limit_not_negative(self):
         with self.assertRaises(IntegrityError), mute_logger(
@@ -632,9 +612,7 @@ class TestSpmsCheck(SavepointCase):
 
     def test_generate_official_exceeds_total_blocks(self):
         # an official value above the original invoice total can only be a
-        # check-data anomaly: the guard fires before the draft, even
-        # with the adjustment product configured
-        self.company.spms_adjustment_product_id = self.adjustment_product
+        # check-data anomaly: the guard fires before the draft
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=200.0)
         self.assertEqual(result.state, "ready")
@@ -648,7 +626,7 @@ class TestSpmsCheck(SavepointCase):
         # a full rejection is legitimate: official == invoice total must
         # generate (the guard is strictly greater-than); every claim is
         # refused in full, so the lines alone reach the official value
-        # and no adjustment line is needed
+        # and no tax adjustment is needed
         move = self._standard_invoice()
         rows = [
             {

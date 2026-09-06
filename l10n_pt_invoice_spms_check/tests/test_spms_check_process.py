@@ -172,6 +172,8 @@ class TestSpmsCheckProcess(SavepointComponentCase):
 
     @classmethod
     def _create_invoice(cls, name, lines):
+        """lines: (prescription, days, price_unit[, tax]) tuples; a line
+        carries no tax unless one is given."""
         move = cls.env["account.move"].create(
             {
                 "name": name,
@@ -188,11 +190,13 @@ class TestSpmsCheckProcess(SavepointComponentCase):
                             "quantity": days,
                             "price_unit": price_unit,
                             "account_id": cls.income_account.id,
-                            "tax_ids": [(5, 0, 0)],
+                            "tax_ids": (
+                                [(6, 0, extra[0].ids)] if extra else [(5, 0, 0)]
+                            ),
                             "spms_prescription": prescription,
                         },
                     )
-                    for prescription, days, price_unit in lines
+                    for prescription, days, price_unit, *extra in lines
                 ],
             }
         )
@@ -567,45 +571,54 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertFalse(result.document_date)
         self.assertIn("IssueDate", result.completeness_warning)
 
-    def test_trigger_holds_on_missing_adjustment_product(self):
-        # the official value sits one cent above the claim: the
-        # adjustment line is needed and its product is not configured
-        self.company.spms_adjustment_product_id = False
+    def test_trigger_holds_on_residual_beyond_limit(self):
+        # the official value sits ten cents above the claim: a discrepancy
+        # to review, held in error with the reason, no credit note
         document = _document(
-            total_allowed_taxed="4.99",
+            total_allowed_taxed="4.90",
             claims=_prestacao("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
         self.assertEqual(child.edi_exchange_state, "input_processed")
         result = self._result()
         self.assertEqual(result.state, "error")
-        self.assertIn("adjustment line product", result.generation_error)
+        self.assertIn("adjustment limit", result.generation_error)
         self.assertEqual(result.error_message, result.generation_error)
         self.assertFalse(result.credit_note_move_id)
 
-    def test_trigger_retry_after_configuring_adjustment(self):
-        self.company.spms_adjustment_product_id = False
+    def test_trigger_retry_after_raising_limit(self):
+        # a taxed claim whose official value sits two cents under the
+        # natural credit note: held at the default limit, generated once
+        # the company allows the residual, which lands on the tax line
+        self.company.spms_adjustment_limit = 0.01
+        invoice = self._create_invoice(
+            "FT TEST/00006", [("TESTP401", 31, 1.0, self.tax6)]
+        )
         document = _document(
-            total_allowed_taxed="4.99",
-            claims=_prestacao("TESTP001", errors=_erro("C011")),
+            total_billed="31.00",
+            total_allowed="0.00",
+            total_billed_taxed="32.86",
+            total_allowed_taxed="0.02",
+            claims=_prestacao(
+                "TESTP401", billed="31.00", allowed="0.00", errors=_erro("C011")
+            ),
         )
-        child = self._process(document)
-        self.assertEqual(self._result().state, "error")
-        product = self.env["product.product"].create(
-            {
-                "name": "SPMS adjustment test",
-                "type": "service",
-                "taxes_id": [(6, 0, self.tax6.ids)],
-            }
-        )
-        self.company.spms_adjustment_product_id = product
+        child = self._process(document, invoice=invoice)
+        result = self._result(invoice)
+        self.assertEqual(result.state, "error")
+        self.assertIn("adjustment limit", result.generation_error)
+        self.assertFalse(result.credit_note_move_id)
+        self.company.spms_adjustment_limit = 0.05
         child.edi_exchange_state = "input_received"
         self.backend.exchange_process(child)
-        result = self._result()
+        result = self._result(invoice)
         self.assertEqual(result.state, "done")
         self.assertFalse(result.generation_error)
         self.assertFalse(result.error_message)
-        self.assertAlmostEqual(result.credit_note_move_id.amount_total, 36.01)
+        credit_note = result.credit_note_move_id
+        self.assertEqual(len(credit_note.invoice_line_ids), 1)
+        self.assertAlmostEqual(credit_note.amount_tax, 1.84)
+        self.assertAlmostEqual(credit_note.amount_total, 32.84)
 
     def test_trigger_preexisting_foreign_note_blocks_generation(self):
         invoice = self._create_invoice("FT TEST/00004", [("TESTP201", 31, 1.0)])

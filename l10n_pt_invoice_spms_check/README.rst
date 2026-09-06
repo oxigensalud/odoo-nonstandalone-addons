@@ -44,8 +44,9 @@ resulting rectifying credit notes:
   away.
 - Generates the draft rectifying invoice (credit note) for the results
   that came back with errors, through the standard reversal mechanism,
-  carrying exactly the official value: one line per rejected
-  prescription plus a deterministic adjustment line when needed.
+  carrying exactly the official value: one line per affected
+  prescription, with the rounding cent of the tax written on the tax
+  line when needed.
 - Keeps the sale order closed: the CCF cut is definitive, so the
   credited quantities are not returned as pending to invoice on the sale
   order the invoice came from.
@@ -71,16 +72,18 @@ Configuration
   *Queue → Jobs* and the next pass queues a fresh attempt. To pause the
   polling, deactivate the scheduled action — never uninstall the module
   just to stop the calls.
-- Set the *SPMS Adjustment Line Product* on the company (SPMS page,
-  visible to *Technical Settings* users): a sale service product
-  required to append the adjustment line when an official value differs
-  from the itemised total. Credit notes that need it are skipped with a
-  clear message until it is configured.
-- Set the *SPMS Adjustment Limit* on the company (same page, 0.05 by
-  default): the largest difference, taxes included, between the official
-  value and the credit-note lines total that the adjustment line may
-  absorb. A larger difference holds the result in *Error* for review
-  instead of generating the credit note.
+- Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
+  *Technical Settings* users; 0.01 by default): the largest difference,
+  taxes included, between the official value and the draft credit note
+  that is written on its tax line. A larger difference holds the result
+  in *Error* for review instead of generating the credit note; raise the
+  limit only when a larger difference is legitimate and strictly
+  necessary.
+- Keep the tax rounding method of the company (*Accounting → Settings →
+  Taxes → Rounding Method*) on *Round Globally*: the CCF computes the
+  tax once on the invoice total, and per-line rounding drifts away from
+  it by more than a cent on long credit notes, which then hold in
+  *Error*.
 
 Usage
 =====
@@ -111,26 +114,29 @@ to the invoice itself or to a lot are listed on the result form.
 
 For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the
-standard reversal path, cut down to the rejected prescriptions, and
-linked back to the result. When the generation of a result fails
-(adjustment product not configured, a prescription with no matching
-invoice line, a foreign credit note), that result alone is held in
+standard reversal path, cut down to the affected prescriptions, and
+linked back to the result. When the generation of a result fails (a
+prescription with no matching invoice line, a foreign credit note, a
+residual beyond the adjustment limit), that result alone is held in
 *Error* with the reason on its form; fix the cause and reprocess the
 document to retry — the rest of the batch is never dragged along. A
 prescription the check priced above the billed amount (a negative
 difference) gets its own negative line, so the credit note nets it
 against the rejected claims exactly as the official value does; the
-result form shows their sum as *Negative Claims*. When the official
-value differs from the itemised total, an adjustment line (service
-product configured on the company, SPMS page) is appended so the total
-matches the official value exactly; if no line base can reach it (global
-tax rounding), the group tax amount is forced instead (±0.01 max
-deviation from the computed tax). The adjustment line absorbs rounding
-cents only: a residual beyond the *SPMS Adjustment Limit* of the company
-(0.05 by default) holds the result in *Error* with the reason, because
-it reveals a discrepancy to review rather than rounding noise. Drafts
-stay drafts: the accounting team reviews and posts them; the EDI circuit
-takes over from there.
+result form shows their sum as *Negative Claims*. The claim bases come
+from the check document itself, so the draft can only differ from the
+official value by the rounding of the tax, which the CCF computes once
+on the invoice total: that cent is written on the tax line of the draft,
+the same correction an accountant would pencil on the tax journal item,
+with no extra line, so the total matches the official value exactly. A
+residual beyond the *SPMS Adjustment Limit* of the company (0.01 by
+default) holds the result in *Error* with the reason, because it reveals
+a discrepancy to review rather than rounding noise: a claim priced
+differently (the *Claims Credit* of the result then differs from its
+official totals before tax), or a company rounding its taxes per line;
+raise the limit only when the difference is legitimate and strictly
+necessary. Drafts stay drafts: the accounting team reviews and posts
+them; the EDI circuit takes over from there.
 
 Once a credit note is generated and alive, the official totals of its
 result are locked; cancel the credit note first to change them.
