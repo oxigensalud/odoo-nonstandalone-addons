@@ -70,10 +70,12 @@ Configuration
   SPMS that still have no definitive check result, with each company's
   own SPMS credentials, so a database where nothing was sent makes no
   calls. Each invoice is asked in its own queue job: a transport failure
-  is retried by the job itself, any other failure stays visible under
-  *Queue → Jobs* and the next pass queues a fresh attempt. To pause the
-  polling, deactivate the scheduled action — never uninstall the module
-  just to stop the calls.
+  — or the CCF answering that its service is unavailable (999) — is
+  retried by the job itself; when the retries run out the job fails and
+  stays visible under *Queue → Jobs*, and the next pass re-activates
+  that same job rather than queueing another, so an invoice never has
+  more than one poll job. To pause the polling, deactivate the scheduled
+  action — never uninstall the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
   *Technical Settings* users; 0.01 by default): the largest difference,
   taxes included, between the official value and the draft credit or

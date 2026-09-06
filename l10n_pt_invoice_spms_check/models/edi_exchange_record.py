@@ -34,6 +34,8 @@ class EdiExchangeRecord(models.Model):
         exchanges: every call to the CCF then runs in its own
         transaction, so a long backlog is never undone as a whole by
         the cron time limit, and a failed poll is retried on its own.
+        A poll that ran out of retries is re-activated, not replaced:
+        an invoice never has more than one poll job.
         """
         backend = self.env.ref("l10n_pt_invoice_spms.spms_backend")
         send_type = self.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
@@ -49,9 +51,42 @@ class EdiExchangeRecord(models.Model):
                 ("model", "=", "account.move"),
             ]
         )
+        failed_polls = self._l10n_pt_spms_check_failed_polls()
         for exchange in exchanges:
-            if exchange._l10n_pt_spms_check_pending():
+            if not exchange._l10n_pt_spms_check_pending():
+                continue
+            failed = failed_polls.get(exchange.id)
+            if failed:
+                failed.requeue()
+            else:
                 exchange.with_delay().action_l10n_pt_spms_check_poll()
+
+    def _l10n_pt_spms_check_failed_polls(self):
+        """The poll jobs that ran out of retries, by exchange record.
+
+        A failed job is final for queue_job: nothing re-runs it, and
+        the identity key of a poll job only stops duplicates of a live
+        one, so the next pass would queue a second poll of the same
+        invoice and leave the failed one behind. The scheduled action
+        re-activates that job instead — what the Requeue button does —
+        so an invoice keeps one poll job whatever the CCF answers.
+        """
+        jobs = self.env["queue.job"].search(
+            [
+                ("model_name", "=", self._name),
+                ("method_name", "=", "action_l10n_pt_spms_check_poll"),
+                ("state", "=", "failed"),
+            ]
+        )
+        by_exchange = {}
+        for job in jobs:
+            if len(job.records) != 1:
+                # not queued by the scheduled action, which polls one
+                # invoice per job
+                continue
+            key = job.records.id
+            by_exchange[key] = by_exchange.get(key, jobs.browse()) | job
+        return by_exchange
 
     def _l10n_pt_spms_check_pending(self):
         """Whether this sent exchange still awaits its check result."""
@@ -83,10 +118,12 @@ class EdiExchangeRecord(models.Model):
     def action_l10n_pt_spms_check_poll(self):
         """Ask the CCF for the check result of this sent invoice.
 
-        One queue job per invoice. A transport failure raises
+        One queue job per invoice. A transport failure — or the CCF
+        answering that its service is unavailable (999) — raises
         RetryableJobError so queue_job retries the poll by itself; any
-        other failure leaves the job failed, visible in the queue, and
-        the next pass of the scheduled action queues a fresh one.
+        other failure, or the retries running out, leaves the job
+        failed, visible in the queue, and the next pass of the
+        scheduled action re-activates it.
         """
         self.ensure_one()
         if not self._l10n_pt_spms_check_pending():
@@ -158,8 +195,15 @@ class EdiExchangeRecord(models.Model):
         elif code == "301":
             with self.env.cr.savepoint():
                 self._l10n_pt_spms_check_flag_incident(move, code)
-        elif code in ("302", "999"):
-            _logger.debug("SPMS check of %s: no result yet (code %s)", move.name, code)
+        elif code == "302":
+            _logger.debug("SPMS check of %s: no result yet", move.name)
+        elif code == "999":
+            # the CCF's own "service unavailable" answer, seen for weeks
+            # at a time: retried like a timeout, and nothing is written
+            # on the invoice — it is honestly not checked yet
+            raise RetryableJobError(
+                f"SPMS check of {move.name}: the CCF service is unavailable (999)"
+            )
         else:
             _logger.warning(
                 "SPMS check of %s: unrecognised answer (return code %s)",
