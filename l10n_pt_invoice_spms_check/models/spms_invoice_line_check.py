@@ -71,9 +71,10 @@ class SpmsInvoiceLineCheck(models.Model):
         string="Difference",
         compute="_compute_amount_difference",
         store=True,
-        help="Over-billed base, untaxed: billed minus allowed. This is the "
-        "base the credit-note line will carry; VAT is applied by the "
-        "line's taxes.",
+        help="Billed minus allowed, untaxed: positive for an over-billed "
+        "claim, negative when the check allowed more than billed. This is "
+        "the base the credit-note line will carry, sign included; VAT is "
+        "applied by the line's taxes.",
     )
     days_billed = fields.Float(
         string="Billed Days",
@@ -114,7 +115,10 @@ class SpmsInvoiceLineCheck(models.Model):
 
     def _is_creditable(self):
         """A claim the credit note must carry: keyed by prescription and
-        over-billed (positive difference)."""
+        with a difference in either direction. An over-billed claim
+        (positive difference) credits the customer; a claim the check
+        allowed above the billed amount (negative difference) becomes a
+        negative line, because the official value nets both kinds."""
         self.ensure_one()
         return bool(self.prescription) and (
             float_compare(
@@ -122,7 +126,7 @@ class SpmsInvoiceLineCheck(models.Model):
                 0.0,
                 precision_rounding=self.currency_id.rounding or 0.01,
             )
-            > 0
+            != 0
         )
 
     def _get_refund_line_values(self):
@@ -133,7 +137,9 @@ class SpmsInvoiceLineCheck(models.Model):
         untouched (original days, price/day and SPMS dates); a partial
         rejection with reliable days credits the rejected days at the
         original price/day; otherwise the whole difference goes on a single
-        unit. Partial cases blank the SPMS dates (which days is unknown).
+        unit, as a negative difference always does: the line then carries
+        the negative amount on one unit. Partial cases blank the SPMS dates
+        (which days is unknown).
         """
         self.ensure_one()
         original_line = self.move_line_id

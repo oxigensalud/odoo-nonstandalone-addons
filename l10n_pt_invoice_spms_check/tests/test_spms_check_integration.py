@@ -19,7 +19,7 @@ from .test_spms_check_transport import CLIENT_PATH, _mock_client, _result_respon
 # known codes at once, anchored only at claim and line level — no real
 # document anchors errors anywhere else). Every value is synthetic.
 
-CREDIT_OFFICIAL = 600.0
+CREDIT_OFFICIAL = 480.01
 CLAIMS = 96
 CODE_MIX_LINHA = ["C012"] * 90 + ["C010"] * 4 + ["C013"] * 2
 CODE_MIX_PRESTACAO = ["C011"] * 4 + ["A004"] * 3 + ["D171"] + ["D306"]
@@ -43,10 +43,12 @@ def _complex_document():
             )
         )
     return _document(
+        # the official cut sits one cent above the claims total (480.00):
+        # the adjustment line carries that cent
         total_billed="2976.00",
-        total_allowed="2376.00",
+        total_allowed="2495.99",
         total_billed_taxed="2976.00",
-        total_allowed_taxed="2376.00",
+        total_allowed_taxed="2495.99",
         claims="".join(claims),
     )
 
@@ -194,6 +196,7 @@ class TestSpmsCheckIntegration(SavepointComponentCase):
         self.assertEqual(credit_note.state, "draft")
         self.assertEqual(credit_note.move_type, "out_refund")
         self.assertAlmostEqual(credit_note.amount_total, CREDIT_OFFICIAL, places=2)
+        self.assertEqual(len(credit_note.invoice_line_ids), CLAIMS + 1)
 
     def test_full_journey_all_five_anchor_levels(self):
         # the spec defines five anchor levels for errors; no real

@@ -668,12 +668,14 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_difference
 msgid ""
-"Over-billed base, untaxed: billed minus allowed. This is the base the "
-"credit-note line will carry; VAT is applied by the line's taxes."
+"Billed minus allowed, untaxed: positive for an over-billed claim, negative "
+"when the check allowed more than billed. This is the base the credit-note "
+"line will carry, sign included; VAT is applied by the line's taxes."
 msgstr ""
-"Base sobrefacturada, sense impostos: facturat menys admès. És la base que "
-"portarà la línia de la factura rectificativa; l'IVA l'apliquen els impostos "
-"de la línia."
+"Facturat menys admès, sense impostos: positiu per a una prestació facturada "
+"de més, negatiu quan la comprovació ha admès més del facturat. És la base "
+"que portarà la línia de la nota de crèdit, signe inclòs; l'IVA l'apliquen "
+"els impostos de la línia."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__days_paid
@@ -849,11 +851,14 @@ msgstr "Estat"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__amount_lines_untaxed
 msgid ""
-"Sum of the per-prescription credit bases, without taxes: what the generated "
-"credit-note lines will add up to."
+"Net sum of the per-prescription differences, without taxes: over-billed "
+"claims minus the claims the check allowed above the billed amount, what the "
+"generated credit-note lines add up to before the adjustment line."
 msgstr ""
-"Suma de les bases de crèdit per prescripció, sense impostos: el que sumaran "
-"les línies de la factura rectificativa generada."
+"Suma neta de les diferències per prescripció, sense impostos: prestacions "
+"facturades de més menys les prestacions que la comprovació ha admès per "
+"sobre del facturat, el que sumen les línies de la nota de crèdit generada "
+"abans de la línia d'ajust."
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
@@ -1059,8 +1064,8 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
-msgid "There is no prescription with a positive difference."
-msgstr "No hi ha cap prescripció amb diferència positiva."
+msgid "There is no prescription with a difference to credit."
+msgstr "No hi ha cap prescripció amb diferència per abonar."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed
@@ -1165,3 +1170,62 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
 msgid "Zero Official Value"
 msgstr "Valor oficial zero"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_limit
+msgid "SPMS Adjustment Limit"
+msgstr "Límit d'ajust SPMS"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_res_company__spms_adjustment_limit
+msgid ""
+"Largest difference, taxes included, between the official value and the "
+"credit-note lines total that the adjustment line may absorb: rounding cents. "
+"A larger difference holds the result in error for review instead of "
+"generating the credit note."
+msgstr ""
+"Diferència més gran, impostos inclosos, entre el valor oficial i el total de "
+"les línies de la nota de crèdit que la línia d'ajust pot absorbir: cèntims "
+"d'arrodoniment. Una diferència més gran deixa el resultat en error per "
+"revisar-lo en lloc de generar la nota de crèdit."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.constraint,message:l10n_pt_invoice_spms_check.constraint_res_company_spms_adjustment_limit_positive
+msgid "The SPMS adjustment limit cannot be negative."
+msgstr "El límit d'ajust SPMS no pot ser negatiu."
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__amount_lines_negative_untaxed
+msgid "Negative Claims Amount (Untaxed)"
+msgstr "Import de prestacions negatives (sense impostos)"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__amount_lines_negative_untaxed
+msgid ""
+"Sum of the negative differences, without taxes: the claims the check allowed "
+"above the billed amount. Each one becomes a negative line of the credit "
+"note, netting against the over-billed claims exactly as the official value "
+"does."
+msgstr ""
+"Suma de les diferències negatives, sense impostos: les prestacions que la "
+"comprovació ha admès per sobre de l'import facturat. Cadascuna es converteix "
+"en una línia negativa de la nota de crèdit, que compensa les prestacions "
+"facturades de més exactament com fa el valor oficial."
+
+#. module: l10n_pt_invoice_spms_check
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
+msgid "Negative Claims"
+msgstr "Prestacions negatives"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
+#, python-format
+msgid ""
+"The credit-note total %(draft)s differs from the official value %(official)s "
+"by %(difference)s, beyond the SPMS adjustment limit %(limit)s of company "
+"%(company)s; review the check lines before retrying."
+msgstr ""
+"El total de la nota de crèdit %(draft)s difereix del valor oficial "
+"%(official)s en %(difference)s, més enllà del límit d'ajust SPMS %(limit)s "
+"de l'empresa %(company)s; reviseu les línies de la comprovació abans de "
+"tornar-ho a provar."
