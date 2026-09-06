@@ -51,13 +51,13 @@ msgstr "Admitido"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_allowed
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_allowed
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__amount_allowed
 msgid "Allowed Amount"
 msgstr "Importe admitido"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_paid
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__days_paid
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__days_paid
 msgid ""
 "Allowed/paid days for the claim (QuantidadeCalculado); may be empty in the "
 "document."
@@ -82,19 +82,19 @@ msgstr "Facturado"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_billed
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_billed
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__amount_billed
 msgid "Billed Amount"
 msgstr "Importe facturado"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_billed
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__days_billed
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__days_billed
 msgid "Billed Days"
 msgstr "Días facturados"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_billed
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__days_billed
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__days_billed
 msgid "Billed quantity in days for the claim (QuantidadeLida)."
 msgstr "Cantidad facturada en días de la prestación (QuantidadeLida)."
 
@@ -133,7 +133,7 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_billed
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_billed
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__amount_billed
 msgid ""
 "Claim total as read by the check, untaxed (ValorTotalLido); read from the "
 "document, never recomputed."
@@ -143,7 +143,7 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_allowed
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_allowed
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__amount_allowed
 msgid ""
 "Claim total recomputed by the check, untaxed (ValorTotalCalculado); read "
 "from the document, never recomputed."
@@ -174,7 +174,7 @@ msgstr "Compañías"
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__company_id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__company_id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__company_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__company_id
 msgid "Company"
 msgstr "Compañía"
 
@@ -205,7 +205,7 @@ msgstr "Consulta"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type__create_uid
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__create_uid
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__create_uid
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__create_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__create_uid
 msgid "Created by"
 msgstr "Creado por"
 
@@ -213,7 +213,7 @@ msgstr "Creado por"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type__create_date
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__create_date
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__create_date
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__create_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__create_date
 msgid "Created on"
 msgstr "Creado el"
 
@@ -229,6 +229,11 @@ msgid "SPMS Invoice Check Error Type"
 msgstr "Tipo de error de conferencia SPMS de factura"
 
 #. module: l10n_pt_invoice_spms_check
+#: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_check_line
+msgid "SPMS Invoice Check Line"
+msgstr "Línea de conferencia SPMS de factura"
+
+#. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/account_move.py:0
 #, python-format
 msgid ""
@@ -239,7 +244,7 @@ msgstr ""
 " factura %(invoice)s vuelve a estar listo para generación."
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__note_move_line_id
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__note_move_line_id
 msgid ""
 "Line of the generated credit or debit note carrying this claim (audit only)."
 msgstr ""
@@ -249,7 +254,7 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__currency_id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__currency_id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__currency_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__currency_id
 msgid "Currency"
 msgstr "Moneda"
 
@@ -273,7 +278,7 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_difference
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_difference
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__amount_difference
 msgid "Difference"
 msgstr "Diferencia"
 
@@ -284,7 +289,7 @@ msgstr "Diferencia"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type__display_name
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__display_name
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__display_name
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__display_name
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__display_name
 msgid "Display Name"
 msgstr "Nombre mostrado"
 
@@ -373,9 +378,9 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_ids
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__error_ids
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__error_ids
 #: model:ir.ui.menu,name:l10n_pt_invoice_spms_check.spms_invoice_check_error_menu
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_form
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_form
 msgid "Errors"
 msgstr "Errores"
 
@@ -427,7 +432,7 @@ msgstr "Error de generación"
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_search
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_search
 msgid "Group By"
 msgstr "Agrupar por"
 
@@ -438,7 +443,7 @@ msgstr "Agrupar por"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__id
 msgid "ID"
 msgstr "ID"
 
@@ -452,9 +457,9 @@ msgstr "Factura"
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/account_move.py:0
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__result_id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__result_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__result_id
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_search
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_search
 #, python-format
 msgid "Invoice Check"
 msgstr "Conferencia de factura"
@@ -523,7 +528,7 @@ msgstr "Asiento de Diario"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type____last_update
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check____last_update
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check____last_update
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line____last_update
 msgid "Last Modified on"
 msgstr "Última modificación el"
 
@@ -531,7 +536,7 @@ msgstr "Última modificación el"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type__write_uid
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__write_uid
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__write_uid
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__write_uid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__write_uid
 msgid "Last Updated by"
 msgstr "Última actualización por"
 
@@ -539,7 +544,7 @@ msgstr "Última actualización por"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error_type__write_date
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__write_date
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__write_date
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__write_date
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__write_date
 msgid "Last Updated on"
 msgstr "Última actualización el"
 
@@ -580,19 +585,19 @@ msgid "Lines"
 msgstr "Líneas"
 
 #. module: l10n_pt_invoice_spms_check
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_search
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_search
 msgid "Lot"
 msgstr "Lote"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_number
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__lot_number
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__lot_number
 msgid "Lot Number"
 msgstr "Número de lote"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_type
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__lot_type
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__lot_type
 msgid "Lot Type"
 msgstr "Tipo de lote"
 
@@ -610,7 +615,7 @@ msgstr "Número"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_number
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__lot_number
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__lot_number
 msgid "Number of the lot the claim belongs to (Numero)."
 msgstr "Número del lote al que pertenece la prestación (Numero)."
 
@@ -667,12 +672,12 @@ msgid "Original Invoice"
 msgstr "Factura original"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__move_line_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__move_line_id
 msgid "Original Invoice Line"
 msgstr "Línea de la factura original"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__move_line_id
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__move_line_id
 msgid ""
 "Original invoice line matched by prescription number within the invoice."
 msgstr ""
@@ -681,7 +686,7 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__amount_difference
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__amount_difference
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__amount_difference
 msgid ""
 "Billed minus allowed, untaxed: positive for an over-billed claim, negative "
 "when the check allowed more than billed. This is the base the credit-note "
@@ -694,13 +699,13 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__days_paid
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__days_paid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__days_paid
 msgid "Paid Days"
 msgstr "Días pagados"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__prescription
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__prescription
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__prescription
 msgid "Prescription"
 msgstr "Prescripción"
 
@@ -719,7 +724,7 @@ msgstr "Datos de prescripción"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__prescription
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__prescription
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__prescription
 msgid ""
 "Prescription number (NumeroPrescricao), the billing-line key of the claim. "
 "Patient-linked: treat as an opaque identifier."
@@ -746,7 +751,7 @@ msgid "Ready"
 msgstr "Listo"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__note_move_line_id
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__note_move_line_id
 msgid "Note Line"
 msgstr "Línea de la nota"
 
@@ -814,11 +819,6 @@ msgstr "Conferencias SPMS de facturas"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_account_payment__spms_note_invoice_check_ids
 msgid "SPMS Invoice Checks (Credit/Debit Note)"
 msgstr "Conferencias SPMS de facturas (nota de crédito/débito)"
-
-#. module: l10n_pt_invoice_spms_check
-#: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_line_check
-msgid "SPMS Invoice Line Check"
-msgstr "Conferencia SPMS de línea de factura"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
@@ -1048,7 +1048,7 @@ msgstr "No hay ninguna prescripción con diferencia que regularizar."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_allowed
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_tree
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_tree
 msgid "Total Allowed"
 msgstr "Total admitido"
 
@@ -1059,7 +1059,7 @@ msgstr "Total admitido (con impuestos)"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__total_billed
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_tree
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_tree
 msgid "Total Billed"
 msgstr "Total facturado"
 
@@ -1069,13 +1069,13 @@ msgid "Total Billed (Taxed)"
 msgstr "Total facturado (con impuestos)"
 
 #. module: l10n_pt_invoice_spms_check
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_line_check_view_tree
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_tree
 msgid "Total Difference"
 msgstr "Diferencia total"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_error__lot_type
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_line_check__lot_type
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__lot_type
 msgid "Type of the lot the claim belongs to (TipoLote)."
 msgstr "Tipo del lote al que pertenece la prestación (TipoLote)."
 

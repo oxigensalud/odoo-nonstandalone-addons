@@ -25,7 +25,7 @@
         "views/account_move_views.xml",
         "views/spms_invoice_check_error_type_views.xml",
         "views/res_company_views.xml",
-        "views/spms_invoice_line_check_views.xml",
+        "views/spms_invoice_check_line_views.xml",
         "views/spms_invoice_check_error_views.xml",
         "views/spms_invoice_check_views.xml",
     ],

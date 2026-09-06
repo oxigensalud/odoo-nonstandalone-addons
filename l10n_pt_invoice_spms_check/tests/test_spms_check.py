@@ -162,7 +162,7 @@ class TestSpmsCheck(SavepointCase):
                     ],
                 }
             )
-        cls.env["spms.invoice.line.check"].create(line_vals_list)
+        cls.env["spms.invoice.check.line"].create(line_vals_list)
         return result
 
     @classmethod

@@ -5,7 +5,7 @@ from odoo import api, fields, models
 from odoo.tools import float_compare, float_is_zero
 
 
-class SpmsInvoiceLineCheck(models.Model):
+class SpmsInvoiceCheckLine(models.Model):
     """One row per claim (prestação) reported by the check document.
 
     The claim element is the only place of the document carrying money
@@ -15,8 +15,8 @@ class SpmsInvoiceLineCheck(models.Model):
     prescription-data levels) hang from the line.
     """
 
-    _name = "spms.invoice.line.check"
-    _description = "SPMS Invoice Line Check"
+    _name = "spms.invoice.check.line"
+    _description = "SPMS Invoice Check Line"
     _order = "result_id, id"
     _rec_name = "prescription"
     _check_company_auto = True
