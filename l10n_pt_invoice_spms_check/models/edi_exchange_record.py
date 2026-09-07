@@ -10,7 +10,7 @@ from zeep.exceptions import Error as ZeepError, Fault
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 
-from odoo import models
+from odoo import api, models
 from odoo.modules.module import get_resource_path
 
 from odoo.addons.queue_job.exception import RetryableJobError
@@ -22,6 +22,39 @@ REQUEST_TIMEOUT = 60
 
 class EdiExchangeRecord(models.Model):
     _inherit = "edi.exchange.record"
+
+    @api.depends("type_id.ack_type_id", "model", "res_id")
+    def _compute_ack_expected(self):
+        """A sent invoice expects its check result as its ACK; a sent
+        credit or debit note expects nothing.
+
+        The sending type of l10n_pt_invoice_spms carries invoices and
+        notes alike and names our check result type as its ACK type,
+        so edi_oca would expect an answer on every sent record. The
+        CCF checks invoices only: the expectation is narrowed to them
+        here, and the form of a sent note shows no ACK group.
+        """
+        for rec in self:
+            # edi_oca reads the ACK type of the whole recordset at once:
+            # computed one record at a time, so a batch never inherits
+            # the expectation of another type
+            super(EdiExchangeRecord, rec)._compute_ack_expected()
+            if (
+                rec.ack_expected
+                and rec.type_id.ack_type_id.code == "l10n_pt_spms_check"
+            ):
+                rec.ack_expected = rec._l10n_pt_spms_check_checkable()
+
+    def _l10n_pt_spms_check_checkable(self):
+        """Whether the related record is a customer invoice, the only
+        document the CCF checks (the sending type also carries notes)."""
+        self.ensure_one()
+        move = self.record
+        return (
+            bool(move)
+            and move._name == "account.move"
+            and move.move_type == "out_invoice"
+        )
 
     def _cron_l10n_pt_spms_check_update(self):
         """Queue the conference check of every sent invoice.
@@ -90,10 +123,10 @@ class EdiExchangeRecord(models.Model):
     def _l10n_pt_spms_check_pending(self):
         """Whether this sent exchange still awaits its check result."""
         self.ensure_one()
+        if not self._l10n_pt_spms_check_checkable():
+            return False
         move = self.record
-        # The sending type also carries credit notes; the CCF checks
-        # invoices only, so a nota is never asked for a result.
-        if not move or move.move_type != "out_invoice" or move.state != "posted":
+        if move.state != "posted":
             return False
         if any(move.spms_invoice_check_ids.mapped("check_state")):
             return False

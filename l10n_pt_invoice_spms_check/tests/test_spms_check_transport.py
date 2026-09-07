@@ -447,9 +447,41 @@ class TestSpmsCheckTransport(SavepointCase):
             self.exchange.action_l10n_pt_spms_check_poll()
         factory.assert_not_called()
 
+    def test_check_result_is_the_ack_of_the_sent_invoice(self):
+        # edi_oca models an expected answer document as the ACK of the
+        # exchange: the sending type of l10n_pt_invoice_spms names our
+        # check result type as its ACK type, so a sent invoice knows it
+        # is waiting for its result and shows when it arrived
+        send_type = self.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
+        check_type = self.env.ref("l10n_pt_invoice_spms_check.spms_check_exchange_type")
+        self.assertEqual(send_type.ack_type_id, check_type)
+        self.assertTrue(self.exchange.ack_expected)
+        self.assertTrue(self.exchange.needs_ack())
+        self.assertFalse(self.exchange.ack_exchange_id)
+        self.assertFalse(self.exchange.ack_received_on)
+        child = self.backend.create_record(
+            "l10n_pt_spms_check",
+            {
+                "edi_exchange_state": "input_received",
+                "model": "account.move",
+                "res_id": self.invoice.id,
+                "parent_id": self.exchange.id,
+            },
+        )
+        self.assertEqual(self.exchange.ack_exchange_id, child)
+        self.assertFalse(self.exchange.needs_ack())
+        self.assertTrue(child.exchanged_on)
+        self.assertEqual(self.exchange.ack_received_on, child.exchanged_on)
+        # the result itself answers nothing: no ACK expected on it, even
+        # when computed in one batch with the sent invoice
+        self.env["edi.exchange.record"].invalidate_cache(["ack_expected"])
+        records = self.exchange | child
+        self.assertEqual(records.mapped("ack_expected"), [True, False])
+
     def test_credit_note_not_polled(self):
         """A sent credit note travels through the same exchange type, but
-        the CCF checks invoices only: a nota is never polled."""
+        the CCF checks invoices only: a nota is never polled, and its
+        sent record expects no check result."""
         self.env["spms.invoice.check"].create(
             {"move_id": self.invoice.id, "check_state": "without_errors"}
         )
@@ -476,7 +508,7 @@ class TestSpmsCheckTransport(SavepointCase):
             }
         )
         credit_note.action_post()
-        self.backend.create_record(
+        sent_note = self.backend.create_record(
             "l10n_pt_spms",
             {
                 "edi_exchange_state": "output_sent_and_processed",
@@ -484,6 +516,7 @@ class TestSpmsCheckTransport(SavepointCase):
                 "res_id": credit_note.id,
             },
         )
+        self.assertFalse(sent_note.ack_expected)
         self.assertEqual(self._queued_polls(), 0)
 
     def test_output_sent_also_polled(self):
