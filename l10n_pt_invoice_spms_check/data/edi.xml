@@ -11,4 +11,11 @@
         <field name="exchange_filename_pattern">{record_name}--{dt}</field>
         <field name="exchange_file_ext">xml</field>
     </record>
+    <!-- The check result is the answer the CCF owes for every sent
+         invoice, and edi_oca models such an expected answer as the ACK
+         of the exchange. l10n_pt_invoice_spms does not set the field on
+         its sending type, so its own updates leave this value in place. -->
+    <record id="l10n_pt_invoice_spms.spms_exchange_type" model="edi.exchange.type">
+        <field name="ack_type_id" ref="spms_check_exchange_type" />
+    </record>
 </odoo>
