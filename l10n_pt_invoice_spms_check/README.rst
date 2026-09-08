@@ -65,16 +65,16 @@ Configuration
   them and with the generated credit and debit notes.
 - The polling scheduled action (*SPMS: get conference results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
-  runs hourly out of the box. It only acts on invoices already sent to
-  SPMS that still have no definitive check result, with each company's
-  own SPMS credentials, so a database where nothing was sent makes no
-  calls. Each invoice is asked in its own queue job: a transport failure
-  — or the CCF answering that its service is unavailable (999) — is
-  retried by the job itself; when the retries run out the job fails and
-  stays visible under *Queue → Jobs*, and the next pass re-activates
-  that same job rather than queueing another, so an invoice never has
-  more than one poll job. To pause the polling, deactivate the scheduled
-  action — never uninstall the module just to stop the calls.
+  runs hourly out of the box. It creates the expected result record of
+  every posted invoice sent to SPMS that has no definitive check result
+  yet, and asks the CCF about each waiting record in its own queue job,
+  with each company's own SPMS credentials, so a database where nothing
+  was sent makes no calls. Every answer of the CCF — including a
+  transport failure — is written on the result record; a job fails only
+  on a software failure, stays visible under *Queue → Jobs*, and the
+  next pass re-activates that same job rather than queueing another. To
+  pause the polling, deactivate the scheduled action — never uninstall
+  the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
   *Technical Settings* users; 0.01 by default): the largest difference,
   taxes included, between the official value and the draft credit or
@@ -91,15 +91,18 @@ Configuration
 Usage
 =====
 
-Results arrive on their own: an hourly scheduled action (*SPMS: get
-conference results from the CCF*) queues one job per posted invoice sent
-to SPMS that has no definitive check result yet, and each job asks the
-CCF web service about its invoice (*Queue → Jobs* lists them). A fetched
-check document is stored as an input exchange record on the SPMS EDI
-backend and processed from there. When the CCF answers that it does not
-know an invoice that was sent successfully (return code 301), its result
-is created and held in *Error*, with the incident explained on the
-result form, until a definitive check result supersedes it.
+Results arrive on their own: the EDI record of every invoice sent to
+SPMS expects the check result as its answer (its ACK). An hourly
+scheduled action (*SPMS: get conference results from the CCF*) creates
+that result record — *Waiting to be received* — at its first pass after
+the sending and asks the CCF about it every hour, in its own queue job
+(*Queue → Jobs* lists them). *Not checked yet* (302) keeps it waiting; a
+check document is received on it and processed from there. The CCF being
+unavailable (999), a transport failure, an unknown answer or the CCF not
+recognising the invoice (301) put the record in *Error on reception*
+with the reason, and it is asked again at the next pass until the CCF
+answers; *Retry* on it asks again at the next pass. A job fails only on
+a software failure.
 
 Every invoice sent to SPMS gets its check result attached the moment the
 check resolves it (one result per invoice — the first definitive answer
@@ -170,11 +173,10 @@ adopts or decides — a human fixes accounting first.
 Known issues / Roadmap
 ======================
 
-- The polling queue has no cap or back-off: an invoice that never gets a
-  definitive answer (e.g. a permanent 301 incident) is retried every
-  pass, forever. Harmless at the current volumes — one read-only call
-  per invoice and pass — but revisit if the stuck tail ever grows enough
-  to matter.
+- The polling queue has no cap or back-off: an invoice the CCF never
+  answers (a permanent 301) is asked again every pass, forever. Harmless
+  at the current volumes — one read-only call per invoice and pass — but
+  revisit if the stuck tail ever grows enough to matter.
 - A prescription the parser cannot match to an original invoice line
   blocks the generation of its invoice, with no manual exclusion lever:
   revisit if a real case ever needs one.

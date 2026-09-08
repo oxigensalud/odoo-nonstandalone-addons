@@ -8,15 +8,13 @@ from unittest import mock
 import requests
 from zeep.transports import Transport
 
-from odoo.tests.common import SavepointCase
-from odoo.tools import mute_logger
-
-from odoo.addons.queue_job.exception import RetryableJobError
+from odoo.addons.component.tests.common import SavepointComponentCase
 from odoo.addons.queue_job.job import Job
 from odoo.addons.queue_job.tests.common import trap_jobs
 
 MODULE = "odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record"
 CLIENT_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_client"
+FETCH_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_fetch"
 TRANSPORT_PATH = MODULE + ".Transport"
 SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/"
 WSSE_NS = (
@@ -35,6 +33,7 @@ LATIN1_XML = (
     "<ApplicationResponse><Mensagem>Prescrição inválida</Mensagem>"
     "</ApplicationResponse>"
 ).encode("iso-8859-1")
+NOT_CHECKED_YET = "302 - Factura ainda não conferida."
 
 
 def _result_response(inner):
@@ -50,6 +49,14 @@ def _result_response(inner):
             "</ns2:obterResultadoConferenciaResponse>"
             "</soapenv:Body></soapenv:Envelope>"
         ).encode(),
+    )
+
+
+def _document_response(payload):
+    """A check answer carrying the conference document, base64 as the
+    service encodes it."""
+    return _result_response(
+        "<documento>%s</documento>" % base64.b64encode(payload).decode()
     )
 
 
@@ -109,8 +116,13 @@ class _FakeTransport(Transport):
         return response
 
 
-class TestSpmsCheckTransport(SavepointCase):
-    """Exercise the polling cron against a mocked CCF web service."""
+class TestSpmsCheckTransport(SavepointComponentCase):
+    """Exercise the polling cron against a mocked CCF web service.
+
+    SavepointComponentCase builds the components registry itself: a
+    received document is processed by the parser component right away,
+    so the class must not depend on another test class having loaded
+    the components before it."""
 
     @classmethod
     def setUpClass(cls):
@@ -203,13 +215,17 @@ class TestSpmsCheckTransport(SavepointCase):
             [("move_id", "=", self.invoice.id)]
         )
 
+    def _settle(self):
+        """A definitive check result on the invoice, out of band."""
+        return self.env["spms.invoice.check"].create(
+            {"move_id": self.invoice.id, "check_state": "without_errors"}
+        )
+
     def test_request_carries_the_resolution_key(self):
         # the CCF resolves an invoice by (numeroFactura, dataFactura),
         # wrapped in <factura> — the exact shape production submits
         # with, signed with the credentials of the invoice's company
-        transport = _FakeTransport(
-            _fault_response("302 - Factura ainda não conferida.")
-        )
+        transport = _FakeTransport(_fault_response(NOT_CHECKED_YET))
         self._run_cron(transport)
         self.assertEqual(len(transport.envelopes), 1)
         envelope = transport.envelopes[0]
@@ -230,35 +246,72 @@ class TestSpmsCheckTransport(SavepointCase):
             ],
         )
 
-    def test_not_checked_yet_leaves_no_trace(self):
+    def test_result_record_expected_from_the_first_pass(self):
+        # the first pass after the sending creates the result record,
+        # waiting and empty, as the ACK the sent invoice expects: the
+        # sent record knows what it is waiting for from the start
+        transport = _FakeTransport(_fault_response(NOT_CHECKED_YET))
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(len(child), 1)
+        self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertEqual(child.parent_id, self.exchange)
+        self.assertFalse(child.exchange_file)
+        self.assertFalse(child.exchange_error)
+        self.assertEqual(self.exchange.ack_exchange_id, child)
+        self.assertTrue(self.exchange.ack_expected)
+        self.assertFalse(self._results())
+        self.assertEqual(len(transport.envelopes), 1)
+
+    def test_not_checked_yet_keeps_waiting(self):
+        # "not checked yet" is the normal answer for weeks: the record
+        # keeps waiting, asked again at every pass, nothing else written
         transport = _FakeTransport(
-            _fault_response("302 - Factura ainda não conferida.")
+            _fault_response(NOT_CHECKED_YET), _fault_response(NOT_CHECKED_YET)
         )
         self._run_cron(transport)
-        self.assertEqual(len(transport.envelopes), 1)
-        self.assertFalse(self._children())
+        self._run_cron(transport)
+        self.assertEqual(len(transport.envelopes), 2)
+        child = self._children()
+        self.assertEqual(len(child), 1)
+        self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertFalse(child.exchange_file)
+        self.assertFalse(child.exchange_error)
         self.assertFalse(self._results())
 
-    def test_service_illness_retries_the_job(self):
+    def test_service_illness_is_an_error_on_reception(self):
         # the real July-2026 outage answered this exact fault for weeks:
-        # retried like a timeout, and once the retries run out the job
-        # fails in the queue — nothing is written on the invoice, which
-        # is honestly not checked yet
-        transport = _FakeTransport(_fault_response("999 - Erro desconhecido."))
-        with self.assertRaises(RetryableJobError):
-            self._run_cron(transport)
-        self.assertFalse(self._children())
+        # the record says so, with the reason, and is asked again at the
+        # next pass — the job itself stays green; the next "not checked
+        # yet" clears the error by itself
+        transport = _FakeTransport(
+            _fault_response("999 - Erro desconhecido."),
+            _fault_response(NOT_CHECKED_YET),
+        )
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("999", child.exchange_error)
+        self.assertFalse(child.exchange_error_traceback)
         self.assertFalse(self._results())
+        self._run_cron(transport)
+        self.assertEqual(len(transport.envelopes), 2)
+        self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertFalse(child.exchange_error)
+        self.assertFalse(child.exchange_error_traceback)
 
-    def test_timeout_retries_the_job(self):
-        # transport trouble is the job's own business: retried, no trace
+    def test_timeout_is_an_error_on_reception(self):
+        # transport trouble is written on the record like any other
+        # answer, the only one that keeps its traceback
         transport = _FakeTransport(side_effect=requests.Timeout("no answer"))
-        with self.assertRaises(RetryableJobError):
-            self._run_cron(transport)
-        self.assertFalse(self._children())
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("could not be reached", child.exchange_error)
+        self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
-    def test_malformed_answer_retries_the_job(self):
+    def test_malformed_answer_is_an_error_on_reception(self):
         # an outage page instead of SOAP is transport trouble too,
         # whether it is not XML at all or an error page without any
         # CCF verdict in it
@@ -269,22 +322,24 @@ class TestSpmsCheckTransport(SavepointCase):
         ):
             with self.subTest(answer=answer):
                 transport = _FakeTransport(answer)
-                with self.assertRaises(RetryableJobError):
-                    self._run_cron(transport)
-                self.assertFalse(self._children())
+                self._run_cron(transport)
+                child = self._children()
+                self.assertEqual(child.edi_exchange_state, "input_receive_error")
+                self.assertIn("could not be reached", child.exchange_error)
                 self.assertFalse(self._results())
 
-    def test_answer_off_the_contract_retries_the_job(self):
+    def test_answer_off_the_contract_is_an_error_on_reception(self):
         # an answer zeep cannot map on the WSDL is a change of contract,
-        # not a quiet "no result yet": retried like a timeout, visible
-        # in the queue once the retries run out
+        # not a quiet "no result yet"
         transport = _FakeTransport(_result_response("<somethingElse>x</somethingElse>"))
-        with self.assertRaises(RetryableJobError):
-            self._run_cron(transport)
-        self.assertFalse(self._children())
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("could not be reached", child.exchange_error)
+        self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
-    def test_unrecognised_answer_warns_and_leaves_no_trace(self):
+    def test_answer_without_document_is_an_error_on_reception(self):
         # an answer the WSDL allows but that carries neither a document
         # nor a fault code must never pass for a quiet "no result yet"
         for answer in (
@@ -293,44 +348,49 @@ class TestSpmsCheckTransport(SavepointCase):
         ):
             with self.subTest(answer=answer):
                 transport = _FakeTransport(answer)
-                with self.assertLogs(MODULE, level="WARNING") as capture:
-                    self._run_cron(transport)
-                self.assertTrue(
-                    any("unrecognised answer" in line for line in capture.output)
-                )
-                self.assertFalse(self._children())
+                self._run_cron(transport)
+                child = self._children()
+                self.assertEqual(child.edi_exchange_state, "input_receive_error")
+                self.assertIn("without a check document", child.exchange_error)
+                self.assertFalse(child.exchange_error_traceback)
                 self.assertFalse(self._results())
 
-    def test_unknown_invoice_flags_incident(self):
-        transport = _FakeTransport(_fault_response("301 - Factura Inexistente."))
-        self._run_cron(transport)
-        self.assertFalse(self._children())
-        result = self._results()
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result.state, "error")
-        self.assertEqual(result.ws_incident_code, "301")
-        self.assertIn("301", result.error_message)
-        self.assertIn(self.invoice.name, result.error_message)
-        transport = _FakeTransport(_fault_response("301 - Factura Inexistente."))
-        self._run_cron(transport)
-        self.assertEqual(len(self._results()), 1)
-
-    def test_definitive_result_supersedes_incident(self):
-        transport = _FakeTransport(_fault_response("301 - Factura Inexistente."))
-        self._run_cron(transport)
-        result = self._results()
-        self.assertEqual(result.state, "error")
-        self.assertTrue(result.error_message)
-        result.write({"check_state": "without_errors"})
-        self.assertEqual(result.state, "zero_official")
-        self.assertFalse(result.error_message)
-
-    @mute_logger(MODULE)
-    def test_document_creates_child_input(self):
-        document = base64.b64encode(DOCUMENT_XML.encode()).decode()
+    def test_unknown_invoice_is_an_error_on_reception(self):
+        # "factura inexistente" on an invoice sent successfully is a
+        # condition of the CCF written where the user looks, and the
+        # invoice keeps being asked for until the CCF answers
         transport = _FakeTransport(
-            _result_response("<documento>%s</documento>" % document)
+            _fault_response("301 - Factura Inexistente."),
+            _document_response(DOCUMENT_XML.encode()),
         )
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(len(child), 1)
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("301", child.exchange_error)
+        self.assertIn(self.invoice.name, child.exchange_error)
+        self.assertFalse(child.exchange_error_traceback)
+        self.assertFalse(self._results())
+        self._run_cron(transport)
+        self.assertEqual(len(transport.envelopes), 2)
+        self.assertEqual(self._children(), child)
+        self.assertEqual(child._get_file_content(), DOCUMENT_XML)
+        self.assertIn(
+            child.edi_exchange_state, ["input_processed", "input_processed_error"]
+        )
+
+    def test_unexpected_return_code_is_an_error_on_reception(self):
+        # a return code outside the known ones is not silently ignored
+        transport = _FakeTransport(_fault_response("303 - Sem resultado."))
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("303", child.exchange_error)
+        self.assertFalse(child.exchange_error_traceback)
+        self.assertFalse(self._results())
+
+    def test_document_received_and_processed(self):
+        transport = _FakeTransport(_document_response(DOCUMENT_XML.encode()))
         self._run_cron(transport)
         child = self._children()
         self.assertEqual(len(child), 1)
@@ -341,13 +401,21 @@ class TestSpmsCheckTransport(SavepointCase):
             child.edi_exchange_state,
             ["input_received", "input_processed", "input_processed_error"],
         )
+        # the reception is the arrival of the ACK the sent invoice expects
+        self.assertTrue(child.exchanged_on)
+        self.assertEqual(self.exchange.ack_received_on, child.exchanged_on)
+        # one message on the invoice for the reception itself
+        received = self.invoice.message_ids.filtered(
+            lambda message: child.identifier in (message.body or "")
+            and "received successfully" in (message.body or "")
+        )
+        self.assertEqual(len(received), 1)
         # while the fetched document waits for processing, no re-poll
         transport = _FakeTransport()
         self._run_cron(transport)
         self.assertFalse(transport.envelopes)
-        self.assertEqual(len(self._children()), 1)
+        self.assertEqual(self._children(), child)
 
-    @mute_logger(MODULE)
     def test_wrapped_base64_document_is_decoded(self):
         # the live service line-wraps the base64 payload (XSD
         # base64Binary allows whitespace): a real answer probed on
@@ -362,39 +430,37 @@ class TestSpmsCheckTransport(SavepointCase):
         self.assertEqual(len(child), 1)
         self.assertEqual(child._get_file_content(), DOCUMENT_XML)
 
-    @mute_logger(MODULE)
     def test_latin1_document_stored_verbatim(self):
-        document = base64.b64encode(LATIN1_XML).decode()
-        transport = _FakeTransport(
-            _result_response("<documento>%s</documento>" % document)
-        )
+        transport = _FakeTransport(_document_response(LATIN1_XML))
         self._run_cron(transport)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(base64.b64decode(child.exchange_file), LATIN1_XML)
 
     def test_definitive_result_not_polled(self):
-        self.env["spms.invoice.check"].create(
-            {"move_id": self.invoice.id, "check_state": "without_errors"}
-        )
+        self._settle()
         self.assertEqual(self._queued_polls(), 0)
+        self.assertFalse(self._children())
 
     def test_cancelled_invoice_not_polled(self):
         self.invoice.button_cancel()
         self.assertEqual(self._queued_polls(), 0)
+        self.assertFalse(self._children())
 
     def test_cron_queues_one_poll_per_invoice(self):
         # the scheduled action never calls the CCF itself: one job per
-        # pending invoice, not repeated while the previous one is pending
+        # waiting result, not repeated while the previous one is pending
         with mock.patch(CLIENT_PATH) as factory:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
         factory.assert_not_called()
+        child = self._children()
+        self.assertEqual(len(child), 1)
         jobs = self.env["queue.job"].search(
             [("method_name", "=", "action_l10n_pt_spms_check_poll")]
         )
         self.assertEqual(len(jobs), 1)
-        self.assertEqual(jobs.record_ids, [self.exchange.id])
+        self.assertEqual(jobs.record_ids, [child.id])
         self.assertTrue(jobs.identity_key)
 
     def _fail_queued_poll(self):
@@ -415,8 +481,8 @@ class TestSpmsCheckTransport(SavepointCase):
         return record
 
     def test_failed_poll_is_requeued_not_duplicated(self):
-        # a poll that ran out of retries is final for queue_job: the
-        # next pass re-activates that job instead of queueing a second
+        # a poll that failed is final for queue_job: the next pass
+        # re-activates that job instead of queueing a second
         record = self._fail_queued_poll()
         with mock.patch(CLIENT_PATH) as factory:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_check_update()
@@ -431,20 +497,19 @@ class TestSpmsCheckTransport(SavepointCase):
     def test_failed_poll_of_settled_invoice_left_alone(self):
         # the failed job of an invoice checked meanwhile is not revived
         record = self._fail_queued_poll()
-        self.env["spms.invoice.check"].create(
-            {"move_id": self.invoice.id, "check_state": "without_errors"}
-        )
+        self._settle()
         self.assertEqual(self._queued_polls(), 0)
         self.assertEqual(record.state, "failed")
 
     def test_job_skips_invoice_settled_meanwhile(self):
         # a result may land between queueing and running: the job must
         # not ask the CCF again
-        self.env["spms.invoice.check"].create(
-            {"move_id": self.invoice.id, "check_state": "without_errors"}
+        child = self.exchange.exchange_create_ack_record(
+            edi_exchange_state="input_pending"
         )
+        self._settle()
         with mock.patch(CLIENT_PATH) as factory:
-            self.exchange.action_l10n_pt_spms_check_poll()
+            child.action_l10n_pt_spms_check_poll()
         factory.assert_not_called()
 
     def test_check_result_is_the_ack_of_the_sent_invoice(self):
@@ -480,11 +545,9 @@ class TestSpmsCheckTransport(SavepointCase):
 
     def test_credit_note_not_polled(self):
         """A sent credit note travels through the same exchange type, but
-        the CCF checks invoices only: a nota is never polled, and its
-        sent record expects no check result."""
-        self.env["spms.invoice.check"].create(
-            {"move_id": self.invoice.id, "check_state": "without_errors"}
-        )
+        the CCF checks invoices only: a nota is never polled, its sent
+        record expects no check result and gets no result record."""
+        self._settle()
         credit_note = self.env["account.move"].create(
             {
                 "name": "NC TEST/00001",
@@ -518,14 +581,38 @@ class TestSpmsCheckTransport(SavepointCase):
         )
         self.assertFalse(sent_note.ack_expected)
         self.assertEqual(self._queued_polls(), 0)
+        self.assertFalse(sent_note.related_exchange_ids)
 
     def test_output_sent_also_polled(self):
         self.exchange.edi_exchange_state = "output_sent"
-        transport = _FakeTransport(
-            _fault_response("302 - Factura ainda não conferida.")
-        )
+        transport = _FakeTransport(_fault_response(NOT_CHECKED_YET))
         self._run_cron(transport)
         self.assertEqual(len(transport.envelopes), 1)
+
+    def test_generic_input_sync_leaves_the_result_records_alone(self):
+        # a waiting result has no receive component: the hourly input
+        # sync of edi_oca must not pick it up, the module's own
+        # scheduled action asks the CCF instead
+        self._run_cron(_FakeTransport(_fault_response(NOT_CHECKED_YET)))
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertFalse(child.exchange_file)
+        pending = self.env["edi.exchange.record"].search(
+            self.backend._input_pending_records_domain()
+        )
+        self.assertNotIn(child, pending)
+
+    def test_unexpected_failure_fails_the_job(self):
+        # a software failure is the only thing that turns a job red,
+        # and it leaves the record exactly as it was
+        with mock.patch(FETCH_PATH, side_effect=RuntimeError("a bug")):
+            with self.assertRaises(RuntimeError):
+                self._run_cron(_FakeTransport())
+        child = self._children()
+        self.assertEqual(len(child), 1)
+        self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertFalse(child.exchange_error)
+        self.assertFalse(child.exchange_error_traceback)
 
     def test_cron_ships_active(self):
         # standard polling pattern: always on, the empty work queue is the gate
