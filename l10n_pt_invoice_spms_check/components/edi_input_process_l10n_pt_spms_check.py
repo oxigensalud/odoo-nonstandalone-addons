@@ -107,7 +107,6 @@ class EdiInputProcessL10nPtSpmsCheck(Component):
             "completeness_warning": self._completeness_warning(
                 root, error_count, problems
             ),
-            "ws_incident_code": False,
             "generation_error": False,
         }
         result = self._store_result(move, result_vals, lines, errors)

@@ -16,7 +16,6 @@
                 <field name="check_state" />
                 <field name="document_date" optional="hide" />
                 <field name="fetch_date" optional="hide" />
-                <field name="ws_incident_code" optional="hide" />
                 <field name="error_count" />
                 <field name="credit_official" />
                 <field name="note_move_id" optional="hide" />
@@ -86,10 +85,6 @@
                             <field name="check_state" />
                             <field name="document_date" />
                             <field name="fetch_date" />
-                            <field
-                                name="ws_incident_code"
-                                attrs="{'invisible': [('ws_incident_code', '=', False)]}"
-                            />
                         </group>
                     </group>
                     <!-- one concept per row, one tax version per column: the
@@ -163,12 +158,6 @@
                     name="filter_zero_official"
                     string="Zero Official Value"
                     domain="[('state', '=', 'zero_official')]"
-                />
-                <separator />
-                <filter
-                    name="filter_ws_incident"
-                    string="WS Incident"
-                    domain="[('ws_incident_code', '!=', False)]"
                 />
                 <separator />
                 <filter

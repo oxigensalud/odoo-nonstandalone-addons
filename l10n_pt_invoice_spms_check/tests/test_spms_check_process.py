@@ -356,8 +356,8 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertFalse(result.generation_error)
 
     def test_result_without_verdict_holds_in_error(self):
-        # a result with no verdict and no incident must never close
-        # silently (out-of-band creations: imports, future code)
+        # a result with no verdict must never close silently
+        # (out-of-band creations: imports, future code)
         result = self.env["spms.invoice.check"].create({"move_id": self.invoice.id})
         self.assertEqual(result.state, "error")
         self.assertIn("recognised outcome", result.error_message)
@@ -484,15 +484,15 @@ class TestSpmsCheckProcess(SavepointComponentCase):
         self.assertEqual(result.error_count, 1)
         self.assertEqual(len(self._attachments(result)), 1)
 
-    def test_definitive_result_supersedes_incident(self):
-        self.env["spms.invoice.check"].create(
-            {"move_id": self.invoice.id, "ws_incident_code": "301"}
-        )
+    def test_document_supersedes_bare_result(self):
+        # a bare result created out of band — no document, no verdict —
+        # is held in error and named after its invoice until the check
+        # document arrives and fills it
+        self.env["spms.invoice.check"].create({"move_id": self.invoice.id})
         self.assertEqual(self._result().state, "error")
         self.assertEqual(self._result().display_name, self.invoice.display_name)
         self._process(_document(claims=_prestacao("TESTP001", errors=_erro("C011"))))
         result = self._result()
-        self.assertFalse(result.ws_incident_code)
         self.assertFalse(result.error_message)
         self.assertEqual(result.name, "999999999")
         self.assertEqual(result.state, "done")
