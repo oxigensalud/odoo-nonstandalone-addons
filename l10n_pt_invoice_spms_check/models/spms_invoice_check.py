@@ -27,8 +27,7 @@ class SpmsInvoiceCheck(models.Model):
         string="Number",
         readonly=True,
         copy=False,
-        help="Number the CCF gave the check document (its ApplicationResponse "
-        "ID). Empty while the result only holds a web-service incident.",
+        help="Number the CCF gave the check document (its ApplicationResponse ID).",
     )
     document_date = fields.Date(
         string="Document Date",
@@ -190,18 +189,9 @@ class SpmsInvoiceCheck(models.Model):
         string="Error Message",
         compute="_compute_error_message",
         help="Why the result is held in error: a live credit or debit note "
-        "this module did not create, a web-service incident, or a check "
-        "outcome this module does not recognise. Computed live and never "
-        "stored, so fixing the cause clears it on its own.",
-    )
-    ws_incident_code = fields.Char(
-        string="WS Incident Code",
-        readonly=True,
-        copy=False,
-        help="Return code of a web-service incident that needs "
-        "human review: the CCF does not recognise an invoice that was "
-        "sent successfully (301). Superseded by the arrival of a "
-        "definitive check result.",
+        "this module did not create or a check outcome this module does not "
+        "recognise. Computed live and never stored, so fixing the cause "
+        "clears it on its own.",
     )
     completeness_warning = fields.Text(
         string="Completeness Warning",
@@ -273,8 +263,8 @@ class SpmsInvoiceCheck(models.Model):
             )
 
     def name_get(self):
-        # a result that only holds a web-service incident has no document
-        # yet: name it after its invoice so the user still knows what it is
+        # a result created out of band has no document, hence no number:
+        # name it after its invoice so the user still knows what it is
         return [(rec.id, rec.name or rec.move_id.display_name) for rec in self]
 
     @api.model_create_multi
@@ -286,8 +276,7 @@ class SpmsInvoiceCheck(models.Model):
     def write(self, vals):
         official_touched = any(field in vals for field in OFFICIAL_VALUE_FIELDS)
         state_touched = official_touched or any(
-            field in vals
-            for field in ("check_state", "ws_incident_code", "generation_error")
+            field in vals for field in ("check_state", "generation_error")
         )
         if official_touched:
             for rec in self:
@@ -356,7 +345,6 @@ class SpmsInvoiceCheck(models.Model):
         "move_id.reversal_move_id.state",
         "move_id.debit_note_ids.state",
         "note_move_id",
-        "ws_incident_code",
         "check_state",
         "generation_error",
         "credit_official",
@@ -375,15 +363,6 @@ class SpmsInvoiceCheck(models.Model):
                 }
             elif rec.generation_error:
                 rec.error_message = rec.generation_error
-            elif rec.ws_incident_code and not rec.check_state:
-                rec.error_message = _(
-                    "The CCF answered %(code)s to the check-result request: "
-                    "it does not recognise invoice %(invoice)s even though "
-                    "it was sent successfully."
-                ) % {
-                    "code": rec.ws_incident_code,
-                    "invoice": rec.move_id.display_name,
-                }
             elif rec._is_unrecognized_outcome():
                 rec.error_message = _(
                     "The check result of %(invoice)s does not match any "
@@ -430,15 +409,9 @@ class SpmsInvoiceCheck(models.Model):
         is kept) so generation stays reachable. An official value of zero
         closes the result as 'zero_official': legitimately settled,
         nothing to regularize — the
-        'Conferida Sem Erros' results land here by construction. A
-        web-service incident (301 on a sent invoice) holds the result in
-        'error' for human review until a definitive check result
-        arrives.
+        'Conferida Sem Erros' results land here by construction.
         """
         for rec in self:
-            if rec.ws_incident_code and not rec.check_state:
-                rec.state = "error"
-                continue
             foreign_notes = rec._get_foreign_notes()
             own_note_alive = rec.note_move_id and rec.note_move_id.state != "cancel"
             if own_note_alive and not foreign_notes:

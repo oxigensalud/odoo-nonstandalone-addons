@@ -620,13 +620,10 @@ msgstr "Número del lot al qual pertany la prestació (Numero)."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__name
-msgid ""
-"Number the CCF gave the check document (its ApplicationResponse ID). Empty "
-"while the result only holds a web-service incident."
+msgid "Number the CCF gave the check document (its ApplicationResponse ID)."
 msgstr ""
 "Número que el CCF va donar al document de conferència (el seu "
-"ApplicationResponse ID). Buit mentre el resultat només contingui una "
-"incidència del servei web."
+"ApplicationResponse ID)."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__credit_official
@@ -759,17 +756,6 @@ msgid "Responsible"
 msgstr "Responsable"
 
 #. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_incident_code
-msgid ""
-"Return code of a web-service incident that needs human review: the CCF does "
-"not recognise an invoice that was sent successfully (301). Superseded by the"
-" arrival of a definitive check result."
-msgstr ""
-"Codi de retorn d'una incidència del servei web que necessita revisió humana:"
-" el CCF no reconeix una factura que es va enviar correctament (301). Queda "
-"superat amb l'arribada d'un resultat de conferència definitiu."
-
-#. module: l10n_pt_invoice_spms_check
 #: model:ir.module.category,name:l10n_pt_invoice_spms_check.module_category_spms
 #: model:ir.ui.menu,name:l10n_pt_invoice_spms_check.spms_customers_menu
 msgid "SPMS"
@@ -869,16 +855,6 @@ msgstr "Sense impostos"
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_form
 msgid "Tax Included"
 msgstr "Amb impostos"
-
-#. module: l10n_pt_invoice_spms_check
-#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
-#, python-format
-msgid ""
-"The CCF answered %(code)s to the check-result request: it does not recognise"
-" invoice %(invoice)s even though it was sent successfully."
-msgstr ""
-"El CCF ha respost %(code)s a la petició del resultat de conferència: no "
-"reconeix la factura %(invoice)s tot i que es va enviar correctament."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
@@ -1137,16 +1113,6 @@ msgstr ""
 " a 0)."
 
 #. module: l10n_pt_invoice_spms_check
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
-msgid "WS Incident"
-msgstr "Incidència WS"
-
-#. module: l10n_pt_invoice_spms_check
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__ws_incident_code
-msgid "WS Incident Code"
-msgstr "Codi d'incidència WS"
-
-#. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__fetch_date
 msgid "When the definitive check document was fetched from the web service."
 msgstr ""
@@ -1167,14 +1133,13 @@ msgstr ""
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_message
 msgid ""
 "Why the result is held in error: a live credit or debit note this module did"
-" not create, a web-service incident, or a check outcome this module does not"
-" recognise. Computed live and never stored, so fixing the cause clears it on"
-" its own."
+" not create or a check outcome this module does not recognise. Computed live"
+" and never stored, so fixing the cause clears it on its own."
 msgstr ""
 "Per què el resultat està retingut en error: una nota de crèdit o de dèbit "
-"viva que aquest mòdul no ha creat, una incidència del servei web o un "
-"desenllaç de conferència que aquest mòdul no reconeix. Es calcula en viu i "
-"mai no s'emmagatzema, així que corregir la causa ho neteja per si sol."
+"viva que aquest mòdul no ha creat o un desenllaç de conferència que aquest "
+"mòdul no reconeix. Es calcula en viu i mai no s'emmagatzema, així que "
+"corregir la causa ho neteja per si sol."
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_check.selection__spms_invoice_check__state__zero_official
