@@ -3,17 +3,16 @@
   with them and with the generated credit and debit notes.
 - The polling scheduled action (*SPMS: get conference results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
-  runs hourly out of the box. It only acts on invoices already sent to
-  SPMS that still have no definitive check result, with each company's
-  own SPMS credentials, so a database where nothing was sent makes no
-  calls. Each invoice is asked in its own queue job: a transport
-  failure — or the CCF answering that its service is unavailable
-  (999) — is retried by the job itself; when the retries run out the
-  job fails and stays visible under *Queue → Jobs*, and the next pass
-  re-activates that same job rather than queueing another, so an
-  invoice never has more than one poll job. To pause the polling,
-  deactivate the scheduled action — never uninstall the module just to
-  stop the calls.
+  runs hourly out of the box. It creates the expected result record of
+  every posted invoice sent to SPMS that has no definitive check result
+  yet, and asks the CCF about each waiting record in its own queue job,
+  with each company's own SPMS credentials, so a database where nothing
+  was sent makes no calls. Every answer of the CCF — including a
+  transport failure — is written on the result record; a job fails only
+  on a software failure, stays visible under *Queue → Jobs*, and the
+  next pass re-activates that same job rather than queueing another. To
+  pause the polling, deactivate the scheduled action — never uninstall
+  the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
   *Technical Settings* users; 0.01 by default): the largest difference,
   taxes included, between the official value and the draft credit or

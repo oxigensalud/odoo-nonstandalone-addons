@@ -1,12 +1,15 @@
-Results arrive on their own: an hourly scheduled action (*SPMS: get
-conference results from the CCF*) queues one job per posted invoice
-sent to SPMS that has no definitive check result yet, and each job asks
-the CCF web service about its invoice (*Queue → Jobs* lists them). A
-fetched check document is stored as an input exchange record on the
-SPMS EDI backend and processed from there. When the CCF answers that it
-does not know an invoice that was sent successfully (return code 301),
-its result is created and held in *Error*, with the incident explained
-on the result form, until a definitive check result supersedes it.
+Results arrive on their own: the EDI record of every invoice sent to
+SPMS expects the check result as its answer (its ACK). An hourly
+scheduled action (*SPMS: get conference results from the CCF*) creates
+that result record — *Waiting to be received* — at its first pass after
+the sending and asks the CCF about it every hour, in its own queue job
+(*Queue → Jobs* lists them). *Not checked yet* (302) keeps it waiting; a
+check document is received on it and processed from there. The CCF being
+unavailable (999), a transport failure, an unknown answer or the CCF not
+recognising the invoice (301) put the record in *Error on reception*
+with the reason, and it is asked again at the next pass until the CCF
+answers; *Retry* on it asks again at the next pass. A job fails only on
+a software failure.
 
 Every invoice sent to SPMS gets its check result attached the moment
 the check resolves it (one result per invoice — the first definitive

@@ -883,6 +883,41 @@ msgstr ""
 "reconoce la factura %(invoice)s aunque se envió correctamente."
 
 #. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid "The CCF answered with an unexpected return code: %s."
+msgstr "El CCF ha respondido con un código de retorno inesperado: %s."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid "The CCF answered without a check document or a return code."
+msgstr ""
+"El CCF ha respondido sin documento de conferencia ni código de retorno."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid ""
+"The CCF does not recognise invoice %(invoice)s even though it was sent "
+"successfully (%(answer)s)."
+msgstr ""
+"El CCF no reconoce la factura %(invoice)s aunque se envió correctamente "
+"(%(answer)s)."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid "The CCF web service could not be reached: %s"
+msgstr "No se ha podido contactar con el servicio web del CCF: %s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid "The CCF web service is unavailable (%s)."
+msgstr "El servicio web del CCF no está disponible (%s)."
+
+#. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/components/edi_input_process_l10n_pt_spms_check.py:0
 #, python-format
 msgid ""

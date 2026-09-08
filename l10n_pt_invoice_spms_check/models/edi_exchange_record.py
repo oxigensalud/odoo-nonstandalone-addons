@@ -1,8 +1,8 @@
 # Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-import logging
 import re
+import traceback
 
 import requests
 from zeep import Client
@@ -10,12 +10,8 @@ from zeep.exceptions import Error as ZeepError, Fault
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 
-from odoo import api, models
+from odoo import _, api, models
 from odoo.modules.module import get_resource_path
-
-from odoo.addons.queue_job.exception import RetryableJobError
-
-_logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 60
 
@@ -57,21 +53,24 @@ class EdiExchangeRecord(models.Model):
         )
 
     def _cron_l10n_pt_spms_check_update(self):
-        """Queue the conference check of every sent invoice.
+        """Expect, then ask the CCF for, the check result of every sent
+        invoice.
 
-        FACE-style polling (precedent: l10n_es_facturae_face): the
-        queue is our own sent exchange records whose invoice has no
-        definitive check result yet. The scheduled action only queues
-        one job per invoice, the way edi_oca dispatches its own
-        exchanges: every call to the CCF then runs in its own
-        transaction, so a long backlog is never undone as a whole by
-        the cron time limit, and a failed poll is retried on its own.
-        A poll that ran out of retries is re-activated, not replaced:
-        an invoice never has more than one poll job.
+        FACE-style polling (precedent: l10n_es_facturae_face) on the
+        answer edi_oca already models: the check result is the ACK the
+        sent invoice expects. The first pass after the sending creates
+        the result record, waiting, as the child of the sent record;
+        from then on the waiting result records are the queue. The
+        scheduled action only queues one job per record, the way
+        edi_oca dispatches its own exchanges: every call to the CCF
+        runs in its own transaction, so a long backlog is never undone
+        as a whole by the cron time limit. A poll that ran out of
+        retries is re-activated, not replaced: a result never has more
+        than one poll job.
         """
         backend = self.env.ref("l10n_pt_invoice_spms.spms_backend")
         send_type = self.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
-        exchanges = self.search(
+        sent = self.search(
             [
                 ("backend_id", "=", backend.id),
                 ("type_id", "=", send_type.id),
@@ -83,25 +82,40 @@ class EdiExchangeRecord(models.Model):
                 ("model", "=", "account.move"),
             ]
         )
+        for exchange in sent:
+            if exchange._l10n_pt_spms_check_expected():
+                exchange.exchange_create_ack_record(edi_exchange_state="input_pending")
         failed_polls = self._l10n_pt_spms_check_failed_polls()
-        for exchange in exchanges:
-            if not exchange._l10n_pt_spms_check_pending():
+        results = self.search(
+            [
+                ("backend_id", "=", backend.id),
+                ("type_id.code", "=", "l10n_pt_spms_check"),
+                (
+                    "edi_exchange_state",
+                    "in",
+                    ["input_pending", "input_receive_error"],
+                ),
+                ("model", "=", "account.move"),
+            ]
+        )
+        for result in results:
+            if not result._l10n_pt_spms_check_open():
                 continue
-            failed = failed_polls.get(exchange.id)
+            failed = failed_polls.get(result.id)
             if failed:
                 failed.requeue()
             else:
-                exchange.with_delay().action_l10n_pt_spms_check_poll()
+                result.with_delay().action_l10n_pt_spms_check_poll()
 
     def _l10n_pt_spms_check_failed_polls(self):
-        """The poll jobs that ran out of retries, by exchange record.
+        """The poll jobs that ran out of retries, by result record.
 
         A failed job is final for queue_job: nothing re-runs it, and
         the identity key of a poll job only stops duplicates of a live
         one, so the next pass would queue a second poll of the same
-        invoice and leave the failed one behind. The scheduled action
+        result and leave the failed one behind. The scheduled action
         re-activates that job instead — what the Requeue button does —
-        so an invoice keeps one poll job whatever the CCF answers.
+        so a result keeps one poll job whatever the CCF answers.
         """
         jobs = self.env["queue.job"].search(
             [
@@ -110,61 +124,61 @@ class EdiExchangeRecord(models.Model):
                 ("state", "=", "failed"),
             ]
         )
-        by_exchange = {}
+        by_result = {}
         for job in jobs:
             if len(job.records) != 1:
                 # not queued by the scheduled action, which polls one
-                # invoice per job
+                # result per job
                 continue
             key = job.records.id
-            by_exchange[key] = by_exchange.get(key, jobs.browse()) | job
-        return by_exchange
+            by_result[key] = by_result.get(key, jobs.browse()) | job
+        return by_result
 
-    def _l10n_pt_spms_check_pending(self):
-        """Whether this sent exchange still awaits its check result."""
+    def _l10n_pt_spms_check_expected(self):
+        """Whether this sent record still owes its result record.
+
+        A posted invoice with no definitive check result and no ACK
+        yet: an existing check child, whatever its state, is the ACK,
+        so the first pass backfills every already-sent invoice without
+        duplicating anything.
+        """
         self.ensure_one()
         if not self._l10n_pt_spms_check_checkable():
             return False
         move = self.record
-        if move.state != "posted":
+        return (
+            move.state == "posted"
+            and not any(move.spms_invoice_check_ids.mapped("check_state"))
+            and bool(self.needs_ack())
+        )
+
+    def _l10n_pt_spms_check_open(self):
+        """Whether this result record is still to be asked for: waiting
+        or in error on reception, its invoice posted and not settled."""
+        self.ensure_one()
+        if self.edi_exchange_state not in ("input_pending", "input_receive_error"):
             return False
-        if any(move.spms_invoice_check_ids.mapped("check_state")):
-            return False
-        return not self.search_count(
-            [
-                ("type_id.code", "=", "l10n_pt_spms_check"),
-                ("model", "=", "account.move"),
-                ("res_id", "=", move.id),
-                (
-                    "edi_exchange_state",
-                    "in",
-                    [
-                        "input_received",
-                        "input_processed",
-                        "input_processed_error",
-                    ],
-                ),
-            ]
+        move = self.record
+        return (
+            bool(move)
+            and move.state == "posted"
+            and not any(move.spms_invoice_check_ids.mapped("check_state"))
         )
 
     def action_l10n_pt_spms_check_poll(self):
-        """Ask the CCF for the check result of this sent invoice.
+        """Ask the CCF for the check result this record waits for.
 
-        One queue job per invoice. A transport failure — or the CCF
-        answering that its service is unavailable (999) — raises
-        RetryableJobError so queue_job retries the poll by itself; any
-        other failure, or the retries running out, leaves the job
-        failed, visible in the queue, and the next pass of the
-        scheduled action re-activates it.
+        One queue job per result record. Every answer of the CCF —
+        a transport failure included — is written on the record, where
+        the user looks; the job fails only on a software failure.
         """
         self.ensure_one()
-        if not self._l10n_pt_spms_check_pending():
+        if not self._l10n_pt_spms_check_open():
             # settled between queueing and running
             return
         move = self.record
-        backend = self.env.ref("l10n_pt_invoice_spms.spms_backend")
         client = self._l10n_pt_spms_check_client(move.company_id)
-        self._l10n_pt_spms_check_poll(backend, client, move)
+        self._l10n_pt_spms_check_poll(client, move)
 
     def _l10n_pt_spms_check_client(self, company):
         """One zeep client per job: the WSSE token carries the portal
@@ -188,72 +202,99 @@ class EdiExchangeRecord(models.Model):
             ),
         )
 
-    def _l10n_pt_spms_check_poll(self, backend, client, move):
-        """Fetch and route the CCF answer for one sent invoice."""
+    def _l10n_pt_spms_check_poll(self, client, move):
+        """Fetch the CCF answer for one waiting result and write it on
+        the record: a document is received and processed, "not checked
+        yet" keeps it waiting, anything else is an error on reception
+        with its reason, asked again at the next pass."""
         try:
-            code, document = self._l10n_pt_spms_check_fetch(client, move)
+            code, document, answer = self._l10n_pt_spms_check_fetch(client, move)
         except (requests.RequestException, ZeepError) as err:
             # transport trouble (a timeout, an outage page instead of
-            # SOAP, an answer off the WSDL contract): the job retries by
-            # itself, no need to wait a pass
-            raise RetryableJobError(
-                f"SPMS check of {move.name}: request failed ({err})"
-            ) from err
+            # SOAP, an answer off the WSDL contract): no verdict of the
+            # CCF, and the only error that keeps its traceback
+            self._l10n_pt_spms_check_receive_error(
+                _("The CCF web service could not be reached: %s") % err,
+                traceback.format_exc(),
+            )
+            return
         if document:
-            try:
-                with self.env.cr.savepoint():
-                    child = backend.create_record(
-                        "l10n_pt_spms_check",
-                        {
-                            "edi_exchange_state": "input_received",
-                            "model": self.model,
-                            "res_id": self.res_id,
-                            "parent_id": self.id,
-                        },
-                    )
-                    child._set_file_content(document)
-            except Exception:
-                _logger.exception(
-                    "SPMS check of %s: could not store the result", move.name
-                )
-                return
-            try:
-                with self.env.cr.savepoint():
-                    backend.exchange_process(child)
-            except Exception:
-                _logger.exception(
-                    "SPMS check of %s: result stored but not processed",
-                    move.name,
-                )
-        elif code == "301":
-            with self.env.cr.savepoint():
-                self._l10n_pt_spms_check_flag_incident(move, code)
+            self._l10n_pt_spms_check_receive(document)
         elif code == "302":
-            _logger.debug("SPMS check of %s: no result yet", move.name)
+            self._l10n_pt_spms_check_still_waiting()
+        elif code == "301":
+            self._l10n_pt_spms_check_receive_error(
+                _(
+                    "The CCF does not recognise invoice %(invoice)s even though "
+                    "it was sent successfully (%(answer)s)."
+                )
+                % {"invoice": move.name, "answer": answer}
+            )
         elif code == "999":
             # the CCF's own "service unavailable" answer, seen for weeks
-            # at a time: retried like a timeout, and nothing is written
-            # on the invoice — it is honestly not checked yet
-            raise RetryableJobError(
-                f"SPMS check of {move.name}: the CCF service is unavailable (999)"
+            # at a time
+            self._l10n_pt_spms_check_receive_error(
+                _("The CCF web service is unavailable (%s).") % answer
+            )
+        elif code:
+            self._l10n_pt_spms_check_receive_error(
+                _("The CCF answered with an unexpected return code: %s.") % answer
             )
         else:
-            _logger.warning(
-                "SPMS check of %s: unrecognised answer (return code %s)",
-                move.name,
-                code,
+            self._l10n_pt_spms_check_receive_error(
+                _("The CCF answered without a check document or a return code.")
             )
 
-    def _l10n_pt_spms_check_flag_incident(self, move, code):
-        """Store only the code: the message is composed — and
-        translated — when the result is read."""
-        result = move.spms_invoice_check_ids[:1]
-        if not result:
-            self.env["spms.invoice.check"].create(
-                {"move_id": move.id, "ws_incident_code": code}
+    def _l10n_pt_spms_check_receive(self, document):
+        """Store the check document on the record and process it.
+
+        The record is moved to received by hand — the generic receive
+        of edi_oca has no "not yet" outcome — and edi_oca takes over
+        from there: the state sets exchanged_on (the "ACK received on"
+        of the sent record), one message goes to the invoice's chatter,
+        and exchange_process holds a rejected document in error on the
+        record, with the reason, for Retry. Anything else is a bug: the
+        job fails and the transaction rolls the record back to waiting.
+        """
+        self._set_file_content(document)
+        self.write(
+            {
+                "edi_exchange_state": "input_received",
+                "exchange_error": False,
+                "exchange_error_traceback": False,
+            }
+        )
+        self.notify_action_complete(
+            "receive", message=self._exchange_status_message("receive_ok")
+        )
+        self.backend_id.exchange_process(self)
+
+    def _l10n_pt_spms_check_still_waiting(self):
+        """Not checked yet (302): waiting, the last error cleared.
+
+        A plain 302 on a clean waiting record writes nothing. Retry on
+        a record in error moves it back to waiting but keeps the error
+        text, so the state alone does not tell a clean record apart.
+        """
+        if self.edi_exchange_state != "input_pending" or self.exchange_error:
+            self.write(
+                {
+                    "edi_exchange_state": "input_pending",
+                    "exchange_error": False,
+                    "exchange_error_traceback": False,
+                }
             )
-        elif result.ws_incident_code != code:
-            result.ws_incident_code = code
+
+    def _l10n_pt_spms_check_receive_error(self, message, traceback_txt=False):
+        """Error on reception with its reason: asked again next pass,
+        cleared by the next "not checked yet" or by the document."""
+        self.write(
+            {
+                "edi_exchange_state": "input_receive_error",
+                "exchange_error": message,
+                "exchange_error_traceback": traceback_txt,
+            }
+        )
 
     def _l10n_pt_spms_check_fetch(self, client, move):
         """Ask the CCF for the check result of one invoice.
@@ -277,6 +318,10 @@ class EdiExchangeRecord(models.Model):
         Factura Inexistente."). A fault carrying no code is no verdict
         of the CCF — an outage page, a refusal of the proxy — and is
         left to the caller as transport trouble.
+
+        Returns (code, document, answer): the code and the full
+        faultstring of a coded fault, or the document of a plain
+        answer — None when the answer carries none.
         """
         vat = move.company_id.vat
         if vat and len(vat) >= 11:
@@ -292,11 +337,12 @@ class EdiExchangeRecord(models.Model):
                 }
             )
         except Fault as fault:
-            match = re.match(r"\s*(\d{3})", str(fault))
+            answer = str(fault)
+            match = re.match(r"\s*(\d{3})", answer)
             if not match:
                 raise
-            return match.group(1), None
+            return match.group(1), None, answer
         # zeep unwraps the single <return> element of the answer: the
         # result is the response type itself, or None without <return>
         document = result.documento if result is not None else None
-        return None, document
+        return None, document, None
