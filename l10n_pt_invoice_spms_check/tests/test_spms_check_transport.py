@@ -9,13 +9,17 @@ import requests
 from zeep.transports import Transport
 
 from odoo.addons.component.tests.common import SavepointComponentCase
+from odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record import (
+    ANSWER_EXCERPT,
+    SpmsCheckTransport,
+)
 from odoo.addons.queue_job.job import Job
 from odoo.addons.queue_job.tests.common import trap_jobs
 
 MODULE = "odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record"
 CLIENT_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_client"
 FETCH_PATH = MODULE + ".EdiExchangeRecord._l10n_pt_spms_check_fetch"
-TRANSPORT_PATH = MODULE + ".Transport"
+TRANSPORT_PATH = MODULE + ".SpmsCheckTransport"
 SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/"
 WSSE_NS = (
     "http://docs.oasis-open.org/wss/2004/01/"
@@ -91,7 +95,21 @@ def _fault_response(faultstring):
     )
 
 
-class _FakeTransport(Transport):
+def _empty_body_response():
+    """HTTP 500 with a well-formed envelope and an empty Body, as the
+    live CCF sends when the broker gets nothing from its backend
+    (observed 2026-09-09)."""
+    return (
+        500,
+        (
+            b'<?xml version="1.0" encoding="UTF-8"?>'
+            b'<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/'
+            b'soap/envelope/"><soapenv:Body/></soapenv:Envelope>'
+        ),
+    )
+
+
+class _FakeTransport(SpmsCheckTransport):
     """The wire, canned. The module builds its real zeep client from
     the shipped WSDL and posts its envelope here; back comes the
     status code and body the live service would send. The WSSE
@@ -111,8 +129,12 @@ class _FakeTransport(Transport):
         status_code, content = self.answers.pop(0)
         response = requests.Response()
         response.status_code = status_code
+        response.reason = "Internal Server Error" if status_code == 500 else "OK"
         response.raw = io.BytesIO(content)
         response.headers["Content-Type"] = "text/xml"
+        self.last_status = response.status_code
+        self.last_reason = response.reason
+        self.last_body = content.decode("utf-8", "replace")
         return response
 
 
@@ -307,37 +329,100 @@ class TestSpmsCheckTransport(SavepointComponentCase):
         self._run_cron(transport)
         child = self._children()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
-        self.assertIn("could not be reached", child.exchange_error)
+        self.assertIn("did not answer within 60 seconds", child.exchange_error)
+        self.assertIn("no answer", child.exchange_error)
+        self.assertTrue(child.exchange_error_traceback)
+        self.assertFalse(self._results())
+
+    def test_unreachable_service_is_an_error_on_reception(self):
+        # the host itself out of reach: DNS, refused connection, TLS
+        transport = _FakeTransport(side_effect=requests.ConnectionError("refused"))
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("could not be reached (connection problem)", child.exchange_error)
+        self.assertIn("refused", child.exchange_error)
+        self.assertTrue(child.exchange_error_traceback)
+        self.assertFalse(self._results())
+
+    def test_empty_body_server_error_is_an_error_on_reception(self):
+        # the live shape of September 2026: the message names the server
+        # error, keeps zeep's own words and ends with the answer itself
+        transport = _FakeTransport(_empty_body_response())
+        self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("HTTP 500 Internal Server Error", child.exchange_error)
+        self.assertIn("Unknown fault occured", child.exchange_error)
+        self.assertTrue(
+            child.exchange_error.endswith(_empty_body_response()[1].decode())
+        )
         self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
     def test_malformed_answer_is_an_error_on_reception(self):
         # an outage page instead of SOAP is transport trouble too,
         # whether it is not XML at all or an error page without any
-        # CCF verdict in it
-        for answer in (
-            (200, b"this is not xml"),
-            (503, b"<html><body>Service Unavailable</body></html>"),
-            (500, b""),
+        # CCF verdict in it: a server error is laid on SPMS, anything
+        # else is only reported as not interpretable
+        for answer, wording in (
+            ((200, b"this is not xml"), "could not be interpreted (HTTP 200 OK)"),
+            (
+                (503, b"<html><body>Service Unavailable</body></html>"),
+                "server error (HTTP 503",
+            ),
+            ((500, b""), "server error (HTTP 500 Internal Server Error)"),
         ):
             with self.subTest(answer=answer):
                 transport = _FakeTransport(answer)
                 self._run_cron(transport)
                 child = self._children()
                 self.assertEqual(child.edi_exchange_state, "input_receive_error")
-                self.assertIn("could not be reached", child.exchange_error)
+                self.assertIn(wording, child.exchange_error)
                 self.assertFalse(self._results())
 
     def test_answer_off_the_contract_is_an_error_on_reception(self):
         # an answer zeep cannot map on the WSDL is a change of contract,
-        # not a quiet "no result yet"
+        # not a quiet "no result yet" — and it came over HTTP 200, so
+        # it is not laid on SPMS
         transport = _FakeTransport(_result_response("<somethingElse>x</somethingElse>"))
         self._run_cron(transport)
         child = self._children()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
-        self.assertIn("could not be reached", child.exchange_error)
+        self.assertIn("could not be interpreted (HTTP 200 OK)", child.exchange_error)
+        self.assertNotIn("SPMS", child.exchange_error)
         self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
+
+    def test_long_unusable_answer_is_cut_in_the_message(self):
+        # the answer kept in the message is bounded: a whole conference
+        # document can never land in the error field
+        status_code, content = _result_response(
+            "<somethingElse>%s</somethingElse>" % ("x" * 3000)
+        )
+        transport = _FakeTransport((status_code, content))
+        self._run_cron(transport)
+        child = self._children()
+        body = content.decode()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertTrue(child.exchange_error.endswith(body[:ANSWER_EXCERPT] + " […]"))
+        self.assertNotIn(body, child.exchange_error)
+        self.assertFalse(self._results())
+
+    def test_transport_records_the_http_status(self):
+        # the real transport, which the fake bypasses: the status, the
+        # reason and the body of the last answer stay on it
+        transport = SpmsCheckTransport()
+        response = requests.Response()
+        response.status_code = 500
+        response.reason = "Internal Server Error"
+        response._content = b"<soapenv:Envelope/>"
+        with mock.patch.object(Transport, "post", return_value=response):
+            returned = transport.post("http://example.invalid", "<x/>", {})
+        self.assertIs(returned, response)
+        self.assertEqual(transport.last_status, 500)
+        self.assertEqual(transport.last_reason, "Internal Server Error")
+        self.assertEqual(transport.last_body, "<soapenv:Envelope/>")
 
     def test_answer_without_document_is_an_error_on_reception(self):
         # an answer the WSDL allows but that carries neither a document
