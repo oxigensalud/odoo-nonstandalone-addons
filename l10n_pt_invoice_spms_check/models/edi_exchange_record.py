@@ -14,6 +14,28 @@ from odoo import _, api, models
 from odoo.modules.module import get_resource_path
 
 REQUEST_TIMEOUT = 60
+ANSWER_EXCERPT = 2000
+
+
+class SpmsCheckTransport(Transport):
+    """zeep's transport, remembering the status of the last answer.
+
+    zeep drops it when the answer carries no usable fault, and that
+    number is what tells a server error from an answer we cannot read.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_status = None
+        self.last_reason = None
+        self.last_body = None
+
+    def post(self, address, message, headers):
+        response = super().post(address, message, headers)
+        self.last_status = response.status_code
+        self.last_reason = response.reason
+        self.last_body = response.text
+        return response
 
 
 class EdiExchangeRecord(models.Model):
@@ -197,7 +219,7 @@ class EdiExchangeRecord(models.Model):
         return Client(
             wsdl,
             wsse=UsernameToken(company.spms_username, company.spms_password),
-            transport=Transport(
+            transport=SpmsCheckTransport(
                 timeout=REQUEST_TIMEOUT, operation_timeout=REQUEST_TIMEOUT
             ),
         )
@@ -209,12 +231,61 @@ class EdiExchangeRecord(models.Model):
         with its reason, asked again at the next pass."""
         try:
             code, document, answer = self._l10n_pt_spms_check_fetch(client, move)
-        except (requests.RequestException, ZeepError) as err:
-            # transport trouble (a timeout, an outage page instead of
-            # SOAP, an answer off the WSDL contract): no verdict of the
-            # CCF, and the only error that keeps its traceback
+        except requests.Timeout as err:
+            # no answer at all within the timeout
             self._l10n_pt_spms_check_receive_error(
-                _("The CCF web service could not be reached: %s") % err,
+                _(
+                    "The CCF did not answer within %(seconds)s seconds. The "
+                    "problem is at SPMS, not in this invoice or its data: try "
+                    "again in a few minutes. Technical detail: %(detail)s"
+                )
+                % {"seconds": REQUEST_TIMEOUT, "detail": err},
+                traceback.format_exc(),
+            )
+            return
+        except requests.RequestException as err:
+            # the host itself could not be reached: DNS, refused
+            # connection, TLS
+            self._l10n_pt_spms_check_receive_error(
+                _(
+                    "The CCF web service could not be reached (connection "
+                    "problem). The problem is at SPMS or in the network, not "
+                    "in this invoice: try again in a few minutes. Technical "
+                    "detail: %(detail)s"
+                )
+                % {"detail": err},
+                traceback.format_exc(),
+            )
+            return
+        except ZeepError as err:
+            # the CCF answered, but with a server error or an answer that
+            # cannot be interpreted: no verdict of the CCF either way
+            transport = client.transport
+            status, reason = transport.last_status, transport.last_reason
+            if status and reason:
+                answer_status = "HTTP %s %s" % (status, reason)
+            elif status:
+                answer_status = "HTTP %s" % status
+            else:
+                answer_status = _("no HTTP status")
+            body = transport.last_body or ""
+            if len(body) > ANSWER_EXCERPT:
+                body = body[:ANSWER_EXCERPT] + " […]"
+            if status and status >= 500:
+                message = _(
+                    "The CCF answered with a server error (%(status)s) and no "
+                    "usable content. The problem is at SPMS, not in this "
+                    "invoice or its data: try again in a few minutes. "
+                    "Technical detail: %(detail)s. Answer received: %(body)s"
+                )
+            else:
+                message = _(
+                    "The CCF returned an answer that could not be interpreted "
+                    "(%(status)s). Technical detail: %(detail)s. "
+                    "Answer received: %(body)s"
+                )
+            self._l10n_pt_spms_check_receive_error(
+                message % {"status": answer_status, "detail": err, "body": body},
                 traceback.format_exc(),
             )
             return

@@ -856,6 +856,19 @@ msgstr "Com impostos"
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
 #, python-format
+msgid ""
+"The CCF answered with a server error (%(status)s) and no usable content. The"
+" problem is at SPMS, not in this invoice or its data: try again in a few "
+"minutes. Technical detail: %(detail)s. Answer received: %(body)s"
+msgstr ""
+"O CCF respondeu com um erro de servidor (%(status)s) e sem conteúdo útil. O "
+"problema é da SPMS, não desta fatura nem dos seus dados: tente novamente "
+"dentro de alguns minutos. Detalhe técnico: %(detail)s. Resposta recebida: "
+"%(body)s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
 msgid "The CCF answered with an unexpected return code: %s."
 msgstr "O CCF respondeu com um código de retorno inesperado: %s."
 
@@ -864,6 +877,18 @@ msgstr "O CCF respondeu com um código de retorno inesperado: %s."
 #, python-format
 msgid "The CCF answered without a check document or a return code."
 msgstr "O CCF respondeu sem documento de conferência nem código de retorno."
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid ""
+"The CCF did not answer within %(seconds)s seconds. The problem is at SPMS, "
+"not in this invoice or its data: try again in a few minutes. Technical "
+"detail: %(detail)s"
+msgstr ""
+"O CCF não respondeu em %(seconds)s segundos. O problema é da SPMS, não desta"
+" fatura nem dos seus dados: tente novamente dentro de alguns minutos. "
+"Detalhe técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
@@ -878,8 +903,24 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
 #, python-format
-msgid "The CCF web service could not be reached: %s"
-msgstr "Não foi possível contactar o serviço web do CCF: %s"
+msgid ""
+"The CCF returned an answer that could not be interpreted (%(status)s). "
+"Technical detail: %(detail)s. Answer received: %(body)s"
+msgstr ""
+"O CCF devolveu uma resposta que não foi possível interpretar (%(status)s). "
+"Detalhe técnico: %(detail)s. Resposta recebida: %(body)s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid ""
+"The CCF web service could not be reached (connection problem). The problem "
+"is at SPMS or in the network, not in this invoice: try again in a few "
+"minutes. Technical detail: %(detail)s"
+msgstr ""
+"Não foi possível contactar o serviço web do CCF (problema de ligação). O "
+"problema é da SPMS ou da rede, não desta fatura: tente novamente dentro de "
+"alguns minutos. Detalhe técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
@@ -1305,3 +1346,9 @@ msgstr ""
 msgid "The check document of %(invoice)s carries no %(field)s"
 msgstr ""
 "O documento de conferência de %(invoice)s não transporta nenhum %(field)s"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
+#, python-format
+msgid "no HTTP status"
+msgstr "sem estado HTTP"
