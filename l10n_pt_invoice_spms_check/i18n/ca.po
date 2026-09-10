@@ -1320,11 +1320,13 @@ msgstr "Nivell dades de prescripció"
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_search
 msgid "With Difference"
 msgstr "Amb diferència"
 
 #. module: l10n_pt_invoice_spms_check
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_error_view_search
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_search
 msgid "Without Difference"
 msgstr "Sense diferència"
 
