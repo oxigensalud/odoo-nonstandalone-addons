@@ -1358,3 +1358,9 @@ msgstr ""
 #, python-format
 msgid "no HTTP status"
 msgstr "sem estado HTTP"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check_error.py:0
+#, python-format
+msgid "An imported error cannot be moved to another invoice check or claim."
+msgstr "Um erro importado não pode ser movido para outra conferência de fatura ou prestação."

@@ -9,7 +9,7 @@ from psycopg2 import IntegrityError
 from odoo import fields
 from odoo.exceptions import UserError, ValidationError
 from odoo.osv import expression
-from odoo.tests.common import SavepointCase
+from odoo.tests.common import Form, SavepointCase, new_test_user
 from odoo.tools import mute_logger
 from odoo.tools.safe_eval import safe_eval
 
@@ -1019,6 +1019,83 @@ class TestSpmsCheck(SavepointCase):
         other = self._single_claim_result("FT 2026/00134", "TESTP015")
         with self.assertRaises(ValidationError):
             result.error_ids.line_id = other.line_ids
+
+    def test_error_source_is_readonly_in_form(self):
+        result = self._single_claim_result("ANCHOR FORM A", "ANCHOR-A")
+        other = self._single_claim_result("ANCHOR FORM B", "ANCHOR-B")
+        user = new_test_user(
+            self.env,
+            login="spms_anchor_form",
+            groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_responsible",
+            company_id=self.company.id,
+            company_ids=[(6, 0, self.company.ids)],
+        )
+        error = result.error_ids.with_user(user)
+        form = Form(error)
+        with self.assertRaisesRegex(AssertionError, "readonly field result_id"):
+            form.result_id = other.with_user(user)
+        with self.assertRaisesRegex(AssertionError, "readonly field line_id"):
+            form.line_id = other.line_ids.with_user(user)
+        form.save()
+        self.assertEqual(error.result_id, result)
+        self.assertEqual(error.line_id, result.line_ids)
+
+    def test_error_source_cannot_be_reassigned(self):
+        result = self._single_claim_result("ANCHOR WRITE A", "ANCHOR-A")
+        other = self._single_claim_result("ANCHOR WRITE B", "ANCHOR-B")
+        user = new_test_user(
+            self.env,
+            login="spms_anchor_write",
+            groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_responsible",
+            company_id=self.company.id,
+            company_ids=[(6, 0, self.company.ids)],
+        )
+        error = result.error_ids.with_user(user)
+        self.assertTrue(error.check_access_rights("write"))
+        # A consistent result/line pair must not move existing evidence.
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            error.write({"result_id": other.id, "line_id": other.line_ids.id})
+        self.assertEqual(error.result_id, result)
+        self.assertEqual(error.line_id, result.line_ids)
+        # Moving within the same check also loses the original claim.
+        other_line = self.env["spms.invoice.check.line"].create(
+            {"result_id": result.id, "prescription": "ANCHOR-C"}
+        )
+        source_line = error.line_id
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            error.write({"line_id": other_line.id})
+        self.assertEqual(error.line_id, source_line)
+        # Repeating unchanged anchors remains a valid ORM operation.
+        self.assertTrue(
+            error.write({"result_id": result.id, "line_id": source_line.id})
+        )
+
+    def test_document_error_source_cannot_be_reassigned(self):
+        result = self._single_claim_result("ANCHOR DOCUMENT A", "ANCHOR-A")
+        other = self._single_claim_result("ANCHOR DOCUMENT B", "ANCHOR-B")
+        user = new_test_user(
+            self.env,
+            login="spms_anchor_document",
+            groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_responsible",
+            company_id=self.company.id,
+            company_ids=[(6, 0, self.company.ids)],
+        )
+        error = (
+            self.env["spms.invoice.check.error"]
+            .create(
+                {
+                    "result_id": result.id,
+                    "level": "invoice",
+                    "error_type_id": result.error_ids.error_type_id.id,
+                }
+            )
+            .with_user(user)
+        )
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            error.write({"result_id": other.id})
+        self.assertEqual(error.result_id, result)
+        self.assertFalse(error.line_id)
+        self.assertTrue(error.write({"result_id": result.id, "line_id": False}))
 
     def test_document_error_with_line_blocks(self):
         result = self._single_claim_result("FT 2026/00135", "TESTP016")

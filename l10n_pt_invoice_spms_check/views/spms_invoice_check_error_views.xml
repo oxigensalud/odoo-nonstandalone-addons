@@ -51,7 +51,7 @@
         <field name="name">spms.invoice.check.error.form</field>
         <field name="model">spms.invoice.check.error</field>
         <field name="arch" type="xml">
-            <form>
+            <form create="false" edit="false" delete="false">
                 <group>
                     <group name="anchor">
                         <field name="result_id" />
