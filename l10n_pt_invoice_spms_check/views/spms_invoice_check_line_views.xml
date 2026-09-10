@@ -79,6 +79,16 @@
                 <field name="prescription" />
                 <field name="error_ids" />
                 <field name="result_id" />
+                <filter
+                    name="with_difference"
+                    string="With Difference"
+                    domain="[('amount_difference', '!=', 0)]"
+                />
+                <filter
+                    name="without_difference"
+                    string="Without Difference"
+                    domain="[('amount_difference', '=', 0)]"
+                />
                 <group expand="0" string="Group By">
                     <filter
                         name="groupby_result"

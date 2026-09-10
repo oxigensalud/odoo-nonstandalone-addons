@@ -871,4 +871,5 @@ class SpmsInvoiceCheck(models.Model):
             "res_model": "spms.invoice.check.line",
             "view_mode": "tree,form",
             "domain": [("result_id", "=", self.id)],
+            "context": {"search_default_with_difference": 1},
         }
