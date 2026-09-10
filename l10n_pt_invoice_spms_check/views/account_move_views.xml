@@ -14,7 +14,7 @@
                     type="object"
                     class="oe_stat_button"
                     icon="fa-check-square-o"
-                    string="SPMS Errors"
+                    string="SPMS Check Line Errors"
                     attrs="{'invisible': [('spms_invoice_check_state', '!=', 'with_errors')]}"
                     groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation"
                 />

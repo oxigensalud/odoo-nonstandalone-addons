@@ -107,9 +107,9 @@ a software failure.
 Every invoice sent to SPMS gets its check result attached the moment the
 check resolves it (one result per invoice — the first definitive answer
 closes the invoice permanently). When the check reports errors, the
-invoice form shows an *SPMS Errors* smart button that opens the result
-directly; a check without errors adds no button, and its result is
-reached from the *Invoice Checks* list.
+invoice form shows an *SPMS Check Line Errors* smart button that opens
+the result directly; a check without errors adds no button, and its
+result is reached from the *Invoice Checks* list.
 
 The result form carries the check state, the official totals and the
 computed official credit value. The *Lines* smart button opens the claim
@@ -119,14 +119,14 @@ lists its own errors, code and message; the errors the document anchors
 to the invoice itself are listed on the result form. The list opens on
 the lines with a difference; remove the filter to see them all.
 
-*Customers → SPMS → Errors* lists every error the check reported, across
-invoices — one row per error with its level, code and message, its
-prescription and the billed, allowed and difference amounts of its
-claim. The list opens on the errors that carry money: the claims the
-check cut or priced above the billed amount, plus the errors anchored to
-the document itself; the *Without Difference* filter brings back the
-informational ones. Group by error code, level, invoice, customer or
-document date to read a month's conference at a glance.
+*Customers → SPMS → Check Line Errors* lists every error the check
+reported, across invoices — one row per error with its level, code and
+message, its prescription and the billed, allowed and difference amounts
+of its claim. The list opens on the errors that carry money: the claims
+the check cut or priced above the billed amount, plus the errors
+anchored to the document itself; the *Without Difference* filter brings
+back the informational ones. Group by error code, level, invoice,
+customer or document date to read a month's conference at a glance.
 
 For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the
