@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <!-- The flat error list behind Customers / SPMS / Errors: one row per
+         error the check reported, across invoices, with the money of its
+         claim beside it, so a month's cuts read by code, level, invoice
+         or customer. -->
+    <record id="spms_invoice_check_error_view_tree" model="ir.ui.view">
+        <field name="name">spms.invoice.check.error.tree</field>
+        <field name="model">spms.invoice.check.error</field>
+        <field name="arch" type="xml">
+            <tree
+                create="false"
+                delete="false"
+                decoration-danger="level == 'invoice'"
+                decoration-primary="level == 'prestacao'"
+                decoration-info="level == 'linha'"
+                decoration-success="level == 'prescricao'"
+            >
+                <field name="move_id" />
+                <field name="partner_id" optional="show" />
+                <field name="document_date" optional="hide" />
+                <field name="result_id" optional="hide" />
+                <field name="level" />
+                <field name="code" />
+                <field name="error_type_id" optional="hide" />
+                <field name="description" />
+                <field name="prescription" />
+                <field name="lot_type" optional="hide" />
+                <field name="lot_number" optional="hide" />
+                <field name="amount_billed" optional="show" />
+                <field name="amount_allowed" optional="show" />
+                <field name="amount_difference" />
+                <field name="days_billed" optional="hide" />
+                <field name="days_paid" optional="hide" />
+                <field name="provider_system_ref" optional="hide" />
+                <field
+                    name="company_id"
+                    groups="base.group_multi_company"
+                    optional="hide"
+                />
+                <field name="currency_id" invisible="1" />
+            </tree>
+        </field>
+    </record>
+
+    <!-- Errors are also reached from their line (or from the result, when
+         they have none): this form is what opens from all of them. -->
+    <record id="spms_invoice_check_error_view_form" model="ir.ui.view">
+        <field name="name">spms.invoice.check.error.form</field>
+        <field name="model">spms.invoice.check.error</field>
+        <field name="arch" type="xml">
+            <form create="false" edit="false" delete="false">
+                <group>
+                    <group name="anchor">
+                        <field name="result_id" />
+                        <field name="move_id" />
+                        <field name="partner_id" />
+                        <field name="document_date" />
+                        <field name="line_id" />
+                        <field name="level" />
+                        <field name="provider_system_ref" />
+                    </group>
+                    <group name="error">
+                        <field name="error_type_id" />
+                        <field name="code" />
+                        <field name="description" />
+                    </group>
+                    <group
+                        name="claim"
+                        string="Claim"
+                        attrs="{'invisible': [('line_id', '=', False)]}"
+                    >
+                        <field name="prescription" />
+                        <field name="lot_type" />
+                        <field name="lot_number" />
+                        <field name="amount_billed" />
+                        <field name="amount_allowed" />
+                        <field name="amount_difference" />
+                        <field name="days_billed" />
+                        <field name="days_paid" />
+                        <field name="currency_id" invisible="1" />
+                    </group>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="spms_invoice_check_error_view_search" model="ir.ui.view">
+        <field name="name">spms.invoice.check.error.search</field>
+        <field name="model">spms.invoice.check.error</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="code" />
+                <field name="error_type_id" />
+                <field name="description" />
+                <field name="prescription" />
+                <field name="move_id" />
+                <field name="partner_id" />
+                <field name="result_id" />
+                <!-- the two default filters share a group, so the client
+                     joins them with OR: what the check cut or raised, plus
+                     what it flagged on the document itself -->
+                <filter
+                    name="filter_with_difference"
+                    string="With Difference"
+                    domain="[('line_id.amount_difference', '!=', 0)]"
+                />
+                <filter
+                    name="filter_document"
+                    string="Document Errors"
+                    domain="[('line_id', '=', False)]"
+                />
+                <separator />
+                <filter
+                    name="filter_without_difference"
+                    string="Without Difference"
+                    domain="[('line_id', '!=', False), ('line_id.amount_difference', '=', 0)]"
+                />
+                <separator />
+                <filter
+                    name="filter_level_invoice"
+                    string="Invoice Level"
+                    domain="[('level', '=', 'invoice')]"
+                />
+                <filter
+                    name="filter_level_prestacao"
+                    string="Claim Level"
+                    domain="[('level', '=', 'prestacao')]"
+                />
+                <filter
+                    name="filter_level_linha"
+                    string="Line Level"
+                    domain="[('level', '=', 'linha')]"
+                />
+                <filter
+                    name="filter_level_prescricao"
+                    string="Prescription Data Level"
+                    domain="[('level', '=', 'prescricao')]"
+                />
+                <separator />
+                <filter
+                    name="filter_document_date"
+                    string="Document Date"
+                    date="document_date"
+                />
+                <group expand="0" string="Group By">
+                    <filter
+                        name="groupby_error_type"
+                        string="Error Code"
+                        context="{'group_by': 'error_type_id'}"
+                    />
+                    <filter
+                        name="groupby_level"
+                        string="Level"
+                        context="{'group_by': 'level'}"
+                    />
+                    <filter
+                        name="groupby_move"
+                        string="Invoice"
+                        context="{'group_by': 'move_id'}"
+                    />
+                    <filter
+                        name="groupby_partner"
+                        string="Customer"
+                        context="{'group_by': 'partner_id'}"
+                    />
+                    <filter
+                        name="groupby_result"
+                        string="Invoice Check"
+                        context="{'group_by': 'result_id'}"
+                    />
+                    <filter
+                        name="groupby_document_date"
+                        string="Document Date"
+                        context="{'group_by': 'document_date:month'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="spms_invoice_check_error_action" model="ir.actions.act_window">
+        <field name="name">SPMS Check Line Errors</field>
+        <field name="res_model">spms.invoice.check.error</field>
+        <field name="view_mode">tree,form</field>
+        <field
+            name="context"
+        >{'search_default_filter_with_difference': 1, 'search_default_filter_document': 1}</field>
+    </record>
+</odoo>

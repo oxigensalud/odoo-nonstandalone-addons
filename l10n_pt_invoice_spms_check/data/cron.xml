@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo noupdate="1">
+    <!-- Always-on polling (fetchmail/FACE pattern): the work queue is
+         the gate — with no sent SPMS invoices awaiting a result it makes
+         no calls. Its Active field is the polling pause switch. -->
+    <record id="cron_spms_check_update" model="ir.cron">
+        <field name="name">SPMS: get conference results from the CCF</field>
+        <field name="active" eval="True" />
+        <field name="user_id" ref="base.user_root" />
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="state">code</field>
+        <field name="numbercall">-1</field>
+        <field name="model_id" ref="edi_oca.model_edi_exchange_record" />
+        <field name="code">model._cron_l10n_pt_spms_check_update()</field>
+    </record>
+</odoo>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="edi_exchange_record_view_form" model="ir.ui.view">
+        <field
+            name="name"
+        >edi.exchange.record.form.inherit.l10n_pt_invoice_spms_check</field>
+        <field name="model">edi.exchange.record</field>
+        <field name="inherit_id" ref="edi_oca.edi_exchange_record_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='error']" position="attributes">
+                <attribute
+                    name="attrs"
+                >{'invisible': [('exchange_error', '=', False), ('exchange_error_traceback', '=', False)]}</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

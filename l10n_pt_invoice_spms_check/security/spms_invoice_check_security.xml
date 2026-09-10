@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="module_category_spms" model="ir.module.category">
+        <field name="name">SPMS</field>
+    </record>
+
+    <record id="spms_invoice_check_group_consultation" model="res.groups">
+        <field name="name">Consultation</field>
+        <field name="category_id" ref="module_category_spms" />
+    </record>
+
+    <record id="spms_invoice_check_group_responsible" model="res.groups">
+        <field name="name">Responsible</field>
+        <field name="category_id" ref="module_category_spms" />
+        <field
+            name="implied_ids"
+            eval="[(4, ref('spms_invoice_check_group_consultation')), (4, ref('account.group_account_invoice'))]"
+        />
+    </record>
+
+    <record id="spms_invoice_check_rule_company" model="ir.rule">
+        <field name="name">SPMS Invoice Check: multi-company</field>
+        <field name="model_id" ref="model_spms_invoice_check" />
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <record id="spms_invoice_check_line_rule_company" model="ir.rule">
+        <field name="name">SPMS Invoice Check Line: multi-company</field>
+        <field name="model_id" ref="model_spms_invoice_check_line" />
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <record id="spms_invoice_check_error_rule_company" model="ir.rule">
+        <field name="name">SPMS Invoice Check Error: multi-company</field>
+        <field name="model_id" ref="model_spms_invoice_check_error" />
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

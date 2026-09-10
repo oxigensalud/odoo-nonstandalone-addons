@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="account_move_view_form" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.l10n_pt_invoice_spms_check</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form" />
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <field name="spms_invoice_check_state" invisible="1" />
+                <button
+                    name="action_view_spms_invoice_check"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-check-square-o"
+                    string="SPMS Check Line Errors"
+                    attrs="{'invisible': [('spms_invoice_check_state', '!=', 'with_errors')]}"
+                    groups="l10n_pt_invoice_spms_check.spms_invoice_check_group_consultation"
+                />
+            </div>
+        </field>
+    </record>
+</odoo>

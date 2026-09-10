@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="spms_invoice_check_line_view_tree" model="ir.ui.view">
+        <field name="name">spms.invoice.check.line.tree</field>
+        <field name="model">spms.invoice.check.line</field>
+        <field name="arch" type="xml">
+            <tree create="false" delete="false">
+                <field name="result_id" optional="hide" />
+                <field name="lot_type" optional="hide" />
+                <field name="lot_number" optional="hide" />
+                <field name="prescription" />
+                <field name="error_ids" widget="many2many_tags" />
+                <field name="amount_billed" sum="Total Billed" />
+                <field name="amount_allowed" sum="Total Allowed" />
+                <field name="amount_difference" sum="Total Difference" />
+                <field name="days_billed" optional="hide" />
+                <field name="days_paid" optional="hide" />
+                <field name="move_line_id" optional="hide" />
+                <field name="note_move_line_id" optional="hide" />
+                <field name="currency_id" invisible="1" />
+            </tree>
+        </field>
+    </record>
+
+    <record id="spms_invoice_check_line_view_form" model="ir.ui.view">
+        <field name="name">spms.invoice.check.line.form</field>
+        <field name="model">spms.invoice.check.line</field>
+        <field name="arch" type="xml">
+            <form create="false" edit="false" delete="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="prescription" /></h1>
+                    </div>
+                    <group>
+                        <group name="main">
+                            <field name="result_id" />
+                            <field name="lot_type" />
+                            <field name="lot_number" />
+                            <field name="move_line_id" />
+                            <field name="note_move_line_id" />
+                        </group>
+                        <group name="amounts">
+                            <field name="amount_billed" />
+                            <field name="amount_allowed" />
+                            <field name="amount_difference" />
+                            <field name="days_billed" />
+                            <field name="days_paid" />
+                            <field name="currency_id" invisible="1" />
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="errors" string="Errors">
+                            <field name="error_ids">
+                                <tree
+                                    decoration-primary="level == 'prestacao'"
+                                    decoration-info="level == 'linha'"
+                                    decoration-success="level == 'prescricao'"
+                                >
+                                    <field name="level" />
+                                    <field name="code" />
+                                    <field name="description" />
+                                    <field name="provider_system_ref" optional="hide" />
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="spms_invoice_check_line_view_search" model="ir.ui.view">
+        <field name="name">spms.invoice.check.line.search</field>
+        <field name="model">spms.invoice.check.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="prescription" />
+                <field name="error_ids" />
+                <field name="result_id" />
+                <filter
+                    name="with_difference"
+                    string="With Difference"
+                    domain="[('amount_difference', '!=', 0)]"
+                />
+                <filter
+                    name="without_difference"
+                    string="Without Difference"
+                    domain="[('amount_difference', '=', 0)]"
+                />
+                <group expand="0" string="Group By">
+                    <filter
+                        name="groupby_result"
+                        string="Invoice Check"
+                        context="{'group_by': 'result_id'}"
+                    />
+                    <filter
+                        name="groupby_lot"
+                        string="Lot"
+                        context="{'group_by': 'lot_number'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>
