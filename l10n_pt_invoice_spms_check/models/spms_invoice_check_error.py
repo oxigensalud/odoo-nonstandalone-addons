@@ -29,12 +29,14 @@ class SpmsInvoiceCheckError(models.Model):
         comodel_name="spms.invoice.check",
         string="Invoice Check",
         required=True,
+        readonly=True,
         index=True,
         ondelete="cascade",
     )
     line_id = fields.Many2one(
         comodel_name="spms.invoice.check.line",
         string="Line",
+        readonly=True,
         index=True,
         ondelete="cascade",
         help="Claim the error hangs under; empty for the errors anchored "
@@ -167,3 +169,19 @@ class SpmsInvoiceCheckError(models.Model):
                     )
                     % {"code": rec.error_type_id.code, "level": rec.level}
                 )
+
+    def write(self, vals):
+        # Reprocessing replaces errors from the source document; it never
+        # reassigns an existing error to a different check or claim.
+        for rec in self:
+            if any(
+                name in vals and vals[name] != rec[name].id
+                for name in ("result_id", "line_id")
+            ):
+                raise ValidationError(
+                    _(
+                        "An imported error cannot be moved to another invoice "
+                        "check or claim."
+                    )
+                )
+        return super().write(vals)

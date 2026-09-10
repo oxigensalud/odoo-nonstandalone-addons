@@ -1363,3 +1363,9 @@ msgstr "El document de conferència de %(invoice)s no porta cap %(field)s"
 #, python-format
 msgid "no HTTP status"
 msgstr "sense estat HTTP"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check_error.py:0
+#, python-format
+msgid "An imported error cannot be moved to another invoice check or claim."
+msgstr "Un error importat no es pot moure a una altra conferència de factura ni a una altra prestació."

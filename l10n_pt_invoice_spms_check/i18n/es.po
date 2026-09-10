@@ -1365,3 +1365,9 @@ msgstr "El documento de conferencia de %(invoice)s no lleva ningún %(field)s"
 #, python-format
 msgid "no HTTP status"
 msgstr "sin estado HTTP"
+
+#. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check_error.py:0
+#, python-format
+msgid "An imported error cannot be moved to another invoice check or claim."
+msgstr "No se puede mover un error importado a otra conferencia de factura ni a otra prestación."
