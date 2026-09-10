@@ -182,7 +182,7 @@
     </record>
 
     <record id="spms_invoice_check_error_action" model="ir.actions.act_window">
-        <field name="name">SPMS Errors</field>
+        <field name="name">SPMS Check Line Errors</field>
         <field name="res_model">spms.invoice.check.error</field>
         <field name="view_mode">tree,form</field>
         <field

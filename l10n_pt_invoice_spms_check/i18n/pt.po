@@ -99,6 +99,11 @@ msgid "Billed quantity in days for the claim (QuantidadeLida)."
 msgstr "Quantidade faturada em dias da prestação (QuantidadeLida)."
 
 #. module: l10n_pt_invoice_spms_check
+#: model:ir.ui.menu,name:l10n_pt_invoice_spms_check.spms_invoice_check_error_menu
+msgid "Check Line Errors"
+msgstr "Erros de linha de conferência"
+
+#. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__check_state
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_view_search
 msgid "Check State"
@@ -222,6 +227,12 @@ msgstr "Criado em"
 #, python-format
 msgid "Credit Note"
 msgstr "Nota de crédito"
+
+#. module: l10n_pt_invoice_spms_check
+#: model:ir.actions.act_window,name:l10n_pt_invoice_spms_check.spms_invoice_check_error_action
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.account_move_view_form
+msgid "SPMS Check Line Errors"
+msgstr "Erros de linha de conferência SPMS"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_check_error_type
@@ -380,7 +391,6 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check__error_ids
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_check.field_spms_invoice_check_line__error_ids
-#: model:ir.ui.menu,name:l10n_pt_invoice_spms_check.spms_invoice_check_error_menu
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.spms_invoice_check_line_view_form
 msgid "Errors"
 msgstr "Erros"
@@ -770,12 +780,6 @@ msgstr "Estado da conferência SPMS"
 #: model:ir.actions.act_window,name:l10n_pt_invoice_spms_check.spms_invoice_check_error_type_act_window
 msgid "SPMS Error Type"
 msgstr "Tipo de Erro SPMS"
-
-#. module: l10n_pt_invoice_spms_check
-#: model:ir.actions.act_window,name:l10n_pt_invoice_spms_check.spms_invoice_check_error_action
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_check.account_move_view_form
-msgid "SPMS Errors"
-msgstr "Erros SPMS"
 
 #. module: l10n_pt_invoice_spms_check
 #: model:ir.model,name:l10n_pt_invoice_spms_check.model_spms_invoice_check

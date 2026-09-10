@@ -14,7 +14,7 @@ a software failure.
 Every invoice sent to SPMS gets its check result attached the moment
 the check resolves it (one result per invoice — the first definitive
 answer closes the invoice permanently). When the check reports errors,
-the invoice form shows an *SPMS Errors* smart button that opens the
+the invoice form shows an *SPMS Check Line Errors* smart button that opens the
 result directly; a check without errors adds no button, and its result
 is reached from the *Invoice Checks* list.
 
@@ -26,7 +26,7 @@ lists its own errors, code and message; the errors the document anchors
 to the invoice itself are listed on the result form. The list opens on
 the lines with a difference; remove the filter to see them all.
 
-*Customers → SPMS → Errors* lists every error the check reported, across
+*Customers → SPMS → Check Line Errors* lists every error the check reported, across
 invoices — one row per error with its level, code and message, its
 prescription and the billed, allowed and difference amounts of its claim.
 The list opens on the errors that carry money: the claims the check cut

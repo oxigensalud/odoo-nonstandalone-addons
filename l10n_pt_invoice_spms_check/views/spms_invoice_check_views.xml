@@ -209,7 +209,7 @@
     />
     <menuitem
         id="spms_invoice_check_error_menu"
-        name="Errors"
+        name="Check Line Errors"
         parent="spms_customers_menu"
         action="spms_invoice_check_error_action"
         sequence="20"

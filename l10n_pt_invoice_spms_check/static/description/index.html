@@ -462,9 +462,9 @@ a software failure.</p>
 <p>Every invoice sent to SPMS gets its check result attached the moment the
 check resolves it (one result per invoice — the first definitive answer
 closes the invoice permanently). When the check reports errors, the
-invoice form shows an <em>SPMS Errors</em> smart button that opens the result
-directly; a check without errors adds no button, and its result is
-reached from the <em>Invoice Checks</em> list.</p>
+invoice form shows an <em>SPMS Check Line Errors</em> smart button that opens
+the result directly; a check without errors adds no button, and its
+result is reached from the <em>Invoice Checks</em> list.</p>
 <p>The result form carries the check state, the official totals and the
 computed official credit value. The <em>Lines</em> smart button opens the claim
 lines — one per prescription, with the billed, allowed and difference
@@ -472,14 +472,14 @@ amounts summed at the bottom and the error codes of each — and each line
 lists its own errors, code and message; the errors the document anchors
 to the invoice itself are listed on the result form. The list opens on
 the lines with a difference; remove the filter to see them all.</p>
-<p><em>Customers → SPMS → Errors</em> lists every error the check reported, across
-invoices — one row per error with its level, code and message, its
-prescription and the billed, allowed and difference amounts of its
-claim. The list opens on the errors that carry money: the claims the
-check cut or priced above the billed amount, plus the errors anchored to
-the document itself; the <em>Without Difference</em> filter brings back the
-informational ones. Group by error code, level, invoice, customer or
-document date to read a month’s conference at a glance.</p>
+<p><em>Customers → SPMS → Check Line Errors</em> lists every error the check
+reported, across invoices — one row per error with its level, code and
+message, its prescription and the billed, allowed and difference amounts
+of its claim. The list opens on the errors that carry money: the claims
+the check cut or priced above the billed amount, plus the errors
+anchored to the document itself; the <em>Without Difference</em> filter brings
+back the informational ones. Group by error code, level, invoice,
+customer or document date to read a month’s conference at a glance.</p>
 <p>For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the
 standard reversal path, cut down to the affected prescriptions, and
