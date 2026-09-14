@@ -868,12 +868,11 @@ msgstr "Con impuestos"
 msgid ""
 "The CCF answered with a server error (%(status)s) and no usable content. The"
 " problem is at SPMS, not in this invoice or its data: try again in a few "
-"minutes. Technical detail: %(detail)s. Answer received: %(body)s"
+"minutes. Technical detail: %(detail)s."
 msgstr ""
 "El CCF ha respondido con un error de servidor (%(status)s) y sin contenido "
 "útil. El problema es de SPMS, no de esta factura ni de sus datos: vuelva a "
-"intentarlo en unos minutos. Detalle técnico: %(detail)s. Respuesta recibida:"
-" %(body)s"
+"intentarlo en unos minutos. Detalle técnico: %(detail)s."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
@@ -905,20 +904,20 @@ msgstr ""
 #, python-format
 msgid ""
 "The CCF does not recognise invoice %(invoice)s even though it was sent "
-"successfully (%(answer)s)."
+"successfully (%(code)s)."
 msgstr ""
 "El CCF no reconoce la factura %(invoice)s aunque se envió correctamente "
-"(%(answer)s)."
+"(%(code)s)."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0
 #, python-format
 msgid ""
 "The CCF returned an answer that could not be interpreted (%(status)s). "
-"Technical detail: %(detail)s. Answer received: %(body)s"
+"Technical detail: %(detail)s."
 msgstr ""
 "El CCF ha devuelto una respuesta que no se ha podido interpretar "
-"(%(status)s). Detalle técnico: %(detail)s. Respuesta recibida: %(body)s"
+"(%(status)s). Detalle técnico: %(detail)s."
 
 #. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/edi_exchange_record.py:0

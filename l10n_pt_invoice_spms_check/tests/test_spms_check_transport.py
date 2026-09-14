@@ -4,13 +4,13 @@
 import base64
 import io
 from unittest import mock
+from xml.sax.saxutils import escape
 
 import requests
 from zeep.transports import Transport
 
 from odoo.addons.component.tests.common import SavepointComponentCase
 from odoo.addons.l10n_pt_invoice_spms_check.models.edi_exchange_record import (
-    ANSWER_EXCERPT,
     SpmsCheckTransport,
 )
 from odoo.addons.queue_job.job import Job
@@ -133,8 +133,6 @@ class _FakeTransport(SpmsCheckTransport):
         response.raw = io.BytesIO(content)
         response.headers["Content-Type"] = "text/xml"
         self.last_status = response.status_code
-        self.last_reason = response.reason
-        self.last_body = content.decode("utf-8", "replace")
         return response
 
 
@@ -330,7 +328,8 @@ class TestSpmsCheckTransport(SavepointComponentCase):
         child = self._children()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("did not answer within 60 seconds", child.exchange_error)
-        self.assertIn("no answer", child.exchange_error)
+        self.assertIn("Timeout", child.exchange_error)
+        self.assertNotIn("no answer", child.exchange_error)
         self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
@@ -341,22 +340,22 @@ class TestSpmsCheckTransport(SavepointComponentCase):
         child = self._children()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("could not be reached (connection problem)", child.exchange_error)
-        self.assertIn("refused", child.exchange_error)
+        self.assertIn("ConnectionError", child.exchange_error)
+        self.assertNotIn("refused", child.exchange_error)
         self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
     def test_empty_body_server_error_is_an_error_on_reception(self):
         # the live shape of September 2026: the message names the server
-        # error, keeps zeep's own words and ends with the answer itself
+        # error and exception class without copying the service's answer
         transport = _FakeTransport(_empty_body_response())
         self._run_cron(transport)
         child = self._children()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("HTTP 500 Internal Server Error", child.exchange_error)
-        self.assertIn("Unknown fault occured", child.exchange_error)
-        self.assertTrue(
-            child.exchange_error.endswith(_empty_body_response()[1].decode())
-        )
+        self.assertIn("Fault", child.exchange_error)
+        self.assertNotIn("Unknown fault occured", child.exchange_error)
+        self.assertNotIn(_empty_body_response()[1].decode(), child.exchange_error)
         self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
@@ -394,24 +393,23 @@ class TestSpmsCheckTransport(SavepointComponentCase):
         self.assertTrue(child.exchange_error_traceback)
         self.assertFalse(self._results())
 
-    def test_long_unusable_answer_is_cut_in_the_message(self):
-        # the answer kept in the message is bounded: a whole conference
-        # document can never land in the error field
+    def test_long_unusable_answer_is_not_in_the_message(self):
+        # No excerpt of an arbitrary answer belongs in the error fields.
         status_code, content = _result_response(
             "<somethingElse>%s</somethingElse>" % ("x" * 3000)
         )
         transport = _FakeTransport((status_code, content))
         self._run_cron(transport)
         child = self._children()
-        body = content.decode()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
-        self.assertTrue(child.exchange_error.endswith(body[:ANSWER_EXCERPT] + " […]"))
-        self.assertNotIn(body, child.exchange_error)
+        self.assertNotIn("somethingElse", child.exchange_error)
+        self.assertNotIn("x" * 10, child.exchange_error)
+        self.assertNotIn("x" * 10, child.exchange_error_traceback)
         self.assertFalse(self._results())
 
     def test_transport_records_the_http_status(self):
-        # the real transport, which the fake bypasses: the status, the
-        # reason and the body of the last answer stay on it
+        # The real transport, which the fake bypasses, returns the response
+        # unchanged and retains only its numeric status for diagnostics.
         transport = SpmsCheckTransport()
         response = requests.Response()
         response.status_code = 500
@@ -421,8 +419,99 @@ class TestSpmsCheckTransport(SavepointComponentCase):
             returned = transport.post("http://example.invalid", "<x/>", {})
         self.assertIs(returned, response)
         self.assertEqual(transport.last_status, 500)
-        self.assertEqual(transport.last_reason, "Internal Server Error")
-        self.assertEqual(transport.last_body, "<soapenv:Envelope/>")
+        self.assertFalse(hasattr(transport, "last_reason"))
+        self.assertFalse(hasattr(transport, "last_body"))
+
+    def test_echoed_request_is_not_persisted(self):
+        # A broker can echo our request instead of returning a SOAP fault.
+        # Exercise the real WSSE client and transport with a fake HTTP reply.
+        transport = SpmsCheckTransport()
+
+        def echo_request(address, message, headers):
+            response = requests.Response()
+            response.status_code = 500
+            response.reason = "Internal Server Error"
+            response.encoding = "utf-8"
+            response._content = message
+            return response
+
+        with mock.patch.object(Transport, "post", side_effect=echo_request) as post:
+            self._run_cron(transport)
+        post.assert_called_once()
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("HTTP 500 Internal Server Error", child.exchange_error)
+        self.assertIn("Fault", child.exchange_error)
+        child.invalidate_cache(["exchange_error", "exchange_error_traceback"])
+        sent = post.call_args[0][1].decode()
+        for value in (self.company.spms_username, self.company.spms_password):
+            self.assertIn(value, sent)
+            self.assertNotIn(value, child.exchange_error)
+            self.assertNotIn(value, child.exchange_error_traceback)
+        self.assertNotIn("Envelope", child.exchange_error)
+        self.assertNotIn("Envelope", child.exchange_error_traceback)
+        self.assertIn("_l10n_pt_spms_check_fetch", child.exchange_error_traceback)
+        self.assertFalse(self._results())
+
+    def test_malformed_answer_is_not_in_exception_diagnostics(self):
+        # zeep includes invalid XML in its exception as a bytes repr. The
+        # rule must also cover JSON and plain text, with no field-name filter.
+        for payload in (
+            b"<broken>synthetic-confidential-value",
+            b'{"arbitrary": "synthetic-confidential-value"}',
+            b"synthetic-confidential-value",
+        ):
+            with self.subTest(payload=payload):
+                self._run_cron(_FakeTransport((500, payload)))
+                child = self._children()
+                self.assertEqual(child.edi_exchange_state, "input_receive_error")
+                self.assertIn("HTTP 500 Internal Server Error", child.exchange_error)
+                self.assertIn("TransportError", child.exchange_error_traceback)
+                for text in (child.exchange_error, child.exchange_error_traceback):
+                    self.assertNotIn("synthetic-confidential-value", text)
+                self.assertFalse(self._results())
+
+    def test_coded_fault_does_not_persist_remote_text(self):
+        for code in ("301", "999", "777"):
+            with self.subTest(code=code):
+                transport = _FakeTransport(
+                    _fault_response(escape(code + " - synthetic-confidential-value"))
+                )
+                self._run_cron(transport)
+                child = self._children()
+                self.assertEqual(child.edi_exchange_state, "input_receive_error")
+                self.assertIn(code, child.exchange_error)
+                self.assertNotIn("synthetic-confidential-value", child.exchange_error)
+                self.assertFalse(child.exchange_error_traceback)
+
+    def test_connection_error_does_not_persist_exception_values(self):
+        for error_class in (requests.Timeout, requests.ConnectionError):
+            with self.subTest(error_class=error_class):
+                error = error_class("synthetic-confidential-value")
+                error.__cause__ = ValueError("synthetic-confidential-cause")
+                transport = _FakeTransport(side_effect=error)
+                self._run_cron(transport)
+                child = self._children()
+                self.assertEqual(child.edi_exchange_state, "input_receive_error")
+                for text in (child.exchange_error, child.exchange_error_traceback):
+                    self.assertIn(error_class.__name__, text)
+                    self.assertNotIn("synthetic-confidential", text)
+
+    def test_untrusted_http_reason_is_not_persisted(self):
+        transport = SpmsCheckTransport()
+        response = requests.Response()
+        response.status_code = 500
+        response.reason = "synthetic-confidential-reason"
+        response._content = _empty_body_response()[1]
+        with mock.patch.object(Transport, "post", return_value=response):
+            self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.edi_exchange_state, "input_receive_error")
+        self.assertIn("HTTP 500 Internal Server Error", child.exchange_error)
+        self.assertNotIn("synthetic-confidential-reason", child.exchange_error)
+        self.assertNotIn(
+            "synthetic-confidential-reason", child.exchange_error_traceback
+        )
 
     def test_answer_without_document_is_an_error_on_reception(self):
         # an answer the WSDL allows but that carries neither a document

@@ -3,6 +3,7 @@
 
 import re
 import traceback
+from http.client import responses as HTTP_REASONS
 
 import requests
 from zeep import Client
@@ -14,7 +15,6 @@ from odoo import _, api, models
 from odoo.modules.module import get_resource_path
 
 REQUEST_TIMEOUT = 60
-ANSWER_EXCERPT = 2000
 
 
 class SpmsCheckTransport(Transport):
@@ -27,14 +27,10 @@ class SpmsCheckTransport(Transport):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_status = None
-        self.last_reason = None
-        self.last_body = None
 
     def post(self, address, message, headers):
         response = super().post(address, message, headers)
         self.last_status = response.status_code
-        self.last_reason = response.reason
-        self.last_body = response.text
         return response
 
 
@@ -230,7 +226,7 @@ class EdiExchangeRecord(models.Model):
         yet" keeps it waiting, anything else is an error on reception
         with its reason, asked again at the next pass."""
         try:
-            code, document, answer = self._l10n_pt_spms_check_fetch(client, move)
+            code, document, _answer = self._l10n_pt_spms_check_fetch(client, move)
         except requests.Timeout as err:
             # no answer at all within the timeout
             self._l10n_pt_spms_check_receive_error(
@@ -239,8 +235,8 @@ class EdiExchangeRecord(models.Model):
                     "problem is at SPMS, not in this invoice or its data: try "
                     "again in a few minutes. Technical detail: %(detail)s"
                 )
-                % {"seconds": REQUEST_TIMEOUT, "detail": err},
-                traceback.format_exc(),
+                % {"seconds": REQUEST_TIMEOUT, "detail": type(err).__name__},
+                exception=err,
             )
             return
         except requests.RequestException as err:
@@ -253,40 +249,38 @@ class EdiExchangeRecord(models.Model):
                     "in this invoice: try again in a few minutes. Technical "
                     "detail: %(detail)s"
                 )
-                % {"detail": err},
-                traceback.format_exc(),
+                % {"detail": type(err).__name__},
+                exception=err,
             )
             return
         except ZeepError as err:
             # the CCF answered, but with a server error or an answer that
             # cannot be interpreted: no verdict of the CCF either way
             transport = client.transport
-            status, reason = transport.last_status, transport.last_reason
+            status = transport.last_status
+            # The peer's reason phrase is free text too: use the standard one.
+            reason = HTTP_REASONS.get(status)
             if status and reason:
                 answer_status = "HTTP %s %s" % (status, reason)
             elif status:
                 answer_status = "HTTP %s" % status
             else:
                 answer_status = _("no HTTP status")
-            body = transport.last_body or ""
-            if len(body) > ANSWER_EXCERPT:
-                body = body[:ANSWER_EXCERPT] + " […]"
             if status and status >= 500:
                 message = _(
                     "The CCF answered with a server error (%(status)s) and no "
                     "usable content. The problem is at SPMS, not in this "
                     "invoice or its data: try again in a few minutes. "
-                    "Technical detail: %(detail)s. Answer received: %(body)s"
+                    "Technical detail: %(detail)s."
                 )
             else:
                 message = _(
                     "The CCF returned an answer that could not be interpreted "
-                    "(%(status)s). Technical detail: %(detail)s. "
-                    "Answer received: %(body)s"
+                    "(%(status)s). Technical detail: %(detail)s."
                 )
             self._l10n_pt_spms_check_receive_error(
-                message % {"status": answer_status, "detail": err, "body": body},
-                traceback.format_exc(),
+                message % {"status": answer_status, "detail": type(err).__name__},
+                exception=err,
             )
             return
         if document:
@@ -297,19 +291,19 @@ class EdiExchangeRecord(models.Model):
             self._l10n_pt_spms_check_receive_error(
                 _(
                     "The CCF does not recognise invoice %(invoice)s even though "
-                    "it was sent successfully (%(answer)s)."
+                    "it was sent successfully (%(code)s)."
                 )
-                % {"invoice": move.name, "answer": answer}
+                % {"invoice": move.name, "code": code}
             )
         elif code == "999":
             # the CCF's own "service unavailable" answer, seen for weeks
             # at a time
             self._l10n_pt_spms_check_receive_error(
-                _("The CCF web service is unavailable (%s).") % answer
+                _("The CCF web service is unavailable (%s).") % code
             )
         elif code:
             self._l10n_pt_spms_check_receive_error(
-                _("The CCF answered with an unexpected return code: %s.") % answer
+                _("The CCF answered with an unexpected return code: %s.") % code
             )
         else:
             self._l10n_pt_spms_check_receive_error(
@@ -356,9 +350,26 @@ class EdiExchangeRecord(models.Model):
                 }
             )
 
-    def _l10n_pt_spms_check_receive_error(self, message, traceback_txt=False):
+    def _l10n_pt_spms_check_receive_error(self, message, exception=None):
         """Error on reception with its reason: asked again next pass,
-        cleared by the next "not checked yet" or by the document."""
+        cleared by the next "not checked yet" or by the document.
+
+        Messages contain our explanations and codes only. Exception text,
+        chained exceptions and local values may contain arbitrary service
+        data: retain just the call locations and the exception class.
+        """
+        if exception is not None:
+            traceback_txt = "\n".join(
+                ["Traceback (most recent call last):"]
+                + [
+                    '  File "%s", line %s, in %s'
+                    % (frame.f_code.co_filename, lineno, frame.f_code.co_name)
+                    for frame, lineno in traceback.walk_tb(exception.__traceback__)
+                ]
+                + ["%s.%s" % (type(exception).__module__, type(exception).__name__)]
+            )
+        else:
+            traceback_txt = False
         self.write(
             {
                 "edi_exchange_state": "input_receive_error",
