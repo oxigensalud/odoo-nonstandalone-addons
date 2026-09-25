@@ -115,11 +115,11 @@ class TestSpmsVerification(SavepointCase):
         """Build a verification result the way the parser does.
 
         lines: list of dicts keyed like the parser output, one per claim
-        (prescription), each linked to the original invoice line by
-        prescription number and carrying its errors: one C010 at claim
-        level unless `errors` says otherwise. The invoice-level taxed
-        totals are set so the computed official credit equals
-        `credit_official` exactly.
+        (prescription), each paired with its original invoice line the way
+        the parser does (the line model's rule) and carrying its errors:
+        one C010 at claim level unless `errors` says otherwise. The
+        invoice-level taxed totals are set so the computed official credit
+        equals `credit_official` exactly.
         """
         result = cls.env["spms.invoice.verification"].create(
             {
@@ -133,12 +133,19 @@ class TestSpmsVerification(SavepointCase):
             }
         )
         error_type_model = cls.env["spms.invoice.verification.error.type"]
+        originals = cls.env["spms.invoice.verification.line"]._match_original_lines(
+            move,
+            [
+                (
+                    line.get("prescription"),
+                    line.get("days_billed", 0.0),
+                    line.get("billed", 0.0),
+                )
+                for line in lines
+            ],
+        )
         line_vals_list = []
-        for line in lines:
-            move_lines = move.invoice_line_ids.filtered(
-                lambda move_line: move_line.spms_prescription
-                == line.get("prescription")
-            )
+        for line, original in zip(lines, originals):
             line_vals_list.append(
                 {
                     "result_id": result.id,
@@ -147,7 +154,7 @@ class TestSpmsVerification(SavepointCase):
                     "amount_allowed": line.get("allowed", 0.0),
                     "days_billed": line.get("days_billed", 0.0),
                     "days_paid": line.get("days_paid", 0.0),
-                    "move_line_id": (move_lines.id if len(move_lines) == 1 else False),
+                    "move_line_id": original.id,
                     "error_ids": [
                         (
                             0,
@@ -234,6 +241,64 @@ class TestSpmsVerification(SavepointCase):
             "odoo.sql_db"
         ), self.env.cr.savepoint():
             self._create_result(move, [])
+
+    def test_line_original_unique_per_result(self):
+        # an original invoice line carries one claim per result: the
+        # pairing never reuses a line, and the database refuses it too
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        line = result.line_ids[:1]
+        with self.assertRaises(IntegrityError), mute_logger(
+            "odoo.sql_db"
+        ), self.env.cr.savepoint():
+            self.env["spms.invoice.verification.line"].create(
+                {
+                    "result_id": result.id,
+                    "prescription": line.prescription,
+                    "move_line_id": line.move_line_id.id,
+                }
+            )
+
+    def test_generate_repeated_prescription_one_note_line_per_claim(self):
+        # a prescription billed on two identical lines, both rejected in
+        # full: each claim pairs with its own line and the note carries the
+        # two copies
+        move = self._create_invoice(
+            "FT 2026/00124", [("TESTP001", 31, 1.0), ("TESTP001", 31, 1.0)]
+        )
+        row = {
+            "prescription": "TESTP001",
+            "billed": 31.0,
+            "allowed": 0.0,
+            "days_billed": 31.0,
+        }
+        result = self._create_result(move, [row, dict(row)], credit_official=65.72)
+        self.assertEqual(
+            result.line_ids.mapped("move_line_id").ids, move.invoice_line_ids.ids
+        )
+        draft = result._generate_note()
+        credited = draft.invoice_line_ids.filtered("spms_prescription")
+        self.assertEqual(credited.mapped("quantity"), [31.0, 31.0])
+        self.assertEqual(credited.mapped("price_unit"), [1.0, 1.0])
+        self.assertEqual(result.line_ids.mapped("note_move_line_id"), credited)
+        self.assertAlmostEqual(draft.amount_total, 65.72)
+        self.assertEqual(result.state, "done")
+
+    def test_generate_two_claims_on_one_original_blocks(self):
+        # two claims for one invoice line (never observed, detected all the
+        # same): the second finds no distinct line, so the generation stops
+        # with the counts and the result stays as it came
+        move = self._standard_invoice()
+        rows = self._standard_rows()
+        rows.append(dict(rows[0]))
+        result = self._create_result(move, rows, credit_official=38.16)
+        self.assertEqual(len(result.line_ids.filtered("move_line_id")), 3)
+        with self.assertRaisesRegex(
+            UserError, r"TESTP001 \(claims: 2, invoice lines: 1\)"
+        ):
+            result._generate_note()
+        self.assertFalse(result.note_move_id)
+        self.assertEqual(result.state, "ready")
 
     def test_zero_official_closes_result(self):
         move = self._standard_invoice()
