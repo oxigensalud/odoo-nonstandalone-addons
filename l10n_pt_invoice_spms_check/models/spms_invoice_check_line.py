@@ -1,7 +1,10 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models
+from datetime import timedelta
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 from odoo.tools import float_compare, float_is_zero
 
 
@@ -137,10 +140,13 @@ class SpmsInvoiceCheckLine(models.Model):
         difference (billed - allowed). Total rejection keeps the copied line
         untouched (original days, price/day and SPMS dates); a partial
         rejection with reliable days credits the rejected days at the
-        original price/day; otherwise the whole difference goes on a single
-        unit, as a negative difference always does: the line then carries
-        the negative amount on one unit. Partial cases blank the SPMS dates
-        (which days is unknown).
+        original price/day, dated as the first rejected days of the original
+        period (the check says how many days SPMS cut, never which ones; the
+        customer's hand-made notes use the same convention); otherwise the
+        whole difference goes on a single unit over the original period, as
+        a negative difference always does: the line then carries the
+        negative amount on one unit. SPMS requires both dates on every line
+        of the note, so no shape leaves them blank.
         """
         self.ensure_one()
         original_line = self.move_line_id
@@ -166,16 +172,26 @@ class SpmsInvoiceCheckLine(models.Model):
             )
             == 0
         ):
+            if not original_line.spms_start_date:
+                raise UserError(
+                    _(
+                        "The rejected days of prescription %(prescription)s "
+                        "cannot be dated: invoice line %(line)s has no SPMS "
+                        "start date."
+                    )
+                    % {
+                        "prescription": self.prescription,
+                        "line": original_line.display_name,
+                    }
+                )
             return {
                 "quantity": days_rejected,
-                "spms_start_date": False,
-                "spms_end_date": False,
+                "spms_end_date": original_line.spms_start_date
+                + timedelta(days=days_rejected - 1),
             }
         return {
             "quantity": 1,
             "price_unit": self.amount_difference,
-            "spms_start_date": False,
-            "spms_end_date": False,
         }
 
     def _get_note_line_values(self, debit):
