@@ -27,6 +27,12 @@ msgid "# Lines"
 msgstr "N.º de linhas"
 
 #. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid "%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)"
+msgstr "%(prescription)s (prestações: %(claims)s, linhas da fatura: %(lines)s)"
+
+#. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
 #, python-format
 msgid ""
@@ -83,6 +89,14 @@ msgstr ""
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_verification.constraint_spms_invoice_verification_move_uniq
 msgid "An invoice can only carry one verification result."
 msgstr "Uma fatura só pode ter um resultado de conferência."
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.constraint,message:l10n_pt_invoice_spms_verification.constraint_spms_invoice_verification_line_result_move_line_uniq
+msgid ""
+"An original invoice line carries at most one claim per verification result."
+msgstr ""
+"Uma linha da fatura original tem no máximo uma prestação por resultado de "
+"conferência."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
@@ -764,10 +778,14 @@ msgstr "Linha da fatura original"
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__move_line_id
 msgid ""
-"Original invoice line matched by prescription number within the invoice."
+"Original invoice line of the claim: the line billing its prescription; when "
+"the prescription is billed on several lines, the one with the claim's billed "
+"quantity and amount, each line paired with one claim at most."
 msgstr ""
-"Linha da fatura original correspondida pelo número de prescrição dentro da "
-"fatura."
+"Linha da fatura original da prestação: a linha que fatura a sua prescrição; "
+"quando a prescrição é faturada em várias linhas, a que tem a quantidade e o "
+"valor faturados da prestação, cada linha emparelhada com uma prestação no "
+"máximo."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__days_paid
@@ -784,10 +802,12 @@ msgstr "Prescrição"
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
-msgid "Prescription %s cannot be mapped to a single line of the note draft."
+msgid ""
+"The note draft has no line for prescription %(prescription)s (invoice line "
+"%(line)s)."
 msgstr ""
-"A prescrição %s não pode ser associada a uma única linha do rascunho da "
-"nota."
+"O rascunho da nota não tem nenhuma linha para a prescrição %(prescription)s "
+"(linha da fatura %(line)s)."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_verification.selection__spms_invoice_verification_error__level__prescricao
@@ -812,8 +832,10 @@ msgstr ""
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
-msgid "Prescriptions not matched to an original invoice line: %s."
-msgstr "Prescrições sem correspondência com uma linha da fatura original: %s."
+msgid "Prescriptions not matched one-to-one to an original invoice line: %s."
+msgstr ""
+"Prescrições sem correspondência um a um com uma linha da fatura original: "
+"%s."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__provider_system_ref
