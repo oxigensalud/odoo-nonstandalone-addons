@@ -38,9 +38,13 @@ document date to read a month's verification at a glance.
 For a result that came back with errors, a draft rectifying invoice is
 created automatically the moment the result is processed, through the
 standard reversal path, cut down to the affected prescriptions, and
-linked back to the result. When the generation of a result fails (a
-prescription with no matching invoice line, a foreign note, a
-residual beyond the adjustment limit), that result alone is held in
+linked back to the result. Each claim edits the copy of its own invoice
+line: a prescription billed on several lines is paired with them by
+billed quantity and amount, one claim per line, and a claim that finds
+no distinct line of its own holds the result instead of guessing. When
+the generation of a result fails (a prescription with no matching
+invoice line, a foreign note, a residual beyond the adjustment limit),
+that result alone is held in
 *Error* with the reason on its form; fix the cause and reprocess the
 document to retry — the rest of the batch is never dragged along. A
 prescription the verification priced above the billed amount (a negative

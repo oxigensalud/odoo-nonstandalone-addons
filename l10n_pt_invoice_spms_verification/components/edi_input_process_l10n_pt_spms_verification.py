@@ -184,14 +184,10 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
 
     def _parse_lines(self, move, fact, problems):
         """The document's claims as (line values, error values) pairs, in
-        document order, plus the errors anchored to the invoice itself,
+        document order, each paired with its original invoice line by the
+        line model's rule, plus the errors anchored to the invoice itself,
         which have no line."""
         error_type_model = self.env["spms.invoice.verification.error.type"]
-        line_by_prescription = {}
-        for line in move.invoice_line_ids:
-            if line.spms_prescription:
-                line_by_prescription.setdefault(line.spms_prescription, [])
-                line_by_prescription[line.spms_prescription].append(line.id)
 
         def errors_of(anchor_element, level, anchor_vals=None):
             errors = []
@@ -222,7 +218,6 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
             }
             for claim in _children(lote, "PrestacoesErrosEDiferencas"):
                 prescription = _child_text(claim, "NumeroPrescricao")
-                line_ids = line_by_prescription.get(prescription, [])
                 line_vals = dict(
                     lot_vals,
                     prescription=prescription,
@@ -238,7 +233,6 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
                     days_paid=self._claim_float(
                         claim, "QuantidadeCalculado", prescription, problems
                     ),
-                    move_line_id=line_ids[0] if len(line_ids) == 1 else False,
                 )
                 line_errors = errors_of(claim, "prestacao")
                 for linha in _children(claim, "LinhaPrestacaoErrosEDiferencas"):
@@ -272,6 +266,19 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
                         )
                     line_errors.extend(errors_of(prescription_data, "prescricao"))
                 lines.append((line_vals, line_errors))
+        originals = self.env["spms.invoice.verification.line"]._match_original_lines(
+            move,
+            [
+                (
+                    line_vals["prescription"],
+                    line_vals["days_billed"],
+                    line_vals["amount_billed"],
+                )
+                for line_vals, _line_errors in lines
+            ],
+        )
+        for (line_vals, _line_errors), original in zip(lines, originals):
+            line_vals["move_line_id"] = original.id
         return lines, errors
 
     def _completeness_warning(self, root, error_count, problems):
