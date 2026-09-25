@@ -258,16 +258,20 @@ class SpmsInvoiceVerificationLine(models.Model):
         """Values to write on the copied refund line, empty to keep it as-is.
 
         Money is authoritative: the resulting line must carry exactly the
-        difference (billed - allowed). Total rejection keeps the copied line
-        untouched (original days, price/day and SPMS dates); a partial
-        rejection with reliable days credits the rejected days at the
-        original price/day, dated as the first rejected days of the original
-        period (the verification says how many days SPMS cut, never which ones; the
+        difference (billed - allowed), and the verification only ever sees
+        net amounts, so a discount of the original line counts once. Total
+        rejection keeps the copied line untouched (original days, price/day,
+        discount and SPMS dates); a partial rejection with reliable days
+        credits the rejected days at the original price/day and discount —
+        recognised on the net price per day, what the verification cut —
+        dated as the first rejected days of the original period (the
+        verification says how many days SPMS cut, never which ones; the
         customer's hand-made notes use the same convention); otherwise the
         whole difference goes on a single unit over the original period, as
-        a negative difference always does: the line then carries the
-        negative amount on one unit. SPMS requires both dates on every line
-        of the note, so no shape leaves them blank.
+        a negative difference always does: the line then carries the net
+        amount on one unit, with no discount to apply to it again. SPMS
+        requires both dates on every line of the note, so no shape leaves
+        them blank.
         """
         self.ensure_one()
         original_line = self.move_line_id
@@ -286,8 +290,9 @@ class SpmsInvoiceVerificationLine(models.Model):
         if (
             self.days_paid > 0
             and days_rejected > 0
+            and original_line.quantity > 0
             and float_compare(
-                days_rejected * original_line.price_unit,
+                days_rejected * original_line.price_subtotal / original_line.quantity,
                 self.amount_difference,
                 precision_rounding=rounding,
             )
@@ -313,6 +318,7 @@ class SpmsInvoiceVerificationLine(models.Model):
         return {
             "quantity": 1,
             "price_unit": self.amount_difference,
+            "discount": 0.0,
         }
 
     def _get_note_line_values(self, debit):

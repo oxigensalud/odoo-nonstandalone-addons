@@ -73,12 +73,13 @@ class TestSpmsVerification(SavepointCase):
         cls.company.tax_calculation_rounding_method = "round_globally"
 
     @classmethod
-    def _create_invoice(cls, name, lines):
+    def _create_invoice(cls, name, lines, discount=0.0):
         """Post an SPMS-like customer invoice.
 
         lines: list of (prescription, days, price_unit[, tax]) tuples; every
         line carries the SPMS period dates so the total-rejection case can
-        assert they are preserved on the refund.
+        assert they are preserved on the refund. `discount` (a percentage)
+        goes on every line.
         """
         move = cls.env["account.move"].create(
             {
@@ -95,6 +96,7 @@ class TestSpmsVerification(SavepointCase):
                             "product_id": cls.product.id,
                             "quantity": days,
                             "price_unit": price_unit,
+                            "discount": discount,
                             "tax_ids": [(6, 0, (extra[0] if extra else cls.tax6).ids)],
                             "spms_prescription": prescription,
                             "spms_start_date": date(2026, 5, 1),
@@ -352,6 +354,92 @@ class TestSpmsVerification(SavepointCase):
                 line.note_move_line_id,
                 by_prescription[line.prescription],
             )
+
+    def test_generate_discounted_invoice_counts_the_discount_once(self):
+        # the verification only sees net amounts: a 10 % discount bills 90
+        # per line. Total rejection keeps the discounted copy (90); the
+        # rejected days are recognised on the net price per day (2 × 9 =
+        # 18) and keep the discount; the money-only line carries the net
+        # difference with no discount (1 × 5, not 4.50)
+        move = self._create_invoice(
+            "FT 2026/00125",
+            [("TESTP001", 10, 10.0), ("TESTP002", 10, 10.0), ("TESTP003", 10, 10.0)],
+            discount=10.0,
+        )
+        rows = [
+            {
+                "prescription": "TESTP001",
+                "billed": 90.0,
+                "allowed": 0.0,
+                "days_billed": 10.0,
+            },
+            {
+                "prescription": "TESTP002",
+                "billed": 90.0,
+                "allowed": 72.0,
+                "days_billed": 10.0,
+                "days_paid": 8.0,
+            },
+            {
+                "prescription": "TESTP003",
+                "billed": 90.0,
+                "allowed": 85.0,
+                "days_billed": 10.0,
+                "days_paid": 10.0,
+            },
+        ]
+        result = self._create_result(move, rows, credit_official=119.78)
+        draft = result._generate_note()
+        by_prescription = {
+            line.spms_prescription: line for line in draft.invoice_line_ids
+        }
+        total_rejection = by_prescription["TESTP001"]
+        self.assertEqual(
+            (total_rejection.quantity, total_rejection.price_unit),
+            (10.0, 10.0),
+        )
+        self.assertEqual(total_rejection.discount, 10.0)
+        self.assertAlmostEqual(total_rejection.price_subtotal, 90.0)
+        partial_days = by_prescription["TESTP002"]
+        self.assertEqual((partial_days.quantity, partial_days.price_unit), (2.0, 10.0))
+        self.assertEqual(partial_days.discount, 10.0)
+        self.assertAlmostEqual(partial_days.price_subtotal, 18.0)
+        self.assertEqual(partial_days.spms_end_date, date(2026, 5, 2))
+        fallback = by_prescription["TESTP003"]
+        self.assertEqual((fallback.quantity, fallback.price_unit), (1.0, 5.0))
+        self.assertEqual(fallback.discount, 0.0)
+        self.assertAlmostEqual(fallback.price_subtotal, 5.0)
+        self.assertAlmostEqual(draft.amount_untaxed, 113.0)
+        self.assertAlmostEqual(draft.amount_total, 119.78)
+        self.assertEqual(result.state, "done")
+
+    def test_generate_discounted_negative_official_debit_line_has_no_discount(
+        self,
+    ):
+        # the charge-back of a net amount is net too: 1 × 5 on the debit
+        # note, never 5 less the copied 10 %
+        move = self._create_invoice(
+            "FT 2026/00151", [("TESTP010", 10, 10.0)], discount=10.0
+        )
+        rows = [
+            {
+                "prescription": "TESTP010",
+                "billed": 90.0,
+                "allowed": 95.0,
+                "days_billed": 10.0,
+                "days_paid": 10.0,
+                "errors": [{"code": "C011"}],
+            }
+        ]
+        result = self._create_result(move, rows, credit_official=-5.30)
+        draft = result._generate_note()
+        self.assertEqual(draft.move_type, "out_invoice")
+        line = draft.invoice_line_ids
+        self.assertEqual((line.quantity, line.price_unit), (1.0, 5.0))
+        self.assertEqual(line.discount, 0.0)
+        self.assertAlmostEqual(draft.amount_untaxed, 5.0)
+        self.assertAlmostEqual(draft.amount_total, 5.30)
+        self.assertEqual(result.state, "done")
 
     def test_generate_dates_every_note_line(self):
         # SPMS requires both dates on every line it receives, and the
