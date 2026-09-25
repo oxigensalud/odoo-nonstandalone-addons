@@ -269,16 +269,49 @@ class TestSpmsCheck(SavepointCase):
         partial_days = by_prescription["TESTP002"]
         self.assertEqual(partial_days.quantity, 2)
         self.assertAlmostEqual(partial_days.price_unit, 2.0)
-        self.assertFalse(partial_days.spms_start_date)
+        # the 2 rejected days are the first 2 of the original period
+        self.assertEqual(partial_days.spms_start_date, date(2026, 5, 1))
+        self.assertEqual(partial_days.spms_end_date, date(2026, 5, 2))
         fallback = by_prescription["TESTP003"]
         self.assertEqual(fallback.quantity, 1)
         self.assertAlmostEqual(fallback.price_unit, 1.0)
-        self.assertFalse(fallback.spms_start_date)
+        # one unit of difference over the original period
+        self.assertEqual(fallback.spms_start_date, date(2026, 5, 1))
+        self.assertEqual(fallback.spms_end_date, date(2026, 5, 31))
         for line in result.line_ids:
             self.assertEqual(
                 line.note_move_line_id,
                 by_prescription[line.prescription],
             )
+
+    def test_generate_dates_every_note_line(self):
+        # SPMS requires both dates on every line it receives, and the
+        # sender's period builder takes min/max over the line dates: one
+        # blank line breaks it (TypeError), all blank breaks it earlier
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_note()
+        for line in draft.invoice_line_ids:
+            self.assertTrue(line.spms_start_date, line.spms_prescription)
+            self.assertTrue(line.spms_end_date, line.spms_prescription)
+        self.assertEqual(
+            self.env["account.edi.xml.spms_cius_pt_211"]._get_invoice_period_vals_list(
+                draft
+            ),
+            [{"start_date": "2026-05-01", "end_date": "2026-05-31"}],
+        )
+
+    def test_generate_partial_days_without_start_date_blocks(self):
+        # the rejected days are dated from the original line's start: with
+        # no start date there is nothing to derive them from, and the note
+        # would reach SPMS undated
+        move = self._standard_invoice()
+        move.invoice_line_ids.filtered(
+            lambda line: line.spms_prescription == "TESTP002"
+        ).write({"spms_start_date": False, "spms_end_date": False})
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        with self.assertRaisesRegex(UserError, "TESTP002.*no SPMS start date"):
+            result._generate_note()
 
     def test_generate_twice_blocks(self):
         move = self._standard_invoice()
@@ -339,11 +372,18 @@ class TestSpmsCheck(SavepointCase):
         )
         order.action_confirm()
         move = order.with_context(default_journal_id=self.journal.id)._create_invoices()
-        # the sale-to-invoice propagation of the prescription number lives
-        # outside this module's dependencies: the sale line description
-        # carries it here and the invoice line takes it from there
+        # the sale-to-invoice propagation of the prescription number and of
+        # the SPMS period lives outside this module's dependencies: the sale
+        # line description carries the prescription here, the invoice line
+        # takes it from there and is dated like the standard invoice
         for line in move.invoice_line_ids:
-            line.spms_prescription = line.sale_line_ids.name
+            line.write(
+                {
+                    "spms_prescription": line.sale_line_ids.name,
+                    "spms_start_date": date(2026, 5, 1),
+                    "spms_end_date": date(2026, 5, 31),
+                }
+            )
         move.action_post()
         self.assertEqual(order.invoice_status, "invoiced")
         return order, move
@@ -565,7 +605,8 @@ class TestSpmsCheck(SavepointCase):
         self.assertEqual(negative.quantity, 1)
         self.assertAlmostEqual(negative.price_unit, -2.0)
         self.assertAlmostEqual(negative.price_subtotal, -2.0)
-        self.assertFalse(negative.spms_start_date)
+        self.assertEqual(negative.spms_start_date, date(2026, 5, 1))
+        self.assertEqual(negative.spms_end_date, date(2026, 5, 31))
         self.assertAlmostEqual(draft.amount_untaxed, 29.0)
         self.assertAlmostEqual(draft.amount_total, 30.74)
         negative_claim = result.line_ids.filtered(
