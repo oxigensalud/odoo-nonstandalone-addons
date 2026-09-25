@@ -1085,6 +1085,16 @@ msgid "The original invoice %s is not posted."
 msgstr "La factura original %s no está publicada."
 
 #. module: l10n_pt_invoice_spms_check
+#: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check_line.py:0
+#, python-format
+msgid ""
+"The rejected days of prescription %(prescription)s cannot be dated: invoice "
+"line %(line)s has no SPMS start date."
+msgstr ""
+"Los días rechazados de la prescripción %(prescription)s no se pueden fechar: "
+"la línea de factura %(line)s no tiene fecha de inicio SPMS."
+
+#. module: l10n_pt_invoice_spms_check
 #: code:addons/l10n_pt_invoice_spms_check/models/spms_invoice_check.py:0
 #, python-format
 msgid "The result is no longer ready (current state: %s)."
