@@ -512,7 +512,10 @@ class SpmsInvoiceVerification(models.Model):
             )
         lines = self._get_creditable_lines()
         draft = self._create_debit_draft() if debit else self._create_reversal_draft()
-        self._edit_note_draft(draft, lines, debit)
+        draft_line_by_original = self.env[
+            "spms.invoice.verification.line"
+        ]._match_copied_lines(self.move_id, draft)
+        self._edit_note_draft(draft, lines, draft_line_by_original, debit)
         self._check_draft_consistency(draft, debit)
         difference = float_round(
             self._get_note_total() - draft.amount_total, precision_rounding=rounding
@@ -520,20 +523,16 @@ class SpmsInvoiceVerification(models.Model):
         if float_compare(difference, 0.0, precision_rounding=rounding) != 0:
             self._check_adjustment_limit(draft, difference)
             self._impose_official_tax(draft, difference)
-        note_line_map = {}
-        for draft_line in draft.invoice_line_ids:
-            note_line_map.setdefault(draft_line.spms_prescription, draft_line)
         for line in lines:
-            line.note_move_line_id = note_line_map.get(
-                line.prescription, self.env["account.move.line"]
-            )
+            # every claim has its draft line: the edit raised otherwise
+            line.note_move_line_id = draft_line_by_original[line.move_line_id.id]
         self.note_move_id = draft
         self.state = "done"
         return draft
 
     def _get_creditable_lines(self):
-        """The claims with a difference, positive or negative, each matched
-        to its original invoice line."""
+        """The claims with a difference, positive or negative, each paired
+        with its own original invoice line."""
         self.ensure_one()
         lines = self.line_ids.filtered(lambda line: line._is_creditable())
         if not lines:
@@ -543,10 +542,34 @@ class SpmsInvoiceVerification(models.Model):
         unmatched = lines.filtered(lambda line: not line.move_line_id)
         if unmatched:
             raise UserError(
-                _("Prescriptions not matched to an original invoice line: %s.")
-                % ", ".join(line.prescription or "?" for line in unmatched)
+                _(
+                    "Prescriptions not matched one-to-one to an original "
+                    "invoice line: %s."
+                )
+                % ", ".join(
+                    self._describe_pairing(prescription)
+                    for prescription in dict.fromkeys(unmatched.mapped("prescription"))
+                )
             )
         return lines
+
+    def _describe_pairing(self, prescription):
+        """«P (claims: n, invoice lines: m)»: the counts behind a failed
+        pairing — the claims the document carries for the prescription
+        against the invoice lines billing it, each claim needing a distinct
+        line with its billed quantity and amount."""
+        self.ensure_one()
+        return _("%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)") % {
+            "prescription": prescription,
+            "claims": len(
+                self.line_ids.filtered(lambda line: line.prescription == prescription)
+            ),
+            "lines": len(
+                self.move_id.invoice_line_ids.filtered(
+                    lambda line: line.spms_prescription == prescription
+                )
+            ),
+        }
 
     def _create_reversal_draft(self):
         self.ensure_one()
@@ -606,8 +629,11 @@ class SpmsInvoiceVerification(models.Model):
             )
         return draft
 
-    def _edit_note_draft(self, draft, lines, debit):
-        """Cut the full-copy draft down to the affected prescriptions.
+    def _edit_note_draft(self, draft, lines, draft_line_by_original, debit):
+        """Cut the full-copy draft down to the affected claims: each claim
+        edits the draft's copy of its original invoice line
+        (`draft_line_by_original`, the line model's pairing), so a
+        prescription billed on several lines keeps one note line per claim.
 
         The single write goes through the standard invoice business layer
         (`invoice_line_ids`), which recomputes subtotals, taxes and payment
@@ -617,29 +643,27 @@ class SpmsInvoiceVerification(models.Model):
         count its quantity as invoiced twice.
         """
         self.ensure_one()
-        draft_line_map = {}
-        for draft_line in draft.invoice_line_ids:
-            draft_line_map.setdefault(draft_line.spms_prescription, []).append(
-                draft_line.id
-            )
         commands = []
         kept_draft_line_ids = []
         for line in lines:
-            draft_line_ids = draft_line_map.get(line.prescription, [])
-            if len(draft_line_ids) != 1:
+            draft_line = draft_line_by_original.get(line.move_line_id.id)
+            if draft_line is None:
                 raise UserError(
                     _(
-                        "Prescription %s cannot be mapped to a single line "
-                        "of the note draft."
+                        "The note draft has no line for prescription "
+                        "%(prescription)s (invoice line %(line)s)."
                     )
-                    % line.prescription
+                    % {
+                        "prescription": line.prescription,
+                        "line": line.move_line_id.display_name,
+                    }
                 )
-            kept_draft_line_ids.append(draft_line_ids[0])
+            kept_draft_line_ids.append(draft_line.id)
             line_values = line._get_note_line_values(debit)
             if debit:
                 line_values["sale_line_ids"] = [(5, 0, 0)]
             if line_values:
-                commands.append((1, draft_line_ids[0], line_values))
+                commands.append((1, draft_line.id, line_values))
         for draft_line in draft.invoice_line_ids:
             if draft_line.id not in kept_draft_line_ids:
                 commands.append((2, draft_line.id))

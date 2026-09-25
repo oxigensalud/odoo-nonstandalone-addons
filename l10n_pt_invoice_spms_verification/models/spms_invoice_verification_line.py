@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools import float_compare, float_is_zero
+from odoo.tools import float_compare, float_is_zero, float_round
 
 
 class SpmsInvoiceVerificationLine(models.Model):
@@ -95,8 +95,10 @@ class SpmsInvoiceVerificationLine(models.Model):
         string="Original Invoice Line",
         readonly=True,
         check_company=True,
-        help="Original invoice line matched by prescription number within "
-        "the invoice.",
+        help="Original invoice line of the claim: the line billing its "
+        "prescription; when the prescription is billed on several lines, "
+        "the one with the claim's billed quantity and amount, each line "
+        "paired with one claim at most.",
     )
     note_move_line_id = fields.Many2one(
         comodel_name="account.move.line",
@@ -112,10 +114,129 @@ class SpmsInvoiceVerificationLine(models.Model):
         string="Errors",
     )
 
+    _sql_constraints = [
+        (
+            "result_move_line_uniq",
+            "unique(result_id, move_line_id)",
+            "An original invoice line carries at most one claim per "
+            "verification result.",
+        ),
+    ]
+
     @api.depends("amount_billed", "amount_allowed")
     def _compute_amount_difference(self):
         for rec in self:
             rec.amount_difference = rec.amount_billed - rec.amount_allowed
+
+    # -- pairing claims with invoice lines ---------------------------------
+    #
+    # The prescription number is the billing-line key of a claim, but an
+    # invoice can bill one prescription on several lines (two periods, two
+    # products) and the document then returns one claim per line with no
+    # line reference. The pairing rule: the prescription alone when it is
+    # billed once and claimed once; otherwise the billed quantity and
+    # untaxed amount tell the lines apart, N identical claims and N
+    # identical lines pair one-to-one in order (the note comes out the same
+    # either way), and a line never carries two claims. A claim without a
+    # distinct compatible line is left unpaired: the generation reports it.
+
+    @api.model
+    def _pairing_key(self, prescription, quantity, amount, rounding):
+        """The key two sides of the pairing compare: the prescription and,
+        rounded to what a document value and an invoice value can share,
+        the quantity and the untaxed amount."""
+        return (
+            prescription,
+            float_round(
+                quantity,
+                precision_digits=self.env["decimal.precision"].precision_get(
+                    "Product Unit of Measure"
+                ),
+            ),
+            float_round(amount, precision_rounding=rounding),
+        )
+
+    @api.model
+    def _invoice_line_key(self, line, rounding):
+        return self._pairing_key(
+            line.spms_prescription, line.quantity, line.price_subtotal, rounding
+        )
+
+    @api.model
+    def _pair_one_to_one(self, keys, candidates):
+        """Pair each key with a distinct candidate of its prescription.
+
+        `keys`: pairing keys in document order; `candidates`: (pairing key,
+        value) pairs in invoice order. Returns {position in `keys`: value}.
+        One key and one candidate for a prescription pair on the
+        prescription alone; otherwise a key takes the first unused
+        candidate with its exact key, in order. A key left without a
+        candidate is absent from the result.
+        """
+        pool_by_prescription = {}
+        for key, value in candidates:
+            pool_by_prescription.setdefault(key[0], []).append((key, value))
+        positions_by_prescription = {}
+        for position, key in enumerate(keys):
+            positions_by_prescription.setdefault(key[0], []).append((position, key))
+        pairs = {}
+        for prescription, positioned in positions_by_prescription.items():
+            pool = list(pool_by_prescription.get(prescription, []))
+            if len(positioned) == 1 and len(pool) == 1:
+                pairs[positioned[0][0]] = pool[0][1]
+            else:
+                for position, key in positioned:
+                    match = next(
+                        (
+                            index
+                            for index, (candidate_key, _value) in enumerate(pool)
+                            if candidate_key == key
+                        ),
+                        None,
+                    )
+                    if match is not None:
+                        pairs[position] = pool.pop(match)[1]
+        return pairs
+
+    @api.model
+    def _match_original_lines(self, move, claims):
+        """The original invoice line of each claim, as a list aligned with
+        `claims`: an empty recordset where no distinct compatible line
+        exists (the generation reports it, never the parser).
+
+        `claims`: (prescription, billed quantity, billed amount) tuples in
+        document order.
+        """
+        rounding = move.currency_id.rounding
+        pairs = self._pair_one_to_one(
+            [
+                self._pairing_key(prescription, quantity, amount, rounding)
+                for prescription, quantity, amount in claims
+            ],
+            [
+                (self._invoice_line_key(line, rounding), line)
+                for line in move.invoice_line_ids.filtered("spms_prescription")
+            ],
+        )
+        empty = self.env["account.move.line"]
+        return [pairs.get(position, empty) for position in range(len(claims))]
+
+    @api.model
+    def _match_copied_lines(self, move, draft):
+        """The copy each invoice line of `move` has on `draft` — a note
+        draft built by copying the invoice — as {invoice line id: draft
+        line}, paired like the claims so that a prescription billed on
+        several lines keeps one draft line per invoice line."""
+        rounding = move.currency_id.rounding
+        originals = move.invoice_line_ids.filtered("spms_prescription")
+        pairs = self._pair_one_to_one(
+            [self._invoice_line_key(line, rounding) for line in originals],
+            [
+                (self._invoice_line_key(line, rounding), line)
+                for line in draft.invoice_line_ids.filtered("spms_prescription")
+            ],
+        )
+        return {originals[position].id: copy for position, copy in pairs.items()}
 
     def _is_creditable(self):
         """A claim the credit note must carry: keyed by prescription and

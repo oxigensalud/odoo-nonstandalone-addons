@@ -387,17 +387,141 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         # parsing never blocks; the generation reports the unmatched
         self.assertEqual(result.state, "error")
         self.assertIn("not matched", result.generation_error)
+        self.assertIn(
+            "TESTMISSING (claims: 1, invoice lines: 0)", result.generation_error
+        )
         self.assertEqual(result.error_message, result.generation_error)
         self.assertFalse(result.note_move_id)
 
-    def test_ambiguous_prescription_stays_unlinked(self):
+    def test_repeated_prescription_pairs_by_quantity_and_amount(self):
+        # two lines bill TESTPDUP (10 days at 1.00, 5 days at 2.00) and the
+        # document returns their claims in the other order: each claim
+        # finds the line with its billed quantity and amount, and the note
+        # carries one line per claim
         invoice = self._create_invoice(
             "FT TEST/00002", [("TESTPDUP", 10, 1.0), ("TESTPDUP", 5, 2.0)]
         )
-        document = _document(claims=_prestacao("TESTPDUP", errors=_erro("C011")))
+        document = _document(
+            total_billed="20.00",
+            total_allowed="8.00",
+            total_billed_taxed="20.00",
+            total_allowed_taxed="8.00",
+            claims=_prestacao(
+                "TESTPDUP",
+                billed="10.00",
+                allowed="8.00",
+                days_billed="5",
+                errors=_erro("C011"),
+            )
+            + _prestacao(
+                "TESTPDUP",
+                billed="10.00",
+                allowed="0.00",
+                days_billed="10",
+                errors=_erro("C011"),
+            ),
+        )
         self._process(document, invoice=invoice)
-        line = self._result(invoice).line_ids
-        self.assertFalse(line.move_line_id)
+        result = self._result(invoice)
+        five_days, ten_days = invoice.invoice_line_ids.sorted("quantity")
+        self.assertEqual(
+            result.line_ids.mapped("move_line_id").ids, [five_days.id, ten_days.id]
+        )
+        self.assertEqual(result.state, "done")
+        credited = result.note_move_id.invoice_line_ids.filtered("spms_prescription")
+        self.assertEqual(
+            [(line.quantity, line.price_unit) for line in credited.sorted("quantity")],
+            [(1.0, 2.0), (10.0, 1.0)],
+        )
+        self.assertEqual(result.line_ids.mapped("note_move_line_id"), credited)
+
+    def test_identical_repeated_lines_pair_each_once(self):
+        # two identical lines bill TESTPDUP and the document returns two
+        # identical claims: they pair one-to-one in order, each line used
+        # once — the two pairings give the same note
+        invoice = self._create_invoice(
+            "FT TEST/00003", [("TESTPDUP", 10, 1.0), ("TESTPDUP", 10, 1.0)]
+        )
+        claim = _prestacao(
+            "TESTPDUP",
+            billed="10.00",
+            allowed="0.00",
+            days_billed="10",
+            errors=_erro("C011"),
+        )
+        document = _document(
+            total_billed="20.00",
+            total_allowed="0.00",
+            total_billed_taxed="20.00",
+            total_allowed_taxed="0.00",
+            claims=claim + claim,
+        )
+        self._process(document, invoice=invoice)
+        result = self._result(invoice)
+        self.assertEqual(
+            result.line_ids.mapped("move_line_id").ids, invoice.invoice_line_ids.ids
+        )
+        self.assertEqual(result.state, "done")
+        credited = result.note_move_id.invoice_line_ids.filtered("spms_prescription")
+        self.assertEqual(credited.mapped("quantity"), [10.0, 10.0])
+        self.assertEqual(credited.mapped("price_unit"), [1.0, 1.0])
+        self.assertEqual(result.line_ids.mapped("note_move_line_id"), credited)
+
+    def test_two_claims_on_one_original_hold_the_result(self):
+        # one line bills TESTPDUP but the document returns two claims for
+        # it: the second has no distinct line of its own, so the result is
+        # kept whole and its note is held with the counts
+        invoice = self._create_invoice("FT TEST/00004", [("TESTPDUP", 10, 1.0)])
+        claim = _prestacao(
+            "TESTPDUP",
+            billed="10.00",
+            allowed="8.00",
+            days_billed="10",
+            errors=_erro("C011"),
+        )
+        document = _document(
+            total_billed="20.00",
+            total_allowed="16.00",
+            total_billed_taxed="20.00",
+            total_allowed_taxed="16.00",
+            claims=claim + claim,
+        )
+        self._process(document, invoice=invoice)
+        result = self._result(invoice)
+        first, second = result.line_ids
+        self.assertEqual(first.move_line_id, invoice.invoice_line_ids)
+        self.assertFalse(second.move_line_id)
+        self.assertEqual(result.state, "error")
+        self.assertIn("not matched one-to-one", result.generation_error)
+        self.assertIn("TESTPDUP (claims: 2, invoice lines: 1)", result.generation_error)
+        self.assertFalse(result.note_move_id)
+
+    def test_repeated_prescription_claim_without_compatible_line_stays_unlinked(
+        self,
+    ):
+        # two lines bill TESTPDUP but the claim's billed quantity matches
+        # neither: no guess — unlinked, and the generation says so
+        invoice = self._create_invoice(
+            "FT TEST/00005", [("TESTPDUP", 10, 1.0), ("TESTPDUP", 5, 2.0)]
+        )
+        document = _document(
+            total_billed="20.00",
+            total_allowed="18.00",
+            total_billed_taxed="20.00",
+            total_allowed_taxed="18.00",
+            claims=_prestacao(
+                "TESTPDUP",
+                billed="10.00",
+                allowed="8.00",
+                days_billed="7",
+                errors=_erro("C011"),
+            ),
+        )
+        self._process(document, invoice=invoice)
+        result = self._result(invoice)
+        self.assertFalse(result.line_ids.move_line_id)
+        self.assertEqual(result.state, "error")
+        self.assertIn("TESTPDUP (claims: 1, invoice lines: 2)", result.generation_error)
 
     def test_multi_claim_counts_per_level(self):
         document = _document(
