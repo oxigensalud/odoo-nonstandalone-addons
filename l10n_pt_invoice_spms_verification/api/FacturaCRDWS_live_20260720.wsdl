@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<s0:definitions name="FacturaElectronicaWSService" targetNamespace="http://facturaElectronica.service.cc.ccf/" xmlns:s0="http://schemas.xmlsoap.org/wsdl/" xmlns:s1="http://facturaElectronica.service.cc.ccf/" xmlns:s2="http://schemas.xmlsoap.org/wsdl/soap/">
+  <s0:types>
+    <xsd:schema targetNamespace="http://facturaElectronica.service.cc.ccf/types" xmlns:tns="http://facturaElectronica.service.cc.ccf/" xmlns:tnsTypes="http://facturaElectronica.service.cc.ccf/types" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:complexType abstract="true" name="serviceMessageBase">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="areaConferencia" type="xsd:int"/>
+          <xsd:element minOccurs="0" name="codigoPrestador" type="xsd:string"/>
+          <xsd:element minOccurs="0" name="dataFactura" type="xsd:date"/>
+          <xsd:element minOccurs="0" name="nif" type="xsd:long"/>
+          <xsd:element minOccurs="0" name="numeroFactura" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType abstract="true" name="serviceMessageCRDBase">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="areaConferencia" type="xsd:int"/>
+          <xsd:element minOccurs="0" name="codigoPrestador" type="xsd:string"/>
+          <xsd:element minOccurs="0" name="dataFactura" type="xsd:date"/>
+          <xsd:element minOccurs="0" name="nif" type="xsd:string"/>
+          <xsd:element minOccurs="0" name="numeroFactura" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="submeterFacturaElectronicaCRD">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="ficheiroComprimido" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="submeterFacturaElectronicaCRDResponse">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="aceite" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="submeterFaturaEletronicaCRD">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageCRDBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="ficheiroComprimido" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="submeterFaturaEletronicaCRDResponse">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageCRDBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="aceite" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="submeterNotaCredDebCRDRequest">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageCRDBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="tipoNota" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="numeroNota" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="submeterNotaCredDebCRDWSResponse">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageCRDBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="tipoNota" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="numeroNota" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="aceite" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="obterResultadoConferenciaRequest">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageBase">
+            <xsd:sequence/>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="obterResultadoConferenciaWSResponse">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="ServiceException">
+        <xsd:sequence>
+          <xsd:element name="Message" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="submeterNotaCredDebRequest">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="numeroNota" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="tipoNota" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="submeterNotaCredDebWSResponse">
+        <xsd:complexContent>
+          <xsd:extension base="tnsTypes:serviceMessageBase">
+            <xsd:sequence>
+              <xsd:element minOccurs="0" name="aceite" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="documento" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="numeroNota" type="xsd:string"/>
+              <xsd:element minOccurs="0" name="tipoNota" type="xsd:string"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+    </xsd:schema>
+    <xsd:schema targetNamespace="http://facturaElectronica.service.cc.ccf/" xmlns:tns="http://facturaElectronica.service.cc.ccf/" xmlns:tnsTypes="http://facturaElectronica.service.cc.ccf/types" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      <xsd:import namespace="http://facturaElectronica.service.cc.ccf/types"/>
+      <xsd:element name="submeterFacturaElectronicaCRD" type="tnsTypes:submeterFacturaElectronicaCRD"/>
+      <xsd:element name="submeterFacturaElectronicaCRDResponse" type="tnsTypes:submeterFacturaElectronicaCRDResponse"/>
+      <xsd:element name="submeterFaturaEletronicaCRD" type="tnsTypes:submeterFaturaEletronicaCRD"/>
+      <xsd:element name="submeterFaturaEletronicaCRDResponse" type="tnsTypes:submeterFaturaEletronicaCRDResponse"/>
+      <xsd:element name="submeterNotaCredDebCRD" type="tnsTypes:submeterNotaCredDebCRDRequest"/>
+      <xsd:element name="submeterNotaCredDebCRDResponse" type="tnsTypes:submeterNotaCredDebCRDWSResponse"/>
+      <xsd:element name="obterResultadoConferencia" type="tnsTypes:obterResultadoConferenciaRequest"/>
+      <xsd:element name="obterResultadoConferenciaResponse" type="tnsTypes:obterResultadoConferenciaWSResponse"/>
+      <xsd:element name="submeterNotaCredDeb" type="tnsTypes:submeterNotaCredDebRequest"/>
+      <xsd:element name="submeterNotaCredDebResponse" type="tnsTypes:submeterNotaCredDebWSResponse"/>
+      <xsd:element name="ServiceException" type="tnsTypes:ServiceException"/>
+    </xsd:schema>
+  </s0:types>
+  <s0:message name="submeterFacturaElectronicaCRDInput">
+    <s0:part element="s1:submeterFacturaElectronicaCRD" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterFacturaElectronicaCRDOutput">
+    <s0:part element="s1:submeterFacturaElectronicaCRDResponse" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterFaturaEletronicaCRDInput">
+    <s0:part element="s1:submeterFaturaEletronicaCRD" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterFaturaEletronicaCRDOutput">
+    <s0:part element="s1:submeterFaturaEletronicaCRDResponse" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterNotaCredDebCRDInput">
+    <s0:part element="s1:submeterNotaCredDebCRD" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterNotaCredDebCRDOutput">
+    <s0:part element="s1:submeterNotaCredDebCRDResponse" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterNotaCredDebInput">
+    <s0:part element="s1:submeterNotaCredDeb" name="parameters"/>
+  </s0:message>
+  <s0:message name="submeterNotaCredDebOutput">
+    <s0:part element="s1:submeterNotaCredDebResponse" name="parameters"/>
+  </s0:message>
+  <s0:message name="obterResultadoConferenciaInput">
+    <s0:part element="s1:obterResultadoConferencia" name="parameters"/>
+  </s0:message>
+  <s0:message name="obterResultadoConferenciaOutput">
+    <s0:part element="s1:obterResultadoConferenciaResponse" name="parameters"/>
+  </s0:message>
+  <s0:message name="ServiceException">
+    <s0:part element="s1:ServiceException" name="ServiceException"/>
+  </s0:message>
+  <s0:portType name="FacturaElectronicaWS">
+    <s0:operation name="submeterFacturaElectronicaCRD">
+      <s0:input message="s1:submeterFacturaElectronicaCRDInput"/>
+      <s0:output message="s1:submeterFacturaElectronicaCRDOutput"/>
+      <s0:fault message="s1:ServiceException" name="ServiceException"/>
+    </s0:operation>
+    <s0:operation name="submeterFaturaEletronicaCRD">
+      <s0:input message="s1:submeterFaturaEletronicaCRDInput"/>
+      <s0:output message="s1:submeterFaturaEletronicaCRDOutput"/>
+      <s0:fault message="s1:ServiceException" name="ServiceException"/>
+    </s0:operation>
+    <s0:operation name="submeterNotaCredDebCRD">
+      <s0:input message="s1:submeterNotaCredDebCRDInput"/>
+      <s0:output message="s1:submeterNotaCredDebCRDOutput"/>
+      <s0:fault message="s1:ServiceException" name="ServiceException"/>
+    </s0:operation>
+    <s0:operation name="submeterNotaCredDeb">
+      <s0:input message="s1:submeterNotaCredDebInput"/>
+      <s0:output message="s1:submeterNotaCredDebOutput"/>
+      <s0:fault message="s1:ServiceException" name="ServiceException"/>
+    </s0:operation>
+    <s0:operation name="obterResultadoConferencia">
+      <s0:input message="s1:obterResultadoConferenciaInput"/>
+      <s0:output message="s1:obterResultadoConferenciaOutput"/>
+      <s0:fault message="s1:ServiceException" name="ServiceException"/>
+    </s0:operation>
+  </s0:portType>
+  <s0:binding name="FacturaElectronicaWSSoapHttp" type="s1:FacturaElectronicaWS">
+    <s2:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <s0:operation name="submeterFacturaElectronicaCRD">
+      <s2:operation/>
+      <s0:input>
+        <s2:body use="literal"/>
+      </s0:input>
+      <s0:output>
+        <s2:body use="literal"/>
+      </s0:output>
+      <s0:fault name="ServiceException">
+        <s2:fault name="ServiceException" use="literal"/>
+      </s0:fault>
+    </s0:operation>
+    <s0:operation name="submeterFaturaEletronicaCRD">
+      <s2:operation/>
+      <s0:input>
+        <s2:body use="literal"/>
+      </s0:input>
+      <s0:output>
+        <s2:body use="literal"/>
+      </s0:output>
+      <s0:fault name="ServiceException">
+        <s2:fault name="ServiceException" use="literal"/>
+      </s0:fault>
+    </s0:operation>
+    <s0:operation name="submeterNotaCredDebCRD">
+      <s2:operation/>
+      <s0:input>
+        <s2:body use="literal"/>
+      </s0:input>
+      <s0:output>
+        <s2:body use="literal"/>
+      </s0:output>
+      <s0:fault name="ServiceException">
+        <s2:fault name="ServiceException" use="literal"/>
+      </s0:fault>
+    </s0:operation>
+    <s0:operation name="submeterNotaCredDeb">
+      <s2:operation/>
+      <s0:input>
+        <s2:body use="literal"/>
+      </s0:input>
+      <s0:output>
+        <s2:body use="literal"/>
+      </s0:output>
+      <s0:fault name="ServiceException">
+        <s2:fault name="ServiceException" use="literal"/>
+      </s0:fault>
+    </s0:operation>
+    <s0:operation name="obterResultadoConferencia">
+      <s2:operation/>
+      <s0:input>
+        <s2:body use="literal"/>
+      </s0:input>
+      <s0:output>
+        <s2:body use="literal"/>
+      </s0:output>
+      <s0:fault name="ServiceException">
+        <s2:fault name="ServiceException" use="literal"/>
+      </s0:fault>
+    </s0:operation>
+  </s0:binding>
+  <s0:service name="FacturaElectronicaWSService">
+    <s0:port binding="s1:FacturaElectronicaWSSoapHttp" name="FacturaElectronicaWSPort">
+      <s2:address location="http://ccfesb01prd.ccf.local:7003/WSExternoBroker/ProxyService/FacturaCRDWS"/>
+    </s0:port>
+  </s0:service>
+</s0:definitions>
