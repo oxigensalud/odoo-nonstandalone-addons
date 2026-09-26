@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-26 16:53+0000\n"
-"PO-Revision-Date: 2026-09-26 16:53+0000\n"
+"POT-Creation-Date: 2026-09-26 17:19+0000\n"
+"PO-Revision-Date: 2026-09-26 17:19+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: pt\n"
@@ -1010,13 +1010,13 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
 #, python-format
 msgid ""
-"The CCF answered with a server error (%(status)s) and no usable content. The"
-" problem is at SPMS, not in this invoice or its data: try again in a few "
-"minutes. Technical detail: %(detail)s."
+"The CCF answered with a server error (%(status)s) and no usable content. "
+"This says nothing about the invoice or its data; the next hourly pass asks "
+"again on its own. Technical detail: %(detail)s."
 msgstr ""
-"O CCF respondeu com um erro de servidor (%(status)s) e sem conteúdo útil. O "
-"problema é da SPMS, não desta fatura nem dos seus dados: tente novamente "
-"dentro de alguns minutos. Detalhe técnico: %(detail)s."
+"O CCF respondeu com um erro de servidor (%(status)s) e sem conteúdo "
+"utilizável. Isto nada diz sobre a fatura nem sobre os seus dados; a passagem"
+" horária seguinte volta a perguntar por si só. Detalhe técnico: %(detail)s."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
@@ -1034,13 +1034,13 @@ msgstr "O CCF respondeu sem documento de conferência nem código de retorno."
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
 #, python-format
 msgid ""
-"The CCF did not answer within %(seconds)s seconds. The problem is at SPMS, "
-"not in this invoice or its data: try again in a few minutes. Technical "
-"detail: %(detail)s"
+"The CCF did not answer within %(seconds)s seconds. This says nothing about "
+"the invoice or its data; the next hourly pass asks again on its own. "
+"Technical detail: %(detail)s"
 msgstr ""
-"O CCF não respondeu em %(seconds)s segundos. O problema é da SPMS, não desta"
-" fatura nem dos seus dados: tente novamente dentro de alguns minutos. "
-"Detalhe técnico: %(detail)s"
+"O CCF não respondeu em %(seconds)s segundos. Isto nada diz sobre a fatura "
+"nem sobre os seus dados; a passagem horária seguinte volta a perguntar por "
+"si só. Detalhe técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
@@ -1066,13 +1066,13 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
 #, python-format
 msgid ""
-"The CCF web service could not be reached (connection problem). The problem "
-"is at SPMS or in the network, not in this invoice: try again in a few "
-"minutes. Technical detail: %(detail)s"
+"The CCF web service could not be reached (connection problem). This says "
+"nothing about the invoice or its data; the next hourly pass asks again on "
+"its own. Technical detail: %(detail)s"
 msgstr ""
-"Não foi possível contactar o serviço web do CCF (problema de ligação). O "
-"problema é da SPMS ou da rede, não desta fatura: tente novamente dentro de "
-"alguns minutos. Detalhe técnico: %(detail)s"
+"Não foi possível contactar o serviço web do CCF (problema de ligação). Isto "
+"nada diz sobre a fatura nem sobre os seus dados; a passagem horária seguinte"
+" volta a perguntar por si só. Detalhe técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
