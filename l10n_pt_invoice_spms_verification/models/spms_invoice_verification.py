@@ -16,6 +16,18 @@ OFFICIAL_VALUE_FIELDS = (
     "total_allowed_taxed",
 )
 
+# the facts the result state and its error message are computed from
+STATE_DEPENDS = (
+    "move_id.reversal_move_id.state",
+    "move_id.reversal_move_id.move_type",
+    "move_id.debit_note_ids.state",
+    "move_id.debit_note_ids.move_type",
+    "note_move_id.state",
+    "verification_state",
+    "generation_error",
+    "credit_official",
+)
+
 
 class SpmsInvoiceVerification(models.Model):
     _name = "spms.invoice.verification"
@@ -132,8 +144,14 @@ class SpmsInvoiceVerification(models.Model):
             ("zero_official", "Zero Official Value"),
         ],
         string="State",
-        readonly=True,
+        compute="_compute_state",
+        store=True,
         copy=False,
+        help="The semaphore of the result, kept by Odoo from the live "
+        "notes of the invoice, the module's own note, the verdict, the "
+        "generation error and the official value: Ready to generate, "
+        "Done with a live note of its own, Error for a human to look "
+        "at, Zero Official Value when there is nothing to regularize.",
     )
     line_ids = fields.One2many(
         comodel_name="spms.invoice.verification.line",
@@ -268,18 +286,8 @@ class SpmsInvoiceVerification(models.Model):
         # name it after its invoice so the user still knows what it is
         return [(rec.id, rec.name or rec.move_id.display_name) for rec in self]
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        records = super().create(vals_list)
-        records._update_state()
-        return records
-
     def write(self, vals):
-        official_touched = any(field in vals for field in OFFICIAL_VALUE_FIELDS)
-        state_touched = official_touched or any(
-            field in vals for field in ("verification_state", "generation_error")
-        )
-        if official_touched:
+        if any(field in vals for field in OFFICIAL_VALUE_FIELDS):
             for rec in self:
                 if (
                     rec.state == "done"
@@ -294,10 +302,7 @@ class SpmsInvoiceVerification(models.Model):
                         )
                         % rec.move_id.display_name
                     )
-        res = super().write(vals)
-        if state_touched:
-            self._update_state()
-        return res
+        return super().write(vals)
 
     def _is_debit(self):
         """A negative official value: the verification computed more than billed,
@@ -342,14 +347,7 @@ class SpmsInvoiceVerification(models.Model):
             - self.note_move_id
         )
 
-    @api.depends(
-        "move_id.reversal_move_id.state",
-        "move_id.debit_note_ids.state",
-        "note_move_id",
-        "verification_state",
-        "generation_error",
-        "credit_official",
-    )
+    @api.depends(*STATE_DEPENDS)
     def _compute_error_message(self):
         for rec in self:
             foreign_notes = rec._get_foreign_notes()
@@ -396,40 +394,35 @@ class SpmsInvoiceVerification(models.Model):
             precision_rounding=self.currency_id.rounding or 0.01,
         )
 
-    def _update_state(self):
-        """Single source of truth for the result state (semaphore).
+    @api.depends(*STATE_DEPENDS)
+    def _compute_state(self):
+        """The result state (semaphore), computed by Odoo from the facts it
+        depends on, so it follows every change of those facts whatever
+        the path: a note cancelled, deleted, created or reset to draft
+        from accounting refreshes it in the same transaction.
 
-        Called after creation, after the official totals are written and
-        after generation. A result whose own note (credit note, or debit
-        note for a negative official value) is alive is 'done'; any other
-        live note of that kind — made by hand or by anyone else — is an
-        'error' even alongside our own note, because only one note may
-        regularize an invoice (a human fixes accounting; the module never
-        adopts a foreign note). Once our note is cancelled or deleted, the
-        regular evaluation below reopens the result (the official value
-        is kept) so generation stays reachable. An official value of zero
-        closes the result as 'zero_official': legitimately settled,
-        nothing to regularize — the
-        'Conferida Sem Erros' results land here by construction.
+        A result whose own note (credit note, or debit note for a negative
+        official value) is alive is 'done'; any other live note of that
+        kind — made by hand or by anyone else — is an 'error' even
+        alongside our own note, because only one note may regularize an
+        invoice (a human fixes accounting; the module never adopts a
+        foreign note). Once our note is cancelled or deleted, the regular
+        evaluation below reopens the result (the official value is kept)
+        so generation stays reachable. An official value of zero closes
+        the result as 'zero_official': legitimately settled, nothing to
+        regularize — the 'Conferida Sem Erros' results land here by
+        construction.
         """
         for rec in self:
             foreign_notes = rec._get_foreign_notes()
             own_note_alive = rec.note_move_id and rec.note_move_id.state != "cancel"
             if own_note_alive and not foreign_notes:
                 rec.state = "done"
-                continue
-            if rec.note_move_id and not own_note_alive:
-                rec.note_move_id = False
-            if foreign_notes:
+            elif (
+                foreign_notes or rec.generation_error or rec._is_unrecognized_outcome()
+            ):
                 rec.state = "error"
-                continue
-            if rec.generation_error:
-                rec.state = "error"
-                continue
-            if rec._is_unrecognized_outcome():
-                rec.state = "error"
-                continue
-            if float_is_zero(
+            elif float_is_zero(
                 rec.credit_official,
                 precision_rounding=rec.currency_id.rounding or 0.01,
             ):
@@ -472,7 +465,6 @@ class SpmsInvoiceVerification(models.Model):
         self.env["account.move"].invalidate_cache(
             ["state", "reversal_move_id", "debit_note_ids"], self.move_id.ids
         )
-        self._update_state()
         if self.state != "ready":
             raise UserError(
                 _("The result is no longer ready (current state: %s).")
@@ -527,7 +519,6 @@ class SpmsInvoiceVerification(models.Model):
             # every claim has its draft line: the edit raised otherwise
             line.note_move_line_id = draft_line_by_original[line.move_line_id.id]
         self.note_move_id = draft
-        self.state = "done"
         return draft
 
     def _get_creditable_lines(self):

@@ -60,13 +60,4 @@ class AccountMove(models.Model):
                 subtype_xmlid="mail.mt_note",
             )
         results.write({"note_move_id": False})
-        results._update_state()
-        return res
-
-    def unlink(self):
-        results = self.spms_note_invoice_verification_ids
-        res = super().unlink()
-        # the database already dropped the pointers (ondelete='set null');
-        # the semaphore has to follow without waiting for a manual refresh
-        results._update_state()
         return res

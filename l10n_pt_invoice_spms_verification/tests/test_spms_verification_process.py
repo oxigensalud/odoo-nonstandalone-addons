@@ -655,7 +655,7 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
                 "total_billed_taxed": 10.0,
             }
         )
-        result.write({"note_move_id": refund.id, "state": "done"})
+        result.write({"note_move_id": refund.id})
         self.assertTrue(result.official_locked)
         child = self._process(_document())
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
