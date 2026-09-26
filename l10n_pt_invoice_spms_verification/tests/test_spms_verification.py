@@ -961,15 +961,38 @@ class TestSpmsVerification(SavepointCase):
             }
         )
         wizard.reverse_moves()
-        result._update_state()
         self.assertEqual(result.state, "error")
         self.assertEqual(result.note_move_id, own)
         foreign = move.reversal_move_id - own
         self.assertIn(foreign.display_name, result.error_message)
         foreign.button_cancel()
-        result._update_state()
         self.assertEqual(result.state, "done")
         self.assertFalse(result.error_message)
+
+    def test_foreign_note_reset_to_draft_marks_error_again(self):
+        # the semaphore follows the note whatever accounting does to it:
+        # cancelled, the foreign note frees the result; reset to draft, it
+        # blocks it again — no manual refresh anywhere
+        move = self._standard_invoice()
+        wizard = self.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, move.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": fields.Date.context_today(move),
+                "company_id": self.company.id,
+            }
+        )
+        wizard.reverse_moves()
+        foreign = move.reversal_move_id
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        self.assertEqual(result.state, "error")
+        foreign.button_cancel()
+        self.assertEqual(result.state, "ready")
+        self.assertFalse(result.error_message)
+        foreign.button_draft()
+        self.assertEqual(result.state, "error")
+        self.assertIn(foreign.display_name, result.error_message)
 
     def test_non_refund_reversal_does_not_block(self):
         # the foreign-note guard only counts customer credit notes: a
@@ -1140,7 +1163,6 @@ class TestSpmsVerification(SavepointCase):
         with self.assertRaisesRegex(UserError, "no longer ready"):
             result._generate_note()
         foreign.button_cancel()
-        result._update_state()
         self.assertEqual(result.state, "ready")
 
     def test_foreign_note_of_the_other_kind_does_not_block(self):
