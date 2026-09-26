@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-26 12:02+0000\n"
-"PO-Revision-Date: 2026-09-26 12:02+0000\n"
+"POT-Creation-Date: 2026-09-26 12:48+0000\n"
+"PO-Revision-Date: 2026-09-26 12:48+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: pt\n"
@@ -596,6 +596,11 @@ msgstr ""
 " nota."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record__l10n_pt_spms_verification_answer
+msgid "Last CCF Answer"
+msgstr "Última resposta do CCF"
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move____last_update
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_backend____last_update
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record____last_update
@@ -1143,6 +1148,23 @@ msgstr ""
 "A fatura já tem uma %(kind)s viva que este módulo não criou: %(notes)s. Só "
 "pode existir uma %(kind)s por fatura; corrija-a ou cancele-a primeiro na "
 "contabilidade."
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_edi_exchange_record__l10n_pt_spms_verification_answer
+msgid ""
+"The last answer of the CCF to the question about this verification result, "
+"exactly as received (\"301 - Factura Inexistente.\", \"302 - Factura ainda "
+"não conferida.\"): a verdict of the CCF in its own words. Blank once the "
+"document is received, and after a failure that carried no verdict (no "
+"answer, connection problem, unusable answer). The record's last modification"
+" is the time of the last question."
+msgstr ""
+"A última resposta do CCF à pergunta sobre este resultado de conferência, "
+"exatamente como recebida (\"301 - Factura Inexistente.\", \"302 - Factura "
+"ainda não conferida.\"): um veredicto do CCF nas suas próprias palavras. Em "
+"branco depois de recebido o documento, e após uma falha sem veredicto (sem "
+"resposta, problema de ligação, resposta inutilizável). A última modificação "
+"do registo é a hora da última pergunta."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
