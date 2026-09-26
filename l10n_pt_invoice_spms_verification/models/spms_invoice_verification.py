@@ -194,7 +194,11 @@ class SpmsInvoiceVerification(models.Model):
         "prescription, so no line.",
     )
     official_locked = fields.Boolean(
+        string="Locked by Its Note",
         compute="_compute_official_locked",
+        help="The result carries a live credit or debit note of its own: "
+        "the official value, the document and the result itself are locked "
+        "until that note is cancelled.",
     )
     amount_lines_untaxed = fields.Monetary(
         string="Claims Amount (Untaxed)",
@@ -310,6 +314,19 @@ class SpmsInvoiceVerification(models.Model):
                         % rec.move_id.display_name
                     )
         return super().write(vals)
+
+    def unlink(self):
+        for rec in self:
+            if rec.official_locked:
+                raise UserError(
+                    _(
+                        "The verification result of %s is carried by a live "
+                        "credit or debit note; cancel that note first to "
+                        "delete it."
+                    )
+                    % rec.move_id.display_name
+                )
+        return super().unlink()
 
     def _is_debit(self):
         """A negative official value: the verification computed more than billed,
