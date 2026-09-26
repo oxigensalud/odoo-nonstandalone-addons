@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-26 12:48+0000\n"
-"PO-Revision-Date: 2026-09-26 12:48+0000\n"
+"POT-Creation-Date: 2026-09-26 16:53+0000\n"
+"PO-Revision-Date: 2026-09-26 16:53+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es\n"
@@ -675,6 +675,11 @@ msgid "Lines"
 msgstr "Líneas"
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__official_locked
+msgid "Locked by Its Note"
+msgstr "Bloqueado por su nota"
+
+#. module: l10n_pt_invoice_spms_verification
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_line_view_search
 msgid "Lot"
 msgstr "Lote"
@@ -749,11 +754,6 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
 msgid "Official Credit"
 msgstr "Crédito oficial"
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__official_locked
-msgid "Official Locked"
-msgstr "Valor oficial bloqueado"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error_type__description
@@ -1231,6 +1231,17 @@ msgstr ""
 " la línea de factura %(line)s no tiene fecha de inicio SPMS."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__official_locked
+msgid ""
+"The result carries a live credit or debit note of its own: the official "
+"value, the document and the result itself are locked until that note is "
+"cancelled."
+msgstr ""
+"El resultado lleva una nota de crédito o de débito propia viva: el valor "
+"oficial, el documento y el propio resultado quedan bloqueados hasta que esa "
+"nota se cancele."
+
+#. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
 msgid "The result is no longer ready (current state: %s)."
@@ -1346,6 +1357,16 @@ msgid ""
 msgstr ""
 "El resultado de verificación de %s ya lo lleva una nota de crédito o de "
 "débito viva; cancele esa nota antes de reprocesar el documento."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
+"The verification result of %s is carried by a live credit or debit note; "
+"cancel that note first to delete it."
+msgstr ""
+"El resultado de verificación de %s lo lleva una nota de crédito o de débito "
+"viva; cancele antes esa nota para eliminarlo."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
