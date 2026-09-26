@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-25 16:24+0000\n"
-"PO-Revision-Date: 2026-09-25 16:24+0000\n"
+"POT-Creation-Date: 2026-09-26 11:47+0000\n"
+"PO-Revision-Date: 2026-09-26 11:47+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ca\n"
@@ -27,13 +27,6 @@ msgid "# Lines"
 msgstr "Nre. de línies"
 
 #. module: l10n_pt_invoice_spms_verification
-#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
-msgid "%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)"
-msgstr ""
-"%(prescription)s (prestacions: %(claims)s, línies de factura: %(lines)s)"
-
-#. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
 #, python-format
 msgid ""
@@ -44,6 +37,13 @@ msgstr ""
 "%(count)s dels %(total)s errors del document de verificació són en posicions"
 " que aquest analitzador no coneix: la llista d'errors de sota és incompleta."
 " El document en brut adjunt a aquest resultat és l'autoritat."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid "%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)"
+msgstr ""
+"%(prescription)s (prestacions: %(claims)s, línies de factura: %(lines)s)"
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
@@ -444,6 +444,11 @@ msgid "Every error the document reports, with and without line."
 msgstr "Tots els errors que informa el document, amb línia i sense."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__exchange_record_id
+msgid "Exchange Record"
+msgstr "Registre d'intercanvi"
+
+#. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
 msgid ""
@@ -784,12 +789,12 @@ msgstr "Línia de la factura original"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__move_line_id
 msgid ""
 "Original invoice line of the claim: the line billing its prescription; when "
-"the prescription is billed on several lines, the one with the claim's billed "
-"quantity and amount, each line paired with one claim at most."
+"the prescription is billed on several lines, the one with the claim's billed"
+" quantity and amount, each line paired with one claim at most."
 msgstr ""
 "Línia de la factura original de la prestació: la línia que factura la seva "
-"prescripció; quan la prescripció es factura en diverses línies, la que té la "
-"quantitat i l'import facturats de la prestació, cada línia aparellada amb "
+"prescripció; quan la prescripció es factura en diverses línies, la que té la"
+" quantitat i l'import facturats de la prestació, cada línia aparellada amb "
 "una prestació com a màxim."
 
 #. module: l10n_pt_invoice_spms_verification
@@ -803,16 +808,6 @@ msgstr "Dies pagats"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__prescription
 msgid "Prescription"
 msgstr "Prescripció"
-
-#. module: l10n_pt_invoice_spms_verification
-#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
-msgid ""
-"The note draft has no line for prescription %(prescription)s (invoice line "
-"%(line)s)."
-msgstr ""
-"L'esborrany de la nota no té cap línia per a la prescripció %(prescription)s "
-"(línia de factura %(line)s)."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_verification.selection__spms_invoice_verification_error__level__prescricao
@@ -851,6 +846,15 @@ msgstr "Ref. sistema del proveïdor"
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_search
 msgid "Ready"
 msgstr "Llest"
+
+#. module: l10n_pt_invoice_spms_verification
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
+msgid ""
+"Ready for generation: press Retry on the exchange record to generate the "
+"note."
+msgstr ""
+"Llest per generar: premeu Retry al registre d'intercanvi per generar la "
+"nota."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:res.groups,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_group_responsible
@@ -1076,6 +1080,19 @@ msgid "The CCF web service is unavailable (%s)."
 msgstr "El servei web del CCF no està disponible (%s)."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__exchange_record_id
+msgid ""
+"The EDI exchange record that received the verification document this result "
+"comes from and processed it. A result held in Error, or reopened by "
+"accounting, is generated again by pressing Retry on that record: it "
+"processes the stored document again."
+msgstr ""
+"El registre d'intercanvi EDI que ha rebut el document de verificació d'on "
+"prové aquest resultat i l'ha processat. Un resultat retingut en Error, o "
+"reobert des de comptabilitat, es torna a generar prement Retry en aquest "
+"registre: torna a processar el document desat."
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_verification.constraint_res_company_spms_adjustment_limit_positive
 msgid "The SPMS adjustment limit cannot be negative."
 msgstr "El límit d'ajust SPMS no pot ser negatiu."
@@ -1114,10 +1131,10 @@ msgstr "El registre d'intercanvi %s no està vinculat a cap factura."
 #, python-format
 msgid ""
 "The generated note %(note)s was cancelled: the verification result of "
-"invoice %(invoice)s is ready for generation again."
+"invoice %(invoice)s no longer carries a note."
 msgstr ""
 "La nota generada %(note)s s'ha cancel·lat: el resultat de verificació de la "
-"factura %(invoice)s torna a estar llest per a la generació."
+"factura %(invoice)s ja no porta cap nota."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1130,6 +1147,16 @@ msgstr ""
 "La factura ja té una %(kind)s viva que aquest mòdul no ha creat: %(notes)s. "
 "Només pot existir una %(kind)s per factura; corregiu-la o cancel·leu-la "
 "abans a comptabilitat."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
+"The note draft has no line for prescription %(prescription)s (invoice line "
+"%(line)s)."
+msgstr ""
+"L'esborrany de la nota no té cap línia per a la prescripció %(prescription)s"
+" (línia de factura %(line)s)."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1181,6 +1208,20 @@ msgstr ""
 #, python-format
 msgid "The result is no longer ready (current state: %s)."
 msgstr "El resultat ja no està llest (estat actual: %s)."
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__state
+msgid ""
+"The semaphore of the result, kept by Odoo from the live notes of the "
+"invoice, the module's own note, the verdict, the generation error and the "
+"official value: Ready to generate, Done with a live note of its own, Error "
+"for a human to look at, Zero Official Value when there is nothing to "
+"regularize."
+msgstr ""
+"El semàfor del resultat, que l'Odoo manté a partir de les notes vives de la "
+"factura, la nota pròpia del mòdul, el veredicte, l'error de generació i el "
+"valor oficial: Llest per generar, Fet amb una nota pròpia viva, Error perquè"
+" s'ho miri una persona, Valor oficial zero quan no hi ha res a regularitzar."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1266,6 +1307,16 @@ msgid ""
 msgstr ""
 "El resultat de verificació de %s ja el porta una nota de crèdit o de dèbit "
 "viva; cancel·leu aquesta nota abans de reprocessar el document."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
+"The verification result of %s is ready for generation again: press Retry on "
+"its exchange record to generate the note."
+msgstr ""
+"El resultat de verificació de %s torna a estar llest per generar: premeu "
+"Retry al seu registre d'intercanvi per generar la nota."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1371,12 +1422,14 @@ msgstr ""
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__generation_error
 msgid ""
 "Why the automatic note generation of this result failed; the result is held "
-"in Error until the cause is fixed and the document is reprocessed. Other "
-"results of the same batch are never dragged along."
+"in Error until the cause is fixed and Retry is pressed on its exchange "
+"record, which processes the document again. Other results of the same batch "
+"are never dragged along."
 msgstr ""
 "Per què ha fallat la generació automàtica de la nota d'aquest resultat; el "
-"resultat es reté en Error fins que es corregeix la causa i es reprocessa el "
-"document. Els altres resultats del mateix lot mai no s'hi veuen arrossegats."
+"resultat es reté en Error fins que es corregeix la causa i es prem Retry al "
+"seu registre d'intercanvi, que torna a processar el document. Els altres "
+"resultats del mateix lot mai no s'hi veuen arrossegats."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__error_message
