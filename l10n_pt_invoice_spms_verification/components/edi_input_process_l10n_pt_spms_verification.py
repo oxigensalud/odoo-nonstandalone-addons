@@ -108,11 +108,13 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
                 root, error_count, problems
             ),
             "generation_error": False,
+            "exchange_record_id": exchange_record.id,
         }
         result = self._store_result(move, result_vals, lines, errors)
         self._attach_document(move, result, exchange_record)
         # a definitive with-errors result goes straight to its draft note
-        # (credit or debit); a failure holds this result only, with reason
+        # (credit or debit); a failure holds this result only, with its
+        # reason, and raises so that the record is held with Retry
         result._generate_note_or_hold()
         return _(
             "SPMS verification result of %(invoice)s processed: %(state)s, "

@@ -52,6 +52,13 @@
                     <field name="error_message" nolabel="1" />
                 </div>
                 <div
+                    class="alert alert-info"
+                    role="alert"
+                    attrs="{'invisible': [('state', '!=', 'ready')]}"
+                >
+                    Ready for generation: press Retry on the exchange record to generate the note.
+                </div>
+                <div
                     class="alert alert-warning"
                     role="alert"
                     attrs="{'invisible': [('completeness_warning', '=', False)]}"
@@ -76,6 +83,7 @@
                         <group name="links">
                             <field name="move_id" />
                             <field name="note_move_id" />
+                            <field name="exchange_record_id" />
                             <field
                                 name="company_id"
                                 groups="base.group_multi_company"

@@ -37,21 +37,35 @@ class AccountMove(models.Model):
             "view_mode": "form",
         }
 
-    def button_cancel(self):
-        """Release the linked verification results in the same transaction.
+    def _spms_verification_results(self):
+        """Verification results these moves take part in: the ones whose
+        generated note they are, and the ones of the invoices they
+        reverse or debit (a foreign note in the eyes of the result)."""
+        return (
+            self.spms_note_invoice_verification_ids
+            | self.reversed_entry_id.spms_invoice_verification_ids
+            | self.debit_origin_id.spms_invoice_verification_ids
+        )
 
-        The pointer means 'live note': once the note is cancelled
-        the result must become generable again on its own — no manual
-        step — leaving a trace in the original invoice's chatter.
+    def button_cancel(self):
+        """Release the verification results these notes belong to, in the
+        same transaction, and hold their exchange records for Retry.
+
+        The pointer means 'live note': once the note is cancelled the
+        result no longer carries one, which the original invoice's
+        chatter records. A result that is Ready again — ours, or the one
+        of the invoice a foreign note reversed — can only be generated
+        again by processing its document again: its exchange record is
+        held with Retry for that.
         """
+        results = self._spms_verification_results()
         res = super().button_cancel()
-        results = self.spms_note_invoice_verification_ids
-        for result in results:
+        own = self.spms_note_invoice_verification_ids
+        for result in own:
             result.move_id.message_post(
                 body=_(
                     "The generated note %(note)s was cancelled: the verification "
-                    "result of invoice %(invoice)s is ready for generation "
-                    "again."
+                    "result of invoice %(invoice)s no longer carries a note."
                 )
                 % {
                     "note": html_escape(result.note_move_id.display_name),
@@ -59,5 +73,14 @@ class AccountMove(models.Model):
                 },
                 subtype_xmlid="mail.mt_note",
             )
-        results.write({"note_move_id": False})
+        own.write({"note_move_id": False})
+        results._mark_exchange_record_retryable()
+        return res
+
+    def unlink(self):
+        results = self._spms_verification_results()
+        res = super().unlink()
+        # the database dropped the pointers (ondelete='set null') and the
+        # semaphore followed; a result Ready again is held for Retry
+        results._mark_exchange_record_retryable()
         return res

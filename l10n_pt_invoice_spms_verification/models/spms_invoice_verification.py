@@ -136,6 +136,17 @@ class SpmsInvoiceVerification(models.Model):
         "means live note: it is released automatically the moment the note "
         "is cancelled or deleted.",
     )
+    exchange_record_id = fields.Many2one(
+        comodel_name="edi.exchange.record",
+        string="Exchange Record",
+        readonly=True,
+        ondelete="set null",
+        help="The EDI exchange record that received the verification "
+        "document this result comes from and processed it. A result held "
+        "in Error, or reopened by accounting, is generated again by "
+        "pressing Retry on that record: it processes the stored document "
+        "again.",
+    )
     state = fields.Selection(
         selection=[
             ("ready", "Ready"),
@@ -227,9 +238,9 @@ class SpmsInvoiceVerification(models.Model):
         readonly=True,
         copy=False,
         help="Why the automatic note generation of this result failed; the "
-        "result is held in Error until the cause is fixed and the document "
-        "is reprocessed. Other results of the same batch are never dragged "
-        "along.",
+        "result is held in Error until the cause is fixed and Retry is "
+        "pressed on its exchange record, which processes the document "
+        "again. Other results of the same batch are never dragged along.",
     )
 
     _sql_constraints = [
@@ -431,24 +442,67 @@ class SpmsInvoiceVerification(models.Model):
                 rec.state = "ready"
 
     def _generate_note_or_hold(self):
-        """One savepoint per result: a failure holds that result alone
-        in Error with its reason; reprocessing the document retries."""
+        """Generate the note of a ready result, or hold the result in Error
+        with the reason and raise it.
+
+        The generation runs in its own savepoint, so a failure leaves the
+        result untouched except for its reason. The raise reaches edi_oca,
+        which holds the exchange record in 'Error on process' with the
+        same reason and offers Retry on it: pressing it processes the
+        stored document again, and the note is generated then. A result
+        already held (a foreign note, an unrecognised outcome) raises for
+        the same reason.
+        """
         for rec in self:
-            if rec.verification_state != "with_errors" or rec.state != "ready":
-                continue
-            try:
-                with self.env.cr.savepoint():
-                    rec._generate_note()
-            except UserError as err:
-                rec.generation_error = err.args[0] if err.args else str(err)
-            except Exception:
-                _logger.exception(
-                    "Note generation of %s failed unexpectedly",
-                    rec.move_id.display_name,
+            if rec.state == "ready":
+                try:
+                    with self.env.cr.savepoint():
+                        rec._generate_note()
+                except UserError as err:
+                    rec.generation_error = err.args[0] if err.args else str(err)
+                except Exception:
+                    _logger.exception(
+                        "Note generation of %s failed unexpectedly",
+                        rec.move_id.display_name,
+                    )
+                    rec.generation_error = _(
+                        "Unexpected generation failure; see the server log."
+                    )
+            if rec.state == "error":
+                raise UserError(rec.error_message)
+
+    def _mark_exchange_record_retryable(self):
+        """Hold the exchange record of a reopened result in 'Error on
+        process', so that its Retry generates the note again.
+
+        Accounting cancelled or deleted a note and the result is Ready
+        again: the only way to generate its note is processing the stored
+        document again, which edi_oca offers as the Retry of a record in
+        'Error on process' — a processed record has no such button. The
+        record is held there with the reason, and the original invoice's
+        chatter gets the link.
+        """
+        for rec in self.filtered(lambda result: result.state == "ready"):
+            record = rec.exchange_record_id
+            # no record: a result created out of band, no document to
+            # process again; not processed: already held, or received
+            # again and waiting to be processed
+            if record and record.edi_exchange_state == "input_processed":
+                message = (
+                    _(
+                        "The verification result of %s is ready for generation "
+                        "again: press Retry on its exchange record to generate "
+                        "the note."
+                    )
+                    % rec.move_id.display_name
                 )
-                rec.generation_error = _(
-                    "Unexpected generation failure; see the server log."
+                record.write(
+                    {
+                        "edi_exchange_state": "input_processed_error",
+                        "exchange_error": message,
+                    }
                 )
+                record._notify_related_record(message, level="warning")
 
     def _generate_note(self):
         """Create the draft note for a ready (green) result: a credit note,

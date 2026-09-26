@@ -782,7 +782,8 @@ class TestSpmsVerification(SavepointCase):
             UserError, "SPMS adjustment limit of company"
         ), self.env.cr.savepoint():
             result._generate_note()
-        result._generate_note_or_hold()
+        with self.assertRaisesRegex(UserError, "adjustment limit"):
+            result._generate_note_or_hold()
         self.assertEqual(result.state, "error")
         self.assertIn("adjustment limit", result.generation_error)
         self.assertFalse(result.note_move_id)
