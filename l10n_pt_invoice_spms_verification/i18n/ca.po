@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-26 12:02+0000\n"
-"PO-Revision-Date: 2026-09-26 12:02+0000\n"
+"POT-Creation-Date: 2026-09-26 12:48+0000\n"
+"PO-Revision-Date: 2026-09-26 12:48+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ca\n"
@@ -599,6 +599,11 @@ msgstr ""
 "en lloc de generar la nota."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record__l10n_pt_spms_verification_answer
+msgid "Last CCF Answer"
+msgstr "Última resposta del CCF"
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move____last_update
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_backend____last_update
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record____last_update
@@ -1147,6 +1152,23 @@ msgstr ""
 "La factura ja té una %(kind)s viva que aquest mòdul no ha creat: %(notes)s. "
 "Només pot existir una %(kind)s per factura; corregiu-la o cancel·leu-la "
 "abans a comptabilitat."
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_edi_exchange_record__l10n_pt_spms_verification_answer
+msgid ""
+"The last answer of the CCF to the question about this verification result, "
+"exactly as received (\"301 - Factura Inexistente.\", \"302 - Factura ainda "
+"não conferida.\"): a verdict of the CCF in its own words. Blank once the "
+"document is received, and after a failure that carried no verdict (no "
+"answer, connection problem, unusable answer). The record's last modification"
+" is the time of the last question."
+msgstr ""
+"L'última resposta del CCF a la pregunta sobre aquest resultat de "
+"verificació, tal com s'ha rebut (\"301 - Factura Inexistente.\", \"302 - "
+"Factura ainda não conferida.\"): un veredicte del CCF amb les seves "
+"paraules. En blanc un cop rebut el document, i després d'una fallada sense "
+"veredicte (cap resposta, problema de connexió, resposta ininterpretable). "
+"L'última modificació del registre és l'hora de l'última pregunta."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
