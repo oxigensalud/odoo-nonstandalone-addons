@@ -7,7 +7,7 @@ from lxml import etree
 from psycopg2 import IntegrityError
 
 from odoo import fields
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.osv import expression
 from odoo.tests.common import Form, SavepointCase, new_test_user
 from odoo.tools import mute_logger
@@ -15,6 +15,9 @@ from odoo.tools.safe_eval import safe_eval
 
 RESPONSIBLE_GROUP = (
     "l10n_pt_invoice_spms_verification.spms_invoice_verification_group_responsible"
+)
+CONSULTATION_GROUP = (
+    "l10n_pt_invoice_spms_verification.spms_invoice_verification_group_consultation"
 )
 
 
@@ -1424,3 +1427,50 @@ class TestSpmsVerification(SavepointCase):
             ),
             cut_error | document_error,
         )
+
+    def test_responsible_deletes_a_result_with_its_lines_and_errors(self):
+        result = self._single_claim_result("DELETE RESPONSIBLE", "DELETE-A")
+        lines, errors = result.line_ids, result.error_ids
+        self.assertTrue(lines)
+        self.assertTrue(errors)
+        user = new_test_user(
+            self.env,
+            login="spms_delete_responsible",
+            groups=RESPONSIBLE_GROUP,
+            company_id=self.company.id,
+            company_ids=[(6, 0, self.company.ids)],
+        )
+        result.with_user(user).unlink()
+        self.assertFalse(result.exists())
+        self.assertFalse(lines.exists())
+        self.assertFalse(errors.exists())
+
+    def test_consultation_cannot_delete_a_result(self):
+        result = self._single_claim_result("DELETE CONSULTATION", "DELETE-B")
+        user = new_test_user(
+            self.env,
+            login="spms_delete_consultation",
+            groups="base.group_user," + CONSULTATION_GROUP,
+            company_id=self.company.id,
+            company_ids=[(6, 0, self.company.ids)],
+        )
+        with self.assertRaises(AccessError), self.cr.savepoint():
+            result.with_user(user).unlink()
+        self.assertTrue(result.exists())
+
+    def test_result_carried_by_a_live_note_cannot_be_deleted(self):
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_note()
+        self.assertEqual(result.state, "done")
+        with self.assertRaisesRegex(
+            UserError, "cancel that note first to delete"
+        ), self.cr.savepoint():
+            result.unlink()
+        self.assertTrue(result.exists())
+        # the note cancelled, the result reopens and can go; the note stays
+        draft.button_cancel()
+        self.assertEqual(result.state, "ready")
+        result.unlink()
+        self.assertFalse(result.exists())
+        self.assertEqual(draft.state, "cancel")

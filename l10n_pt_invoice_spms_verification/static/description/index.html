@@ -420,7 +420,11 @@ to it.</li>
 <ul class="simple">
 <li>Assign the <em>SPMS / Consultation</em> group to users who can read the
 verification results, and <em>SPMS / Responsible</em> to the users allowed to
-work with them and with the generated credit and debit notes.</li>
+work with them and with the generated credit and debit notes. Only
+<em>Responsible</em> can delete a result (its lines and errors go with it),
+and never from the screens: deletion is reserved to scripted
+clean-ups, and a result carried by a live credit or debit note refuses
+it until that note is cancelled.</li>
 <li>The polling scheduled action (<em>SPMS: get verification results from the
 CCF</em>, under <em>Settings → Technical → Automation → Scheduled Actions</em>)
 runs hourly out of the box. It creates the expected result record of
