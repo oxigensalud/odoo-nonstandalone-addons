@@ -4,7 +4,9 @@ scheduled action (*SPMS: get verification results from the CCF*) creates
 that result record — *Waiting to be received* — at its first pass after
 the sending and asks the CCF about it every hour, in its own queue job
 (*Queue → Jobs* lists them). *Not verified yet* (302) keeps it waiting; a
-verification document is received on it and processed from there. The CCF being
+verification document is received on it and processed from there (a
+document naming another invoice than the record's is rejected: *Error on
+process* with the reason, *Retry* after looking into it). The CCF being
 unavailable (999), a transport failure, an unknown answer or the CCF not
 recognising the invoice (301) put the record in *Error on reception*
 with the reason, and it is asked again at the next pass until the CCF
