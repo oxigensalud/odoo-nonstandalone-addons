@@ -249,9 +249,10 @@ class EdiExchangeRecord(models.Model):
             # no answer at all within the timeout
             self._l10n_pt_spms_verification_receive_error(
                 _(
-                    "The CCF did not answer within %(seconds)s seconds. The "
-                    "problem is at SPMS, not in this invoice or its data: try "
-                    "again in a few minutes. Technical detail: %(detail)s"
+                    "The CCF did not answer within %(seconds)s seconds. This "
+                    "says nothing about the invoice or its data; the next "
+                    "hourly pass asks again on its own. Technical detail: "
+                    "%(detail)s"
                 )
                 % {"seconds": REQUEST_TIMEOUT, "detail": type(err).__name__},
                 exception=err,
@@ -263,9 +264,9 @@ class EdiExchangeRecord(models.Model):
             self._l10n_pt_spms_verification_receive_error(
                 _(
                     "The CCF web service could not be reached (connection "
-                    "problem). The problem is at SPMS or in the network, not "
-                    "in this invoice: try again in a few minutes. Technical "
-                    "detail: %(detail)s"
+                    "problem). This says nothing about the invoice or its "
+                    "data; the next hourly pass asks again on its own. "
+                    "Technical detail: %(detail)s"
                 )
                 % {"detail": type(err).__name__},
                 exception=err,
@@ -287,8 +288,8 @@ class EdiExchangeRecord(models.Model):
             if status and status >= 500:
                 message = _(
                     "The CCF answered with a server error (%(status)s) and no "
-                    "usable content. The problem is at SPMS, not in this "
-                    "invoice or its data: try again in a few minutes. "
+                    "usable content. This says nothing about the invoice or "
+                    "its data; the next hourly pass asks again on its own. "
                     "Technical detail: %(detail)s."
                 )
             else:

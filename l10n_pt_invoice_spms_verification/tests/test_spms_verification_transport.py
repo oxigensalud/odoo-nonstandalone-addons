@@ -377,7 +377,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
     def test_malformed_answer_is_an_error_on_reception(self):
         # an outage page instead of SOAP is transport trouble too,
         # whether it is not XML at all or an error page without any
-        # CCF verdict in it: a server error is laid on SPMS, anything
+        # CCF verdict in it: a server error is named as such, anything
         # else is only reported as not interpretable
         for answer, wording in (
             ((200, b"this is not xml"), "could not be interpreted (HTTP 200 OK)"),
