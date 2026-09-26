@@ -64,7 +64,11 @@ Configuration
 
 - Assign the *SPMS / Consultation* group to users who can read the
   verification results, and *SPMS / Responsible* to the users allowed to
-  work with them and with the generated credit and debit notes.
+  work with them and with the generated credit and debit notes. Only
+  *Responsible* can delete a result (its lines and errors go with it),
+  and never from the screens: deletion is reserved to scripted
+  clean-ups, and a result carried by a live credit or debit note refuses
+  it until that note is cancelled.
 - The polling scheduled action (*SPMS: get verification results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
   runs hourly out of the box. It creates the expected result record of

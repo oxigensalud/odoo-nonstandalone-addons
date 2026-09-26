@@ -7,6 +7,7 @@
         <field name="model">spms.invoice.verification</field>
         <field name="arch" type="xml">
             <tree
+                delete="false"
                 decoration-danger="state == 'error'"
                 decoration-muted="state == 'zero_official'"
                 decoration-success="state in ('ready', 'done')"
@@ -36,7 +37,7 @@
         <field name="name">spms.invoice.verification.form</field>
         <field name="model">spms.invoice.verification</field>
         <field name="arch" type="xml">
-            <form>
+            <form delete="false">
                 <header>
                     <field
                         name="state"
