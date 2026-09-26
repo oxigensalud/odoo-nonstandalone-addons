@@ -300,11 +300,7 @@ class SpmsInvoiceVerification(models.Model):
     def write(self, vals):
         if any(field in vals for field in OFFICIAL_VALUE_FIELDS):
             for rec in self:
-                if (
-                    rec.state == "done"
-                    and rec.note_move_id
-                    and rec.note_move_id.state != "cancel"
-                ):
+                if rec.official_locked:
                     raise UserError(
                         _(
                             "The official value of %s is already carried by a "
