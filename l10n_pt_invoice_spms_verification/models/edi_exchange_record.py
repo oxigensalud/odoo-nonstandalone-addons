@@ -61,13 +61,16 @@ class EdiExchangeRecord(models.Model):
 
     def _l10n_pt_spms_verification_verifiable(self):
         """Whether the related record is a customer invoice, the only
-        document the CCF verifies (the sending type also carries notes)."""
+        document the CCF verifies. The sending type also carries the
+        credit notes and the debit notes, and a debit note is an
+        out_invoice hanging from its origin invoice."""
         self.ensure_one()
         move = self.record
         return (
             bool(move)
             and move._name == "account.move"
             and move.move_type == "out_invoice"
+            and not move.debit_origin_id
         )
 
     def _cron_l10n_pt_spms_verification_update(self):
@@ -172,13 +175,13 @@ class EdiExchangeRecord(models.Model):
 
     def _l10n_pt_spms_verification_open(self):
         """Whether this result record is still to be asked for: waiting
-        or in error on reception, its invoice posted and not settled."""
+        or in error on reception, on a customer invoice (never a note,
+        whatever created the record) that is posted and not settled."""
         self.ensure_one()
-        if self.edi_exchange_state not in ("input_pending", "input_receive_error"):
-            return False
         move = self.record
         return (
-            bool(move)
+            self.edi_exchange_state in ("input_pending", "input_receive_error")
+            and self._l10n_pt_spms_verification_verifiable()
             and move.state == "posted"
             and not any(move.spms_invoice_verification_ids.mapped("verification_state"))
         )

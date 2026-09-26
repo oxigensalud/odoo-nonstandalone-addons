@@ -1,5 +1,6 @@
 Results arrive on their own: the EDI record of every invoice sent to
-SPMS expects the verification result as its answer (its ACK). An hourly
+SPMS expects the verification result as its answer (its ACK); the credit
+and debit notes the same circuit sends expect nothing. An hourly
 scheduled action (*SPMS: get verification results from the CCF*) creates
 that result record — *Waiting to be received* — at its first pass after
 the sending and asks the CCF about it every hour, in its own queue job
