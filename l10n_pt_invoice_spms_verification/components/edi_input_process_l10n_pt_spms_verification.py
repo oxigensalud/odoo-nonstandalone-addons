@@ -79,6 +79,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
                 )
                 % {"invoice": move.display_name, "error": err}
             ) from err
+        self._check_document_reference(move, root)
         fact = _find_first(root, "FacturasErrosEDiferencas")
         if fact is None:
             raise UserError(
@@ -125,6 +126,33 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
             "lines": len(lines),
             "errors": error_count,
         }
+
+    def _check_document_reference(self, move, root):
+        """The document must be the answer for the exchange's invoice.
+
+        The CCF names the invoice in DocumentReference/ID, as the number
+        was sent (FT2026-437 for FT 2026/00437): another number is a
+        document of another invoice, rejected before anything is stored.
+        The prescriptions never identify an invoice (they recur across
+        periods). An absent or empty reference is accepted: it is no
+        contradiction, and the module asked the CCF for this invoice's
+        number and date.
+        """
+        reference = _find_first(root, "DocumentReference")
+        number = _child_text(reference, "ID") if reference is not None else ""
+        expected = move._get_spms_invoice_number()
+        if number and number != expected:
+            raise UserError(
+                _(
+                    "The verification document of %(invoice)s refers to another "
+                    "invoice: %(number)s instead of %(expected)s."
+                )
+                % {
+                    "invoice": move.display_name,
+                    "number": number,
+                    "expected": expected,
+                }
+            )
 
     def _parse_verification_state(self, move, fact):
         estado = _child_text(fact, "EstadoFactura").lower()

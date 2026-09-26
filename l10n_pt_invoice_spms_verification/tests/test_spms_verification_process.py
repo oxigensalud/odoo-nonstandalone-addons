@@ -89,7 +89,14 @@ def _document(
     oficio="Documento conferido. Com rectificações.",
     invoice_errors="",
     claims="",
+    reference="",
 ):
+    document_reference = (
+        "<DocumentReference><ID>%s</ID><IssueDate>2026-07-02</IssueDate>"
+        "</DocumentReference>" % reference
+        if reference
+        else ""
+    )
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<ApplicationResponse xmlns="urn:oasis:names:specification:ubl:'
@@ -99,7 +106,7 @@ def _document(
         "<DocumentResponse><Response>"
         "<ReferenceID>FT TEST/00001</ReferenceID>"
         "<Description>%s</Description>"
-        "</Response></DocumentResponse>"
+        "</Response>%s</DocumentResponse>"
         "<UBLExtensions><UBLExtension><ExtensionContent>"
         "<ErrosEDiferencasCRDExtension>"
         "<FacturasErrosEDiferencas>"
@@ -120,6 +127,7 @@ def _document(
         "</ApplicationResponse>"
         % (
             oficio,
+            document_reference,
             estado,
             total_billed,
             total_allowed,
@@ -665,6 +673,39 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         self.assertEqual(child.edi_exchange_state, "input_processed_error")
         self.assertIn("credit or debit note", child.exchange_error)
         self.assertAlmostEqual(result.total_billed_taxed, 10.0)
+
+    def test_document_naming_another_invoice_is_rejected(self):
+        # the CCF names the invoice in DocumentReference/ID as it was sent:
+        # another number is a document of another invoice, rejected before
+        # anything is stored — the prescriptions never identify an invoice
+        child = self._process(
+            _document(
+                claims=_prestacao("TESTP001", errors=_erro("C011")),
+                reference="FTOTHER-999",
+            )
+        )
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("FTOTHER-999", child.exchange_error)
+        self.assertIn(self.invoice._get_spms_invoice_number(), child.exchange_error)
+        self.assertFalse(self._result())
+        self.assertFalse(
+            self.env["account.move"].search(
+                [("reversed_entry_id", "=", self.invoice.id)]
+            )
+        )
+
+    def test_document_naming_the_invoice_is_processed(self):
+        # the number as sent to SPMS (series without offending characters,
+        # no leading zeros) is the one the CCF echoes; the rest of the
+        # suite covers the accepted absent reference
+        child = self._process(
+            _document(
+                claims=_prestacao("TESTP001", errors=_erro("C011")),
+                reference=self.invoice._get_spms_invoice_number(),
+            )
+        )
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(self._result().state, "done")
 
     def test_garbage_document_marks_processing_error(self):
         child = self._process("this is not xml at all")

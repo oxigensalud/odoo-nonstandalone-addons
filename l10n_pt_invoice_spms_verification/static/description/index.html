@@ -455,12 +455,14 @@ scheduled action (<em>SPMS: get verification results from the CCF</em>) creates
 that result record — <em>Waiting to be received</em> — at its first pass after
 the sending and asks the CCF about it every hour, in its own queue job
 (<em>Queue → Jobs</em> lists them). <em>Not verified yet</em> (302) keeps it waiting;
-a verification document is received on it and processed from there. The
-CCF being unavailable (999), a transport failure, an unknown answer or
-the CCF not recognising the invoice (301) put the record in <em>Error on
-reception</em> with the reason, and it is asked again at the next pass until
-the CCF answers; <em>Retry</em> on it asks again at the next pass. A job fails
-only on a software failure.</p>
+a verification document is received on it and processed from there (a
+document naming another invoice than the record’s is rejected: <em>Error on
+process</em> with the reason, <em>Retry</em> after looking into it). The CCF being
+unavailable (999), a transport failure, an unknown answer or the CCF not
+recognising the invoice (301) put the record in <em>Error on reception</em>
+with the reason, and it is asked again at the next pass until the CCF
+answers; <em>Retry</em> on it asks again at the next pass. A job fails only on
+a software failure.</p>
 <p>Every invoice sent to SPMS gets its verification result attached the
 moment the verification resolves it (one result per invoice — the first
 definitive answer closes the invoice permanently). When the verification
