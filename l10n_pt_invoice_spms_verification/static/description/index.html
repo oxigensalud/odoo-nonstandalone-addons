@@ -450,7 +450,8 @@ it by more than a cent on long credit notes, which then hold in
 <div class="section" id="usage">
 <h2><a class="toc-backref" href="#toc-entry-2">Usage</a></h2>
 <p>Results arrive on their own: the EDI record of every invoice sent to
-SPMS expects the verification result as its answer (its ACK). An hourly
+SPMS expects the verification result as its answer (its ACK); the credit
+and debit notes the same circuit sends expect nothing. An hourly
 scheduled action (<em>SPMS: get verification results from the CCF</em>) creates
 that result record — <em>Waiting to be received</em> — at its first pass after
 the sending and asks the CCF about it every hour, in its own queue job

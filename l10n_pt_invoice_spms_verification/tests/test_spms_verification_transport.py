@@ -761,6 +761,36 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertEqual(self._queued_polls(), 0)
         self.assertFalse(sent_note.related_exchange_ids)
 
+    def test_debit_note_not_polled(self):
+        """A debit note is an out_invoice hanging from its origin: sent
+        through the same exchange type, it expects no verification result
+        either, and a waiting result record of it — whatever created it —
+        is never asked for."""
+        self._settle()
+        wizard = (
+            self.env["account.debit.note"]
+            .with_context(active_model="account.move", active_ids=self.invoice.ids)
+            .create({"date": "2026-06-30", "copy_lines": True})
+        )
+        wizard.create_debit()
+        debit_note = self.invoice.debit_note_ids
+        self.assertEqual(len(debit_note), 1)
+        debit_note.action_post()
+        sent_note = self.backend.create_record(
+            "l10n_pt_spms",
+            {
+                "edi_exchange_state": "output_sent_and_processed",
+                "model": "account.move",
+                "res_id": debit_note.id,
+            },
+        )
+        self.assertFalse(sent_note.ack_expected)
+        self.assertEqual(self._queued_polls(), 0)
+        self.assertFalse(sent_note.related_exchange_ids)
+        child = sent_note.exchange_create_ack_record(edi_exchange_state="input_pending")
+        self.assertEqual(self._queued_polls(), 0)
+        self.assertEqual(child.edi_exchange_state, "input_pending")
+
     def test_output_sent_also_polled(self):
         self.exchange.edi_exchange_state = "output_sent"
         transport = _FakeTransport(_fault_response(NOT_VERIFIED_YET))
