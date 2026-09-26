@@ -106,7 +106,11 @@ process* with the reason, *Retry* after looking into it). The CCF being
 unavailable (999), a transport failure, an unknown answer or the CCF not
 recognising the invoice (301) put the record in *Error on reception*
 with the reason, and it is asked again at the next pass until the CCF
-answers; *Retry* on it asks again at the next pass. A job fails only on
+answers; *Retry* on it asks again at the next pass. The record keeps the
+CCF's last answer in its own words (*Last CCF Answer*: «302 - Factura
+ainda não conferida.», «301 - Factura Inexistente.»; blank once the
+document arrives or after a failure that carried no verdict), and its
+last modification is the time of the last question. A job fails only on
 a software failure.
 
 Every invoice sent to SPMS gets its verification result attached the

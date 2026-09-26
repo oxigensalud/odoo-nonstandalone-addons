@@ -11,7 +11,7 @@ from zeep.exceptions import Error as ZeepError, Fault
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 
-from odoo import _, api, models
+from odoo import _, api, fields, models
 from odoo.modules.module import get_resource_path
 
 REQUEST_TIMEOUT = 60
@@ -36,6 +36,19 @@ class SpmsVerificationTransport(Transport):
 
 class EdiExchangeRecord(models.Model):
     _inherit = "edi.exchange.record"
+
+    l10n_pt_spms_verification_answer = fields.Char(
+        string="Last CCF Answer",
+        readonly=True,
+        copy=False,
+        help="The last answer of the CCF to the question about this "
+        'verification result, exactly as received ("301 - Factura '
+        'Inexistente.", "302 - Factura ainda não conferida."): a '
+        "verdict of the CCF in its own words. Blank once the document is "
+        "received, and after a failure that carried no verdict (no "
+        "answer, connection problem, unusable answer). The record's last "
+        "modification is the time of the last question.",
+    )
 
     @api.depends("type_id.ack_type_id", "model", "res_id")
     def _compute_ack_expected(self):
@@ -227,11 +240,11 @@ class EdiExchangeRecord(models.Model):
         """Fetch the CCF answer for one waiting result and write it on
         the record: a document is received and processed, "not verified
         yet" keeps it waiting, anything else is an error on reception
-        with its reason, asked again at the next pass."""
+        with its reason, asked again at the next pass. Every question
+        leaves the CCF's own words (a coded fault) or a blank on the
+        record, and its time as the record's last modification."""
         try:
-            code, document, _answer = self._l10n_pt_spms_verification_fetch(
-                client, move
-            )
+            code, document, answer = self._l10n_pt_spms_verification_fetch(client, move)
         except requests.Timeout as err:
             # no answer at all within the timeout
             self._l10n_pt_spms_verification_receive_error(
@@ -291,24 +304,27 @@ class EdiExchangeRecord(models.Model):
         if document:
             self._l10n_pt_spms_verification_receive(document)
         elif code == "302":
-            self._l10n_pt_spms_verification_still_waiting()
+            self._l10n_pt_spms_verification_still_waiting(answer)
         elif code == "301":
             self._l10n_pt_spms_verification_receive_error(
                 _(
                     "The CCF does not recognise invoice %(invoice)s even though "
                     "it was sent successfully (%(code)s)."
                 )
-                % {"invoice": move.name, "code": code}
+                % {"invoice": move.name, "code": code},
+                answer=answer,
             )
         elif code == "999":
             # the CCF's own "service unavailable" answer, seen for weeks
             # at a time
             self._l10n_pt_spms_verification_receive_error(
-                _("The CCF web service is unavailable (%s).") % code
+                _("The CCF web service is unavailable (%s).") % code,
+                answer=answer,
             )
         elif code:
             self._l10n_pt_spms_verification_receive_error(
-                _("The CCF answered with an unexpected return code: %s.") % code
+                _("The CCF answered with an unexpected return code: %s.") % code,
+                answer=answer,
             )
         else:
             self._l10n_pt_spms_verification_receive_error(
@@ -332,6 +348,7 @@ class EdiExchangeRecord(models.Model):
                 "edi_exchange_state": "input_received",
                 "exchange_error": False,
                 "exchange_error_traceback": False,
+                "l10n_pt_spms_verification_answer": False,
             }
         )
         self.notify_action_complete(
@@ -339,25 +356,29 @@ class EdiExchangeRecord(models.Model):
         )
         self.backend_id.exchange_process(self)
 
-    def _l10n_pt_spms_verification_still_waiting(self):
-        """Not verified yet (302): waiting, the last error cleared.
-
-        A plain 302 on a clean waiting record writes nothing. Retry on
-        a record in error moves it back to waiting but keeps the error
-        text, so the state alone does not tell a clean record apart.
+    def _l10n_pt_spms_verification_still_waiting(self, answer):
+        """Not verified yet (302): waiting, the last error cleared, the
+        CCF's answer written — every question leaves its answer and its
+        time on the record, also when nothing else changes (Retry on a
+        record in error moves it back to waiting but keeps the error
+        text, so the state alone does not tell a clean record apart).
         """
-        if self.edi_exchange_state != "input_pending" or self.exchange_error:
-            self.write(
-                {
-                    "edi_exchange_state": "input_pending",
-                    "exchange_error": False,
-                    "exchange_error_traceback": False,
-                }
-            )
+        self.write(
+            {
+                "edi_exchange_state": "input_pending",
+                "exchange_error": False,
+                "exchange_error_traceback": False,
+                "l10n_pt_spms_verification_answer": answer,
+            }
+        )
 
-    def _l10n_pt_spms_verification_receive_error(self, message, exception=None):
+    def _l10n_pt_spms_verification_receive_error(
+        self, message, exception=None, answer=False
+    ):
         """Error on reception with its reason: asked again next pass,
-        cleared by the next "not verified yet" or by the document.
+        cleared by the next "not verified yet" or by the document. The
+        answer is the CCF's own words when it gave a verdict (a coded
+        fault), blank after a failure that carried none.
 
         Messages contain our explanations and codes only. Exception text,
         chained exceptions and local values may contain arbitrary service
@@ -380,6 +401,7 @@ class EdiExchangeRecord(models.Model):
                 "edi_exchange_state": "input_receive_error",
                 "exchange_error": message,
                 "exchange_error_traceback": traceback_txt,
+                "l10n_pt_spms_verification_answer": answer,
             }
         )
 

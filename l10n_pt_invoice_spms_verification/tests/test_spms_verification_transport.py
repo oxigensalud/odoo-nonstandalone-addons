@@ -285,16 +285,22 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
 
     def test_not_verified_yet_keeps_waiting(self):
         # "not verified yet" is the normal answer for weeks: the record
-        # keeps waiting, asked again at every pass, nothing else written
+        # keeps waiting, asked again at every pass, and every question
+        # writes the CCF's words on it (so its last modification is the
+        # time of the last question) — nothing else
         transport = _FakeTransport(
             _fault_response(NOT_VERIFIED_YET), _fault_response(NOT_VERIFIED_YET)
         )
         self._run_cron(transport)
+        child = self._children()
+        self.assertEqual(child.l10n_pt_spms_verification_answer, NOT_VERIFIED_YET)
+        child.l10n_pt_spms_verification_answer = False
         self._run_cron(transport)
         self.assertEqual(len(transport.envelopes), 2)
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertEqual(child.l10n_pt_spms_verification_answer, NOT_VERIFIED_YET)
         self.assertFalse(child.exchange_file)
         self.assertFalse(child.exchange_error)
         self.assertFalse(self._results())
@@ -312,25 +318,34 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         child = self._children()
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("999", child.exchange_error)
+        self.assertEqual(
+            child.l10n_pt_spms_verification_answer, "999 - Erro desconhecido."
+        )
         self.assertFalse(child.exchange_error_traceback)
         self.assertFalse(self._results())
         self._run_cron(transport)
         self.assertEqual(len(transport.envelopes), 2)
         self.assertEqual(child.edi_exchange_state, "input_pending")
+        self.assertEqual(child.l10n_pt_spms_verification_answer, NOT_VERIFIED_YET)
         self.assertFalse(child.exchange_error)
         self.assertFalse(child.exchange_error_traceback)
 
     def test_timeout_is_an_error_on_reception(self):
         # transport trouble is written on the record like any other
-        # answer, the only one that keeps its traceback
+        # answer, the only one that keeps its traceback; it carries no
+        # verdict of the CCF, so the last answer goes blank
+        self._run_cron(_FakeTransport(_fault_response(NOT_VERIFIED_YET)))
+        child = self._children()
+        self.assertEqual(child.l10n_pt_spms_verification_answer, NOT_VERIFIED_YET)
         transport = _FakeTransport(side_effect=requests.Timeout("no answer"))
         self._run_cron(transport)
-        child = self._children()
+        self.assertEqual(self._children(), child)
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("did not answer within 60 seconds", child.exchange_error)
         self.assertIn("Timeout", child.exchange_error)
         self.assertNotIn("no answer", child.exchange_error)
         self.assertTrue(child.exchange_error_traceback)
+        self.assertFalse(child.l10n_pt_spms_verification_answer)
         self.assertFalse(self._results())
 
     def test_unreachable_service_is_an_error_on_reception(self):
@@ -545,12 +560,17 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("301", child.exchange_error)
         self.assertIn(self.invoice.name, child.exchange_error)
+        self.assertEqual(
+            child.l10n_pt_spms_verification_answer, "301 - Factura Inexistente."
+        )
         self.assertFalse(child.exchange_error_traceback)
         self.assertFalse(self._results())
         self._run_cron(transport)
         self.assertEqual(len(transport.envelopes), 2)
         self.assertEqual(self._children(), child)
         self.assertEqual(child._get_file_content(), DOCUMENT_XML)
+        # the document is the answer: the CCF's last words go blank
+        self.assertFalse(child.l10n_pt_spms_verification_answer)
         self.assertIn(
             child.edi_exchange_state, ["input_processed", "input_processed_error"]
         )
