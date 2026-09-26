@@ -142,25 +142,29 @@ billed quantity and amount, one claim per line, and a claim that finds
 no distinct line of its own holds the result instead of guessing. When
 the generation of a result fails (a prescription with no matching
 invoice line, a foreign note, a residual beyond the adjustment limit),
-that result alone is held in *Error* with the reason on its form; fix
-the cause and reprocess the document to retry — the rest of the batch is
-never dragged along. A prescription the verification priced above the
-billed amount (a negative difference) gets its own negative line, so the
-credit note nets it against the rejected claims exactly as the official
-value does; the result form shows their sum as *Negative Claims*. The
-claim bases come from the verification document itself, so the draft can
-only differ from the official value by the rounding of the tax, which
-the CCF computes once on the invoice total: that cent is written on the
-tax line of the draft, the same correction an accountant would pencil on
-the tax journal item, with no extra line, so the total matches the
-official value exactly. A residual beyond the *SPMS Adjustment Limit* of
-the company (0.01 by default) holds the result in *Error* with the
-reason, because it reveals a discrepancy to review rather than rounding
-noise: a claim priced differently (the *Claims Credit* of the result
-then differs from its official totals before tax), or a company rounding
-its taxes per line; raise the limit only when the difference is
-legitimate and strictly necessary. Drafts stay drafts: the accounting
-team reviews and posts them; the EDI circuit takes over from there.
+that result alone is held in *Error* with the reason on its form, and
+its exchange record — the result form links to it — in *Error on
+process* with the same reason; fix the cause and press *Retry* on that
+record: the stored document is processed again at the next pass of the
+hourly input action of the EDI framework, and the note is generated
+then. The rest of the batch is never dragged along. A prescription the
+verification priced above the billed amount (a negative difference) gets
+its own negative line, so the credit note nets it against the rejected
+claims exactly as the official value does; the result form shows their
+sum as *Negative Claims*. The claim bases come from the verification
+document itself, so the draft can only differ from the official value by
+the rounding of the tax, which the CCF computes once on the invoice
+total: that cent is written on the tax line of the draft, the same
+correction an accountant would pencil on the tax journal item, with no
+extra line, so the total matches the official value exactly. A residual
+beyond the *SPMS Adjustment Limit* of the company (0.01 by default)
+holds the result in *Error* with the reason, because it reveals a
+discrepancy to review rather than rounding noise: a claim priced
+differently (the *Claims Credit* of the result then differs from its
+official totals before tax), or a company rounding its taxes per line;
+raise the limit only when the difference is legitimate and strictly
+necessary. Drafts stay drafts: the accounting team reviews and posts
+them; the EDI circuit takes over from there.
 
 A negative official value — the verification computed more than the
 invoice billed — calls for a debit note instead. The module generates it
@@ -172,12 +176,16 @@ below applies to that debit note as it does to the credit note.
 
 Once a note is generated and alive, the official totals of its result
 are locked; cancel the note first to change them. Cancelling or deleting
-a generated note releases its result immediately — no manual step — and
-the cancellation leaves a message in the original invoice's chatter. A
-live note of the same kind the module did not create — a credit note for
-a positive official value, a debit note for a negative one — holds the
-result in *Error* (the result form names it by number): the module never
-adopts or decides — a human fixes accounting first.
+a generated note releases its result immediately — no manual step: the
+result is *Ready* again, its exchange record is held in *Error on
+process* so that *Retry* generates a new note, and the original
+invoice's chatter records both. A live note of the same kind the module
+did not create — a credit note for a positive official value, a debit
+note for a negative one — holds the result in *Error* (the result form
+names it by number) and its record with *Retry*: the module never adopts
+or decides — a human fixes accounting first. The semaphore follows every
+change of the notes on its own; once the foreign note is gone, *Retry*
+generates the module's note.
 
 Known issues / Roadmap
 ======================

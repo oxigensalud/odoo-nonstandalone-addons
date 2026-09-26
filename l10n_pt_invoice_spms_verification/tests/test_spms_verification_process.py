@@ -3,8 +3,10 @@
 
 import base64
 from datetime import date
+from unittest.mock import patch
 
 from odoo import fields
+from odoo.tools import mute_logger
 
 from odoo.addons.component.tests.common import SavepointComponentCase
 
@@ -350,7 +352,8 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
             total_allowed_taxed="5.00",
         )
         child = self._process(document)
-        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("recognised outcome", child.exchange_error)
         result = self._result()
         self.assertEqual(result.verification_state, "without_errors")
         self.assertEqual(result.state, "error")
@@ -379,7 +382,7 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
     def test_unmatched_prescription_has_no_link_and_no_parse_error(self):
         document = _document(claims=_prestacao("TESTMISSING", errors=_erro("C011")))
         child = self._process(document)
-        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
         result = self._result()
         line = result.line_ids
         self.assertEqual(line.prescription, "TESTMISSING")
@@ -605,8 +608,9 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         child = self._process(document)
         result = self._result()
         self.assertEqual(result.error_count, 1)
-        child.edi_exchange_state = "input_received"
-        self.backend.exchange_process(child)
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        child.action_retry()
+        child.action_exchange_process()
         result = self._result()
         self.assertEqual(len(result), 1)
         self.assertEqual(result.line_count, 1)
@@ -713,7 +717,7 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
             + _prestacao("TESTP002", billed="10,00", errors=_erro("C012")),
         )
         child = self._process(document)
-        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
         result = self._result()
         self.assertIn("ValorTotalLido", result.completeness_warning)
         self.assertIn("TESTP001", result.completeness_warning)
@@ -741,11 +745,14 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
             claims=_prestacao("TESTP001", errors=_erro("C011")),
         )
         child = self._process(document)
-        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("adjustment limit", child.exchange_error)
+        self.assertTrue(child.retryable)
         result = self._result()
         self.assertEqual(result.state, "error")
         self.assertIn("adjustment limit", result.generation_error)
         self.assertEqual(result.error_message, result.generation_error)
+        self.assertEqual(result.exchange_record_id, child)
         self.assertFalse(result.note_move_id)
 
     def test_trigger_retry_after_raising_limit(self):
@@ -771,8 +778,12 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         self.assertIn("adjustment limit", result.generation_error)
         self.assertFalse(result.note_move_id)
         self.company.spms_adjustment_limit = 0.05
-        child.edi_exchange_state = "input_received"
-        self.backend.exchange_process(child)
+        # the user's path: Retry on the held record, then the process job
+        # the hourly input action of the EDI framework queues for it
+        child.action_retry()
+        self.assertEqual(child.edi_exchange_state, "input_received")
+        child.action_exchange_process()
+        self.assertEqual(child.edi_exchange_state, "input_processed")
         result = self._result(invoice)
         self.assertEqual(result.state, "done")
         self.assertFalse(result.generation_error)
@@ -796,15 +807,35 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         wizard.reverse_moves()
         foreign = invoice.reversal_move_id
         child = self._process(
-            _document(claims=_prestacao("TESTP201", errors=_erro("C011"))),
+            _document(
+                total_billed="31.00",
+                total_allowed="0.00",
+                total_billed_taxed="31.00",
+                total_allowed_taxed="0.00",
+                claims=_prestacao(
+                    "TESTP201", billed="31.00", allowed="0.00", errors=_erro("C011")
+                ),
+            ),
             invoice=invoice,
         )
-        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn(foreign.display_name, child.exchange_error)
         result = self._result(invoice)
         self.assertEqual(result.state, "error")
         self.assertFalse(result.generation_error)
         self.assertIn(foreign.display_name, result.error_message)
         self.assertFalse(result.note_move_id)
+        # accounting removes the foreign note: the result reopens on its
+        # own, the record is already held, and Retry generates the note
+        foreign.button_cancel()
+        self.assertEqual(result.state, "ready")
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        child.action_retry()
+        child.action_exchange_process()
+        result = self._result(invoice)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(result.state, "done")
+        self.assertTrue(result.note_move_id)
 
     def test_trigger_failure_does_not_drag_other_results(self):
         bad_child = self._process(
@@ -824,12 +855,77 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
             ),
             invoice=good_invoice,
         )
-        self.assertEqual(bad_child.edi_exchange_state, "input_processed")
+        self.assertEqual(bad_child.edi_exchange_state, "input_processed_error")
         self.assertEqual(good_child.edi_exchange_state, "input_processed")
         self.assertEqual(self._result().state, "error")
         good_verification = self._result(good_invoice)
         self.assertEqual(good_verification.state, "done")
         self.assertAlmostEqual(good_verification.note_move_id.amount_total, 31.0)
+
+    def test_cancelled_note_holds_the_record_for_retry(self):
+        # accounting cancels the generated draft: the result reopens, its
+        # processed record — no Retry on it by itself — is held in 'Error
+        # on process' with the reason, the invoice's chatter gets the link,
+        # and Retry generates a new draft
+        child = self._process(
+            _document(claims=_prestacao("TESTP001", errors=_erro("C011")))
+        )
+        result = self._result()
+        self.assertEqual(result.state, "done")
+        self.assertEqual(result.exchange_record_id, child)
+        first_draft = result.note_move_id
+        first_draft.button_cancel()
+        self.assertEqual(result.state, "ready")
+        self.assertFalse(result.note_move_id)
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("press Retry", child.exchange_error)
+        self.assertTrue(child.retryable)
+        self.assertTrue(
+            any(
+                "press Retry" in body
+                for body in self.invoice.message_ids.mapped("body")
+            )
+        )
+        child.action_retry()
+        child.action_exchange_process()
+        result = self._result()
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(result.state, "done")
+        self.assertNotEqual(result.note_move_id, first_draft)
+        self.assertEqual(first_draft.state, "cancel")
+
+    def test_deleted_note_holds_the_record_for_retry(self):
+        child = self._process(
+            _document(claims=_prestacao("TESTP001", errors=_erro("C011")))
+        )
+        result = self._result()
+        result.note_move_id.unlink()
+        self.assertEqual(result.state, "ready")
+        self.assertFalse(result.note_move_id)
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertTrue(child.retryable)
+
+    def test_unexpected_generation_failure_holds_with_retry(self):
+        # a failure that is not a business refusal still holds the result
+        # with a reason a person can act on, and the record with Retry;
+        # the traceback is in the server log
+        with patch.object(
+            self.registry["spms.invoice.verification"],
+            "_generate_note",
+            side_effect=RuntimeError("boom"),
+        ), mute_logger(
+            "odoo.addons.l10n_pt_invoice_spms_verification.models."
+            "spms_invoice_verification"
+        ):
+            child = self._process(
+                _document(claims=_prestacao("TESTP001", errors=_erro("C011")))
+            )
+        self.assertEqual(child.edi_exchange_state, "input_processed_error")
+        self.assertIn("Unexpected generation failure", child.exchange_error)
+        result = self._result()
+        self.assertEqual(result.state, "error")
+        self.assertIn("Unexpected generation failure", result.generation_error)
+        self.assertFalse(result.note_move_id)
 
     def test_trigger_negative_official_creates_debit_note(self):
         # the verification computed more than billed: the official value is
