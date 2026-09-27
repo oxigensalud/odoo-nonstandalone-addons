@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-26 17:19+0000\n"
-"PO-Revision-Date: 2026-09-26 17:19+0000\n"
+"POT-Creation-Date: 2026-09-27 09:06+0000\n"
+"PO-Revision-Date: 2026-09-27 09:06+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ca\n"
@@ -1145,13 +1145,41 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
 msgid ""
-"The invoice already has a live %(kind)s this module did not create: "
-"%(notes)s. Only one %(kind)s may exist per invoice; fix or cancel it in "
-"accounting first."
+"The invoice already has the credit note %s. No additional credit note was "
+"generated. Check whether it corresponds to this verification result."
 msgstr ""
-"La factura ja té una %(kind)s viva que aquest mòdul no ha creat: %(notes)s. "
-"Només pot existir una %(kind)s per factura; corregiu-la o cancel·leu-la "
-"abans a comptabilitat."
+"La factura ja té la nota de crèdit %s. No s'ha generat cap nota de crèdit "
+"addicional. Comproveu si correspon a aquest resultat de verificació."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
+"The invoice already has the credit notes %s. No additional credit note was "
+"generated. Check whether they correspond to this verification result."
+msgstr ""
+"La factura ja té les notes de crèdit %s. No s'ha generat cap nota de crèdit "
+"addicional. Comproveu si corresponen a aquest resultat de verificació."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
+"The invoice already has the debit note %s. No additional debit note was "
+"generated. Check whether it corresponds to this verification result."
+msgstr ""
+"La factura ja té la nota de dèbit %s. No s'ha generat cap nota de dèbit "
+"addicional. Comproveu si correspon a aquest resultat de verificació."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
+"The invoice already has the debit notes %s. No additional debit note was "
+"generated. Check whether they correspond to this verification result."
+msgstr ""
+"La factura ja té les notes de dèbit %s. No s'ha generat cap nota de dèbit "
+"addicional. Comproveu si corresponen a aquest resultat de verificació."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_edi_exchange_record__l10n_pt_spms_verification_answer
