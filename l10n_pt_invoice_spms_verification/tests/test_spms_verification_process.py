@@ -478,6 +478,117 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         self.assertEqual(credited.mapped("price_unit"), [1.0, 1.0])
         self.assertEqual(result.line_ids.mapped("note_move_line_id"), credited)
 
+    def test_three_identical_repeated_claims_across_lots_pair_once(self):
+        # the same prescription occurs three times across two lots: the
+        # lot boundary must not let a claim reuse an original invoice line
+        invoice = self._create_invoice(
+            "FT TEST/00101",
+            [("TESTPDUP", 10, 1.0), ("TESTPDUP", 10, 1.0), ("TESTPDUP", 10, 1.0)],
+        )
+        claim = _prestacao(
+            "TESTPDUP",
+            billed="10.00",
+            allowed="0.00",
+            days_billed="10",
+            errors=_erro("C011"),
+        )
+        document = _document(
+            total_billed="30.00",
+            total_allowed="0.00",
+            total_billed_taxed="30.00",
+            total_allowed_taxed="0.00",
+            claims=claim,
+        )
+        second_lot = (
+            "<LoteErrosEDiferencas><Numero>2</Numero><TipoLote>992</TipoLote>"
+            + claim
+            + claim
+            + "</LoteErrosEDiferencas>"
+        )
+        document = document.replace(
+            "</LoteErrosEDiferencas>", "</LoteErrosEDiferencas>" + second_lot, 1
+        )
+        child = self._process(document, invoice=invoice)
+        result = self._result(invoice)
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(len(result.line_ids), 3)
+        self.assertEqual(result.line_ids.mapped("lot_number"), ["1", "2", "2"])
+        self.assertEqual(
+            result.line_ids.mapped("move_line_id").ids, invoice.invoice_line_ids.ids
+        )
+        self.assertEqual(result.state, "done")
+        credited = result.note_move_id.invoice_line_ids
+        self.assertEqual(len(credited), 3)
+        self.assertEqual(credited.mapped("quantity"), [10.0, 10.0, 10.0])
+        self.assertEqual(credited.mapped("price_unit"), [1.0, 1.0, 1.0])
+        self.assertEqual(result.line_ids.mapped("note_move_line_id"), credited)
+        self.assertAlmostEqual(result.note_move_id.amount_total, 30.0)
+
+    def test_three_repeated_claims_match_after_reordering(self):
+        # equal billed amounts do not identify these three lines: the
+        # returned quantity must select the right original, in any order
+        invoice = self._create_invoice(
+            "FT TEST/00102",
+            [("TESTPDUP", 10, 1.0), ("TESTPDUP", 5, 2.0), ("TESTPDUP", 2, 5.0)],
+        )
+        document = _document(
+            total_billed="30.00",
+            total_allowed="0.00",
+            total_billed_taxed="30.00",
+            total_allowed_taxed="0.00",
+            claims=_prestacao(
+                "TESTPDUP",
+                billed="10.00",
+                allowed="0.00",
+                days_billed="5",
+                errors=_erro("C011"),
+            )
+            + _prestacao(
+                "TESTPDUP",
+                billed="10.00",
+                allowed="0.00",
+                days_billed="2",
+                errors=_erro("C011"),
+            )
+            + _prestacao(
+                "TESTPDUP",
+                billed="10.00",
+                allowed="0.00",
+                days_billed="10",
+                errors=_erro("C011"),
+            ),
+        )
+        child = self._process(document, invoice=invoice)
+        result = self._result(invoice)
+        two_days, five_days, ten_days = invoice.invoice_line_ids.sorted("quantity")
+        self.assertEqual(child.edi_exchange_state, "input_processed")
+        self.assertEqual(len(result.line_ids), 3)
+        self.assertEqual(
+            result.line_ids.mapped("move_line_id").ids,
+            [five_days.id, two_days.id, ten_days.id],
+        )
+        self.assertEqual(result.state, "done")
+        credited = result.note_move_id.invoice_line_ids
+        self.assertEqual(len(credited), 3)
+        self.assertEqual(
+            [(line.quantity, line.price_unit) for line in credited.sorted("quantity")],
+            [(2.0, 5.0), (5.0, 2.0), (10.0, 1.0)],
+        )
+        self.assertEqual(
+            set(result.line_ids.mapped("note_move_line_id").ids), set(credited.ids)
+        )
+        self.assertEqual(
+            [
+                (
+                    line.note_move_line_id.quantity,
+                    line.note_move_line_id.price_unit,
+                )
+                for line in result.line_ids
+            ],
+            [(5.0, 2.0), (2.0, 5.0), (10.0, 1.0)],
+        )
+        self.assertAlmostEqual(result.note_move_id.amount_total, 30.0)
+
     def test_two_claims_on_one_original_hold_the_result(self):
         # one line bills TESTPDUP but the document returns two claims for
         # it: the second has no distinct line of its own, so the result is
