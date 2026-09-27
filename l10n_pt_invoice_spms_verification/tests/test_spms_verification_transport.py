@@ -639,7 +639,11 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertFalse(self._children())
 
     def test_cancelled_invoice_not_polled(self):
+        # the sender refuses cancelling an invoice SPMS has accepted, so the
+        # case is an invoice cancelled while its sending was still pending
+        self.exchange.edi_exchange_state = "output_pending"
         self.invoice.button_cancel()
+        self.exchange.edi_exchange_state = "output_sent_and_processed"
         self.assertEqual(self._queued_polls(), 0)
         self.assertFalse(self._children())
 
