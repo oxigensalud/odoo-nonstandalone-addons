@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 09:06+0000\n"
-"PO-Revision-Date: 2026-09-27 09:06+0000\n"
+"POT-Creation-Date: 2026-09-27 09:27+0000\n"
+"PO-Revision-Date: 2026-09-27 09:27+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ca\n"
@@ -918,14 +918,14 @@ msgid "SPMS Invoice Verifications (Credit/Debit Note)"
 msgstr "Verificacions SPMS de factures (nota de crèdit/dèbit)"
 
 #. module: l10n_pt_invoice_spms_verification
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.account_move_view_form
+msgid "SPMS Verification"
+msgstr "Verificació SPMS"
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.actions.act_window,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_error_action
 msgid "SPMS Verification Errors"
 msgstr "Errors de verificació SPMS"
-
-#. module: l10n_pt_invoice_spms_verification
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.account_move_view_form
-msgid "SPMS Verification Line Errors"
-msgstr "Errors de línia de verificació SPMS"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_bank_statement_line__spms_invoice_verification_state
