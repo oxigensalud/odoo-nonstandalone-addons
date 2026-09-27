@@ -7,7 +7,7 @@
     "version": "14.0.1.0.0",
     "development_status": "Beta",
     "license": "AGPL-3",
-    "author": "NuoBiT Solutions SL, Oxigen Salud SA",
+    "author": "Oxigen Salud SA, NuoBiT Solutions SL",
     "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
     "category": "Accounting",
     "depends": [
