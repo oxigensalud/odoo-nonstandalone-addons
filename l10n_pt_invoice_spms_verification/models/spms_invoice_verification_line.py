@@ -264,15 +264,19 @@ class SpmsInvoiceVerificationLine(models.Model):
         rejection keeps the copied line untouched (original days, price/day,
         discount and SPMS dates); a partial rejection with reliable days
         credits the rejected days at the original price/day and discount —
-        recognised on the net price per day, what the verification cut —
-        dated as the first rejected days of the original period (the
-        verification says how many days SPMS cut, never which ones; the
-        customer's hand-made notes use the same convention); otherwise the
-        whole difference goes on a single unit over the original period, as
-        a negative difference always does: the line then carries the net
-        amount on one unit, with no discount to apply to it again. SPMS
-        requires both dates on every line of the note, so no shape leaves
-        them blank.
+        recognised by the line's own arithmetic: the rejected days at the
+        copied price and discount, rounded as the note line will be, must
+        come to exactly the difference (the CCF rounds the billed and the
+        allowed amounts separately, so a price with more decimals than the
+        currency can leave the rejected days one cent off the difference,
+        and then the days cannot carry it) — dated as the first rejected
+        days of the original period (the verification says how many days
+        SPMS cut, never which ones; the customer's hand-made notes use the
+        same convention); otherwise the whole difference goes on a single
+        unit over the original period, as a negative difference always
+        does: the line then carries the net amount on one unit, with no
+        discount to apply to it again. SPMS requires both dates on every
+        line of the note, so no shape leaves them blank.
         """
         self.ensure_one()
         original_line = self.move_line_id
@@ -291,9 +295,10 @@ class SpmsInvoiceVerificationLine(models.Model):
         if (
             self.days_paid > 0
             and days_rejected > 0
-            and original_line.quantity > 0
             and float_compare(
-                days_rejected * original_line.price_subtotal / original_line.quantity,
+                days_rejected
+                * original_line.price_unit
+                * (1 - original_line.discount / 100.0),
                 self.amount_difference,
                 precision_rounding=rounding,
             )
