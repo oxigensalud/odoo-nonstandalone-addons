@@ -227,8 +227,8 @@ Credits
 Authors
 -------
 
-* NuoBiT Solutions SL
 * Oxigen Salud SA
+* NuoBiT Solutions SL
 
 Contributors
 ------------
