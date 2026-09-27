@@ -371,19 +371,46 @@ class SpmsInvoiceVerification(models.Model):
             - self.note_move_id
         )
 
+    def _get_foreign_notes_message(self, notes):
+        """The message of a result whose invoice already carries a live note
+        this module did not create: which note(s), that nothing was
+        generated, and what to check — never an order to fix or cancel a
+        note somebody may have made on purpose. Four explicit texts
+        (credit/debit, one/several) so every language keeps its own
+        agreement; `notes` is never empty here."""
+        self.ensure_one()
+        texts = {
+            (False, False): _(
+                "The invoice already has the credit note %s. No additional "
+                "credit note was generated. Check whether it corresponds to "
+                "this verification result."
+            ),
+            (False, True): _(
+                "The invoice already has the credit notes %s. No additional "
+                "credit note was generated. Check whether they correspond to "
+                "this verification result."
+            ),
+            (True, False): _(
+                "The invoice already has the debit note %s. No additional "
+                "debit note was generated. Check whether it corresponds to "
+                "this verification result."
+            ),
+            (True, True): _(
+                "The invoice already has the debit notes %s. No additional "
+                "debit note was generated. Check whether they correspond to "
+                "this verification result."
+            ),
+        }
+        return texts[(self._is_debit(), len(notes) > 1)] % ", ".join(
+            notes.mapped("display_name")
+        )
+
     @api.depends(*STATE_DEPENDS)
     def _compute_error_message(self):
         for rec in self:
             foreign_notes = rec._get_foreign_notes()
             if foreign_notes:
-                rec.error_message = _(
-                    "The invoice already has a live %(kind)s this module "
-                    "did not create: %(notes)s. Only one %(kind)s may exist "
-                    "per invoice; fix or cancel it in accounting first."
-                ) % {
-                    "kind": rec._get_note_kind(),
-                    "notes": ", ".join(foreign_notes.mapped("display_name")),
-                }
+                rec.error_message = rec._get_foreign_notes_message(foreign_notes)
             elif rec.generation_error:
                 rec.error_message = rec.generation_error
             elif rec._is_unrecognized_outcome():

@@ -192,10 +192,12 @@ result is *Ready* again, its exchange record is held in *Error on
 process* so that *Retry* generates a new note, and the original
 invoice's chatter records both. A live note of the same kind the module
 did not create — a credit note for a positive official value, a debit
-note for a negative one — holds the result in *Error* (the result form
-names it by number) and its record with *Retry*: the module never adopts
-or decides — a human fixes accounting first. The semaphore follows every
-change of the notes on its own; once the foreign note is gone, *Retry*
+note for a negative one — holds the result in *Error* and its record
+with *Retry*: the message names the note, says that no additional note
+was generated and asks to check whether it corresponds to this
+verification result. The module never adopts or decides — a person does,
+and a note made on purpose stays as it is. The semaphore follows every
+change of the notes on its own; if that note is cancelled, *Retry*
 generates the module's note.
 
 Known issues / Roadmap
