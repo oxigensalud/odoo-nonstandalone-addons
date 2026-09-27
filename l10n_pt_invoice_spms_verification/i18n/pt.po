@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 09:37+0000\n"
-"PO-Revision-Date: 2026-09-27 09:37+0000\n"
+"POT-Creation-Date: 2026-09-27 09:59+0000\n"
+"PO-Revision-Date: 2026-09-27 09:59+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: pt\n"
@@ -124,10 +124,10 @@ msgid ""
 "when the verification allowed more than billed. This is the base the credit-"
 "note line will carry, sign included; VAT is applied by the line's taxes."
 msgstr ""
-"Faturado menos admitido, sem IVA: positivo para uma prestação faturada a "
-"mais, negativo quando a conferência admitiu mais do que o faturado. É a base"
-" que a linha da nota de crédito vai transportar, sinal incluído; o IVA é "
-"aplicado pelos impostos da linha."
+"Faturado menos aceite, sem IVA: positivo para uma prestação faturada a mais,"
+" negativo quando a conferência aceitou mais do que o faturado. É a base que "
+"a linha da nota de crédito vai transportar, sinal incluído; o IVA é aplicado"
+" pelos impostos da linha."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__days_billed
@@ -177,7 +177,7 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__amount_lines_untaxed
-msgid "Claims Amount (Untaxed)"
+msgid "Claims Amount (Tax Excluded)"
 msgstr "Valor das prestações (sem impostos)"
 
 #. module: l10n_pt_invoice_spms_verification
@@ -206,19 +206,6 @@ msgstr "Empresa"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__completeness_warning
 msgid "Completeness Warning"
 msgstr "Aviso de completude"
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__completeness_warning
-msgid ""
-"Completeness warning raised while parsing the verification document: some "
-"errors sit at positions the parser does not know, so the error list may be "
-"incomplete. The raw document attached to this result is the authority. Never"
-" blocks the flow."
-msgstr ""
-"Aviso de completude gerado ao analisar o documento de conferência: alguns "
-"erros estão em posições que o analisador não conhece, pelo que a lista de "
-"erros pode estar incompleta. O documento em bruto anexado a este resultado é"
-" a autoridade. Nunca bloqueia o fluxo."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:res.groups,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_group_consultation
@@ -337,13 +324,12 @@ msgstr "Concluído"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__note_move_id
 msgid ""
 "Draft credit note, or debit note when the official value is negative, "
-"generated for this invoice by this module. Full pointer means live note: it "
-"is released automatically the moment the note is cancelled or deleted."
+"generated for this invoice by this module. Cleared on its own the moment the"
+" note is cancelled or deleted."
 msgstr ""
 "Nota de crédito em rascunho, ou nota de débito quando o valor oficial é "
-"negativo, gerada para esta fatura por este módulo. Ponteiro preenchido "
-"significa nota viva: é libertado automaticamente assim que a nota é "
-"cancelada ou eliminada."
+"negativo, gerada para esta fatura por este módulo. Fica vazio por si só "
+"assim que a nota é cancelada ou eliminada."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model,name:l10n_pt_invoice_spms_verification.model_edi_backend
@@ -700,14 +686,8 @@ msgstr "Prestações negativas"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__amount_lines_negative_untaxed
-msgid "Negative Claims Amount (Untaxed)"
+msgid "Negative Claims Amount (Tax Excluded)"
 msgstr "Valor das prestações negativas (sem impostos)"
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__level
-msgid "Nesting point of the verification document the error is anchored to."
-msgstr ""
-"Ponto de aninhamento do documento de conferência a que o erro está ancorado."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__amount_lines_untaxed
@@ -717,7 +697,7 @@ msgid ""
 "what the generated credit-note lines add up to (negated on a debit note)."
 msgstr ""
 "Soma líquida das diferenças por prescrição, sem IVA: prestações faturadas a "
-"mais menos as prestações que a conferência admitiu acima do faturado, o que "
+"mais menos as prestações que a conferência aceitou acima do faturado, o que "
 "as linhas da nota de crédito gerada somam (negado numa nota de débito)."
 
 #. module: l10n_pt_invoice_spms_verification
@@ -824,11 +804,13 @@ msgstr "Nível dados de prescrição"
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__prescription
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__prescription
 msgid ""
-"Prescription number (NumeroPrescricao), the billing-line key of the claim. "
-"Patient-linked: treat as an opaque identifier."
+"Prescription number (NumeroPrescricao): what links the claim to its invoice "
+"line. It identifies a patient: use it only to find the line, never interpret"
+" or share it."
 msgstr ""
-"Número de prescrição (NumeroPrescricao), a chave de linha de faturação da "
-"prestação. Ligado ao doente: tratar como um identificador opaco."
+"Número de prescrição (NumeroPrescricao): o que liga a prestação à sua linha "
+"da fatura. Identifica um doente: use-o apenas para encontrar a linha, não o "
+"interprete nem partilhe."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -852,11 +834,26 @@ msgstr "Pronto"
 #. module: l10n_pt_invoice_spms_verification
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
 msgid ""
-"Ready for generation: press Retry on the exchange record to generate the "
-"note."
+"Ready for generation: press Retry on the exchange record; the EDI input "
+"action processes the document again at its next hourly pass and generates "
+"the note then."
 msgstr ""
-"Pronto para gerar: carregue em Retry no registo de intercâmbio para gerar a "
-"nota."
+"Pronto para gerar: carregue em Retry no registo de intercâmbio; a ação de "
+"entrada EDI volta a processar o documento na passagem horária seguinte e "
+"gera então a nota."
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__state
+msgid ""
+"Ready: the note is still to be generated. Done: the credit or debit note of "
+"this result is live. Error: a person must look at it; the reason is shown on"
+" the form. Zero Official Value: nothing to regularize. The state follows the"
+" notes of the invoice on its own."
+msgstr ""
+"Pronto: a nota ainda está por gerar. Concluído: a nota de crédito ou de "
+"débito deste resultado está viva. Erro: uma pessoa tem de a analisar; o "
+"motivo é mostrado no formulário. Valor oficial zero: nada a regularizar. O "
+"estado segue as notas da fatura por si só."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:res.groups,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_group_responsible
@@ -876,8 +873,8 @@ msgstr "Limite de ajuste SPMS"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.actions.act_window,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_error_type_act_window
-msgid "SPMS Error Type"
-msgstr "Tipo de Erro SPMS"
+msgid "SPMS Error Types"
+msgstr "Tipos de erro SPMS"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model,name:l10n_pt_invoice_spms_verification.model_spms_invoice_verification
@@ -970,7 +967,7 @@ msgid ""
 "billed claims exactly as the official value does."
 msgstr ""
 "Soma das diferenças negativas, sem IVA: as prestações que a conferência "
-"admitiu acima do valor faturado. Cada uma passa a ser uma linha negativa da "
+"aceitou acima do valor faturado. Cada uma passa a ser uma linha negativa da "
 "nota de crédito (uma linha positiva da nota de débito), compensando as "
 "prestações faturadas a mais exatamente como faz o valor oficial."
 
@@ -1085,13 +1082,14 @@ msgstr "O serviço web do CCF não está disponível (%s)."
 msgid ""
 "The EDI exchange record that received the verification document this result "
 "comes from and processed it. A result held in Error, or reopened by "
-"accounting, is generated again by pressing Retry on that record: it "
-"processes the stored document again."
+"accounting, is generated again by pressing Retry on that record: the EDI "
+"input action processes the stored document again at its next hourly pass."
 msgstr ""
 "O registo de intercâmbio EDI que recebeu o documento de conferência de que "
-"provém este resultado e o processou. Um resultado retido em Erro, ou "
-"reaberto pela contabilidade, é gerado de novo carregando em Retry nesse "
-"registo: processa de novo o documento guardado."
+"vem este resultado e o processou. Um resultado retido em Erro, ou reaberto "
+"pela contabilidade, é gerado de novo carregando em Retry nesse registo: a "
+"ação de entrada EDI volta a processar o documento na passagem horária "
+"seguinte."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_verification.constraint_res_company_spms_adjustment_limit_positive
@@ -1109,17 +1107,6 @@ msgstr ""
 "O valor de impostos do rascunho (%(draft).2f) difere do imposto esperado "
 "(%(expected).2f) para os impostos das suas linhas; reveja a configuração de "
 "impostos antes de tentar novamente."
-
-#. module: l10n_pt_invoice_spms_verification
-#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
-msgid ""
-"The draft untaxed total (%(draft).2f) differs from the prescription claims "
-"total (%(expected).2f); review the draft lines before retrying."
-msgstr ""
-"O total sem impostos do rascunho (%(draft).2f) difere do total das "
-"prestações por prescrição (%(expected).2f); reveja as linhas do rascunho "
-"antes de tentar novamente."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
@@ -1209,6 +1196,20 @@ msgstr ""
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
 msgid ""
+"The note's untaxed total (%(draft).2f) differs from the claims total of the "
+"result (%(expected).2f). Compare the original invoice lines of the affected "
+"prescriptions (price, discount, taxes) with the verification lines before "
+"retrying."
+msgstr ""
+"O total sem impostos da nota (%(draft).2f) difere do total das prestações do"
+" resultado (%(expected).2f). Compare as linhas da fatura original das "
+"prescrições afetadas (preço, desconto, impostos) com as linhas de "
+"conferência antes de tentar de novo."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+#, python-format
+msgid ""
 "The official value %(value)s exceeds the total of the original invoice "
 "%(invoice)s (%(total)s)."
 msgstr ""
@@ -1266,21 +1267,6 @@ msgstr ""
 #, python-format
 msgid "The result is no longer ready (current state: %s)."
 msgstr "O resultado já não está pronto (estado atual: %s)."
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__state
-msgid ""
-"The semaphore of the result, kept by Odoo from the live notes of the "
-"invoice, the module's own note, the verdict, the generation error and the "
-"official value: Ready to generate, Done with a live note of its own, Error "
-"for a human to look at, Zero Official Value when there is nothing to "
-"regularize."
-msgstr ""
-"O semáforo do resultado, mantido pelo Odoo a partir das notas vivas da "
-"fatura, da nota própria do módulo, do veredicto, do erro de geração e do "
-"valor oficial: Pronto para gerar, Concluído com uma nota própria viva, Erro "
-"para uma pessoa analisar, Valor oficial zero quando não há nada a "
-"regularizar."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1392,10 +1378,12 @@ msgstr ""
 #, python-format
 msgid ""
 "The verification result of %s is ready for generation again: press Retry on "
-"its exchange record to generate the note."
+"its exchange record; the EDI input action generates the note at its next "
+"hourly pass."
 msgstr ""
-"O resultado da conferência de %s está de novo pronto para gerar: carregue em"
-" Retry no seu registo de intercâmbio para gerar a nota."
+"O resultado de conferência de %s está de novo pronto para gerar: carregue em"
+" Retry no seu registo de intercâmbio; a ação de entrada EDI gera a nota na "
+"passagem horária seguinte."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1411,7 +1399,7 @@ msgstr "Total aceite"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__total_allowed_taxed
-msgid "Total Allowed (Taxed)"
+msgid "Total Allowed (Tax Included)"
 msgstr "Total aceite (com impostos)"
 
 #. module: l10n_pt_invoice_spms_verification
@@ -1422,7 +1410,7 @@ msgstr "Total faturado"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__total_billed_taxed
-msgid "Total Billed (Taxed)"
+msgid "Total Billed (Tax Included)"
 msgstr "Total faturado (com impostos)"
 
 #. module: l10n_pt_invoice_spms_verification
@@ -1491,6 +1479,21 @@ msgid "Verified Without Errors"
 msgstr "Conferida sem erros"
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__completeness_warning
+msgid ""
+"Warnings raised while reading the verification document: errors at positions"
+" this module does not know (the error list is then incomplete), a claim "
+"amount that could not be read (stored as 0), a document date that could not "
+"be read. The raw document attached to this result is the authority. The "
+"result is processed all the same."
+msgstr ""
+"Avisos gerados ao ler o documento de conferência: erros em posições que este"
+" módulo não conhece (a lista de erros fica então incompleta), um valor de "
+"prestação que não pôde ser lido (guardado como 0), uma data de documento que"
+" não pôde ser lida. O documento em bruto anexo a este resultado é a "
+"autoridade. O resultado é processado na mesma."
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__fetch_date
 msgid ""
 "When the definitive verification document was fetched from the web service."
@@ -1498,29 +1501,42 @@ msgstr ""
 "Quando o documento de conferência definitivo foi obtido do serviço web."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__level
+msgid ""
+"Where the verification document reports the error: on the invoice, on a "
+"claim, on a claim line or on the prescription data."
+msgstr ""
+"Onde o documento de conferência reporta o erro: na fatura, numa prestação, "
+"numa linha de prestação ou nos dados de prescrição."
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__generation_error
 msgid ""
 "Why the automatic note generation of this result failed; the result is held "
 "in Error until the cause is fixed and Retry is pressed on its exchange "
-"record, which processes the document again. Other results of the same batch "
-"are never dragged along."
+"record: the EDI input action processes the document again at its next hourly"
+" pass. Other results of the same batch are never dragged along."
 msgstr ""
-"Porque falhou a geração automática da nota deste resultado; o resultado fica"
-" retido em Erro até que a causa seja corrigida e se carregue em Retry no seu"
-" registo de intercâmbio, que processa de novo o documento. Os outros "
-"resultados do mesmo lote nunca são arrastados."
+"Por que falhou a geração automática da nota deste resultado; o resultado "
+"fica retido em Erro até a causa ser corrigida e se carregar em Retry no seu "
+"registo de intercâmbio: a ação de entrada EDI volta a processar o documento "
+"na passagem horária seguinte. Os outros resultados do mesmo lote nunca são "
+"arrastados."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__error_message
 msgid ""
-"Why the result is held in error: a live credit or debit note this module did"
-" not create or a verification outcome this module does not recognise. "
-"Computed live and never stored, so fixing the cause clears it on its own."
+"Why the result is held in Error: the note generation failed, the invoice "
+"already has a credit or debit note this module did not create, or the "
+"verification outcome is one this module does not recognise. A foreign note "
+"cancelled clears it on its own; a generation failure clears when Retry on "
+"the exchange record processes the document again."
 msgstr ""
-"Porque o resultado está retido em erro: uma nota de crédito ou de débito "
-"viva que este módulo não criou ou um desfecho de conferência que este módulo"
-" não reconhece. É calculado ao vivo e nunca armazenado, pelo que corrigir a "
-"causa limpa-o por si só."
+"Por que o resultado está retido em Erro: falhou a geração da nota, a fatura "
+"já tem uma nota de crédito ou de débito que este módulo não criou, ou o "
+"desfecho da conferência é um que este módulo não reconhece. Uma nota alheia "
+"cancelada limpa-o por si só; uma falha de geração limpa-se quando Retry no "
+"registo de intercâmbio volta a processar o documento."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_error_view_search
