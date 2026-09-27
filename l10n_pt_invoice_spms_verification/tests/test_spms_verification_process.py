@@ -273,7 +273,6 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         self.assertAlmostEqual(result.credit_official, 36.0)
         self.assertIn("Documento conferido", result.oficio)
         self.assertTrue(result.fetch_date)
-        self.assertEqual(self.invoice.spms_invoice_verification_state, "with_errors")
         self.assertFalse(result.completeness_warning)
         # one line per claim, carrying the money and the lot
         line = result.line_ids
@@ -338,7 +337,6 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         result = self._result()
         self.assertEqual(result.verification_state, "without_errors")
         self.assertEqual(result.error_count, 0)
-        self.assertEqual(self.invoice.spms_invoice_verification_state, "without_errors")
         self.assertEqual(result.state, "zero_official")
         self.assertFalse(
             self.env["account.move"].search(
@@ -687,8 +685,8 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         result = self._result()
         self.assertEqual(result.error_count, 0)
         self.assertFalse(result.completeness_warning)
-        # no Erro at all, yet the invoice still flags the verification as with errors
-        self.assertEqual(self.invoice.spms_invoice_verification_state, "with_errors")
+        # no Erro at all, yet the document still reports verification with errors
+        self.assertEqual(result.verification_state, "with_errors")
         line = result.line_ids
         self.assertEqual(line.prescription, "TESTP001")
         self.assertAlmostEqual(line.amount_difference, 36.0)

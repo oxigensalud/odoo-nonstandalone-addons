@@ -18,10 +18,6 @@ class AccountMove(models.Model):
         inverse_name="note_move_id",
         string="SPMS Invoice Verifications (Credit/Debit Note)",
     )
-    spms_invoice_verification_state = fields.Selection(
-        related="spms_invoice_verification_ids.verification_state",
-        string="SPMS Verification State",
-    )
 
     def action_view_spms_invoice_verification(self):
         """Open the invoice's verification result form directly (1:1)."""

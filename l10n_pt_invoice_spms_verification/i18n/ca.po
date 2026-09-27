@@ -288,9 +288,6 @@ msgid "Debit Note"
 msgstr "Nota de dèbit"
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_account_bank_statement_line__spms_invoice_verification_state
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_account_move__spms_invoice_verification_state
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_account_payment__spms_invoice_verification_state
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__verification_state
 msgid ""
 "Definitive state reported by the verification document (Conferida Com Erros "
@@ -923,13 +920,6 @@ msgstr "Verificació SPMS"
 #: model:ir.actions.act_window,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_error_action
 msgid "SPMS Verification Errors"
 msgstr "Errors de verificació SPMS"
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_bank_statement_line__spms_invoice_verification_state
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move__spms_invoice_verification_state
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_payment__spms_invoice_verification_state
-msgid "SPMS Verification State"
-msgstr "Estat de la verificació SPMS"
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
