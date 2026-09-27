@@ -119,11 +119,10 @@ a software failure.
 
 Every invoice sent to SPMS gets its verification result attached the
 moment the verification resolves it (one result per invoice — the first
-definitive answer closes the invoice permanently). When the verification
-reports errors, the invoice form shows an *SPMS Verification Line
-Errors* smart button that opens the result directly; a verification
-without errors adds no button, and its result is reached from the
-*Invoice Verifications* list.
+definitive answer closes the invoice permanently). Once the invoice has
+its result, its form shows an *SPMS Verification* smart button that
+opens the result directly, with or without errors; before that there is
+no button. The *Invoice Verifications* list shows every result.
 
 The result form carries the verification state, the official totals and
 the computed official credit value. The *Lines* smart button opens the
