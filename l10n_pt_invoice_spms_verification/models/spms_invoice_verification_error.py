@@ -11,9 +11,9 @@ class SpmsInvoiceVerificationError(models.Model):
     The Erro element is identical everywhere — {Codigo, Mensagem} — only
     its anchor changes: `level` says where it hangs and `line_id` is the
     claim it hangs under, empty for the errors anchored to the document
-    itself or to a lot, which carry no prescription. Errors carry no
-    money: the amounts live on the line, and the flat error list reads
-    them through it.
+    itself, which carry no prescription. Errors carry no money: the
+    amounts live on the line, and the flat error list reads them
+    through it.
     """
 
     _name = "spms.invoice.verification.error"
@@ -40,7 +40,7 @@ class SpmsInvoiceVerificationError(models.Model):
         index=True,
         ondelete="cascade",
         help="Claim the error hangs under; empty for the errors anchored "
-        "to the document itself or to a lot.",
+        "to the document itself.",
     )
     company_id = fields.Many2one(
         related="result_id.company_id",
