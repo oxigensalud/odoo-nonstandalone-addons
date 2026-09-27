@@ -973,6 +973,55 @@ class TestSpmsVerification(SavepointCase):
         self.assertEqual(result.state, "done")
         self.assertFalse(result.error_message)
 
+    def test_foreign_note_message_names_it_and_asks_to_check(self):
+        # the message never orders to fix or cancel the note: somebody may
+        # have made it on purpose (the notes made by hand before go-live)
+        move = self._create_invoice("FT 2026/00136", [("TESTP016", 10, 10.0)])
+        result = self._create_result(
+            move,
+            [
+                {
+                    "prescription": "TESTP016",
+                    "billed": 100.0,
+                    "allowed": 0.0,
+                    "days_billed": 10.0,
+                }
+            ],
+            credit_official=move.amount_total,
+        )
+        self.assertEqual(result.state, "ready")
+        self._reverse(move)
+        one = move.reversal_move_id
+        self.assertEqual(len(one), 1)
+        self.assertEqual(result.state, "error")
+        self.assertEqual(
+            result.error_message,
+            "The invoice already has the credit note %s. No additional credit "
+            "note was generated. Check whether it corresponds to this "
+            "verification result." % one.display_name,
+        )
+        self._reverse(move)
+        several = move.reversal_move_id
+        self.assertEqual(len(several), 2)
+        self.assertEqual(
+            result.error_message,
+            "The invoice already has the credit notes %s. No additional credit "
+            "note was generated. Check whether they correspond to this "
+            "verification result." % ", ".join(several.mapped("display_name")),
+        )
+
+    def _reverse(self, move):
+        wizard = self.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, move.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": fields.Date.context_today(move),
+                "company_id": self.company.id,
+            }
+        )
+        wizard.reverse_moves()
+
     def test_foreign_note_reset_to_draft_marks_error_again(self):
         # the semaphore follows the note whatever accounting does to it:
         # cancelled, the foreign note frees the result; reset to draft, it
@@ -1163,7 +1212,7 @@ class TestSpmsVerification(SavepointCase):
         self.assertEqual(result.state, "error")
         self.assertFalse(result.note_move_id)
         self.assertIn(foreign.display_name, result.error_message)
-        self.assertIn("debit note", result.error_message)
+        self.assertIn("No additional debit note was generated", result.error_message)
         with self.assertRaisesRegex(UserError, "no longer ready"):
             result._generate_note()
         foreign.button_cancel()
