@@ -40,7 +40,7 @@
         id="spms_invoice_verification_error_type_act_window"
         model="ir.actions.act_window"
     >
-        <field name="name">SPMS Error Type</field>
+        <field name="name">SPMS Error Types</field>
         <field name="res_model">spms.invoice.verification.error.type</field>
         <field name="view_mode">tree,form</field>
     </record>

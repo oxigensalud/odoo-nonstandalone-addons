@@ -26,9 +26,10 @@ SPMS Invoice Verification
 
 |badge1| |badge2| |badge3|
 
-This module stores the SPMS/CCMSNS invoice verification results
-("Conferência de Faturas") of the customer invoices sent to SPMS and
-manages the resulting rectifying credit and debit notes:
+This module stores the results of the invoice verification ("Conferência
+de Faturas") that the CCF (Centro de Conferência de Faturas of the SNS)
+runs on the customer invoices sent to SPMS, and manages the resulting
+credit and debit notes:
 
 - Stores one verification result per invoice — the CCF document number
   and date, the verification state, the read and recomputed totals, the
@@ -81,13 +82,13 @@ Configuration
   and the next pass re-activates that same job rather than queueing
   another. To pause the polling, deactivate the scheduled action — never
   uninstall the module just to stop the calls.
-- Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
-  *Technical Settings* users; 0.01 by default): the largest difference,
-  taxes included, between the official value and the draft credit or
-  debit note that is written on its tax line. A larger difference holds
-  the result in *Error* for review instead of generating the note; raise
-  the limit only when a larger difference is legitimate and strictly
-  necessary.
+- Set the *SPMS Adjustment Limit* on the company (SPMS page of the
+  company form, visible to users with *Administration / Settings*; 0.01
+  by default): the largest difference, taxes included, between the
+  official value and the draft credit or debit note that is written on
+  its tax line. A larger difference holds the result in *Error* for
+  review instead of generating the note; raise the limit only when a
+  larger difference is legitimate and strictly necessary.
 - Keep the tax rounding method of the company (*Accounting → Settings →
   Taxes → Rounding Method*) on *Round Globally*: the CCF computes the
   tax once on the invoice total, and per-line rounding drifts away from
@@ -133,7 +134,7 @@ document anchors to the invoice itself are listed on the result form.
 The list opens on the lines with a difference; remove the filter to see
 them all.
 
-*Customers → SPMS → Verification Line Errors* lists every error the
+*Customers → SPMS → Verification Errors* lists every error the
 verification reported, across invoices — one row per error with its
 level, code and message, its prescription and the billed, allowed and
 difference amounts of its claim. The list opens on the errors that carry
@@ -143,21 +144,21 @@ Difference* filter brings back the informational ones. Group by error
 code, level, invoice, customer or document date to read a month's
 verification at a glance.
 
-For a result that came back with errors, a draft rectifying invoice is
-created automatically the moment the result is processed, through the
-standard reversal path, cut down to the affected prescriptions, and
-linked back to the result. Each claim edits the copy of its own invoice
-line: a prescription billed on several lines is paired with them by
-billed quantity and amount, one claim per line, and a claim that finds
-no distinct line of its own holds the result instead of guessing. When
-the generation of a result fails (a prescription with no matching
-invoice line, a foreign note, a residual beyond the adjustment limit),
-that result alone is held in *Error* with the reason on its form, and
-its exchange record — the result form links to it — in *Error on
-process* with the same reason; fix the cause and press *Retry* on that
-record: the stored document is processed again at the next pass of the
-hourly input action of the EDI framework, and the note is generated
-then. The rest of the batch is never dragged along. A prescription the
+For a result that came back with errors, a draft credit note is created
+automatically the moment the result is processed, through the standard
+reversal path, cut down to the affected prescriptions, and linked back
+to the result. Each claim edits the copy of its own invoice line: a
+prescription billed on several lines is paired with them by billed
+quantity and amount, one claim per line, and a claim that finds no
+distinct line of its own holds the result instead of guessing. When the
+generation of a result fails (a prescription with no matching invoice
+line, a foreign note, a residual beyond the adjustment limit), that
+result alone is held in *Error* with the reason on its form, and its
+exchange record — the result form links to it — in *Error on process*
+with the same reason; fix the cause and press *Retry* on that record:
+the stored document is processed again at the next pass of the hourly
+input action of the EDI framework, and the note is generated then. The
+rest of the batch is never dragged along. A prescription the
 verification priced above the billed amount (a negative difference) gets
 its own negative line, so the credit note nets it against the rejected
 claims exactly as the official value does; the result form shows their
