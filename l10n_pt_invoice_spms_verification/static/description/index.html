@@ -542,10 +542,12 @@ result is <em>Ready</em> again, its exchange record is held in <em>Error on
 process</em> so that <em>Retry</em> generates a new note, and the original
 invoice’s chatter records both. A live note of the same kind the module
 did not create — a credit note for a positive official value, a debit
-note for a negative one — holds the result in <em>Error</em> (the result form
-names it by number) and its record with <em>Retry</em>: the module never adopts
-or decides — a human fixes accounting first. The semaphore follows every
-change of the notes on its own; once the foreign note is gone, <em>Retry</em>
+note for a negative one — holds the result in <em>Error</em> and its record
+with <em>Retry</em>: the message names the note, says that no additional note
+was generated and asks to check whether it corresponds to this
+verification result. The module never adopts or decides — a person does,
+and a note made on purpose stays as it is. The semaphore follows every
+change of the notes on its own; if that note is cancelled, <em>Retry</em>
 generates the module’s note.</p>
 </div>
 <div class="section" id="known-issues-roadmap">
