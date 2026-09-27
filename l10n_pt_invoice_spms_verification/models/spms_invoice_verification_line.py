@@ -86,10 +86,10 @@ class SpmsInvoiceVerificationLine(models.Model):
         help="Billed quantity in days for the claim (QuantidadeLida).",
     )
     days_paid = fields.Float(
-        string="Paid Days",
+        string="Allowed Days",
         readonly=True,
-        help="Allowed/paid days for the claim (QuantidadeCalculado); may be "
-        "empty in the document.",
+        help="Days the verification allowed for the claim (QuantidadeCalculado); "
+        "may be empty in the document.",
     )
     move_line_id = fields.Many2one(
         comodel_name="account.move.line",

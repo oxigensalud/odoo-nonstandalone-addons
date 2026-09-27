@@ -19,14 +19,15 @@ last modification is the time of the last question. A job fails only on
 a software failure.
 
 Every invoice sent to SPMS gets its verification result attached the moment
-the verification resolves it (one result per invoice — the first definitive
-answer closes the invoice permanently). Once the invoice has its result,
+the verification resolves it (one result per invoice — once the CCF's
+definitive answer is received, the invoice is not asked about again).
+Once the invoice has its result,
 its form shows an *SPMS Verification* smart button that opens the result
 directly, with or without errors; before that there is no button. The
 *Invoice Verifications* list shows every result.
 
 The result form carries the verification state, the official totals and the
-computed official credit value. The *Lines* smart button opens the claim
+official value. The *Lines* smart button opens the claim
 lines — one per prescription, with the billed, allowed and difference
 amounts summed at the bottom and the error codes of each — and each line
 lists its own errors, code and message; the errors the document anchors
@@ -69,7 +70,7 @@ with no extra line, so the total matches the official value exactly. A
 residual beyond the *SPMS Adjustment Limit* of the company (0.01 by
 default) holds the result in *Error* with the reason, because it reveals
 a discrepancy to review rather than rounding noise: a claim priced
-differently (the *Claims Credit* of the result then differs from its
+differently (the *Claims Amount* of the result then differs from its
 official totals before tax), or a company rounding its taxes per line;
 raise the limit only when the difference is legitimate and strictly
 necessary. Drafts stay drafts: the
