@@ -57,7 +57,7 @@
                     role="alert"
                     attrs="{'invisible': [('state', '!=', 'ready')]}"
                 >
-                    Ready for generation: press Retry on the exchange record to generate the note.
+                    Ready for generation: press Retry on the exchange record; the EDI input action processes the document again at its next hourly pass and generates the note then.
                 </div>
                 <div
                     class="alert alert-warning"

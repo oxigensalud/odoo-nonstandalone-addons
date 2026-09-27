@@ -97,13 +97,13 @@ class SpmsInvoiceVerification(models.Model):
         "(TotalFaturaCalculado).",
     )
     total_billed_taxed = fields.Monetary(
-        string="Total Billed (Taxed)",
+        string="Total Billed (Tax Included)",
         readonly=True,
         help="Invoice total as read by the verification, taxes included "
         "(TotalFaturaIVALido).",
     )
     total_allowed_taxed = fields.Monetary(
-        string="Total Allowed (Taxed)",
+        string="Total Allowed (Tax Included)",
         readonly=True,
         help="Invoice total recomputed by the verification, taxes included "
         "(TotalFaturaIVACalculado).",
@@ -132,9 +132,8 @@ class SpmsInvoiceVerification(models.Model):
         check_company=True,
         ondelete="set null",
         help="Draft credit note, or debit note when the official value is "
-        "negative, generated for this invoice by this module. Full pointer "
-        "means live note: it is released automatically the moment the note "
-        "is cancelled or deleted.",
+        "negative, generated for this invoice by this module. Cleared on "
+        "its own the moment the note is cancelled or deleted.",
     )
     exchange_record_id = fields.Many2one(
         comodel_name="edi.exchange.record",
@@ -144,8 +143,8 @@ class SpmsInvoiceVerification(models.Model):
         help="The EDI exchange record that received the verification "
         "document this result comes from and processed it. A result held "
         "in Error, or reopened by accounting, is generated again by "
-        "pressing Retry on that record: it processes the stored document "
-        "again.",
+        "pressing Retry on that record: the EDI input action processes "
+        "the stored document again at its next hourly pass.",
     )
     state = fields.Selection(
         selection=[
@@ -158,11 +157,11 @@ class SpmsInvoiceVerification(models.Model):
         compute="_compute_state",
         store=True,
         copy=False,
-        help="The semaphore of the result, kept by Odoo from the live "
-        "notes of the invoice, the module's own note, the verdict, the "
-        "generation error and the official value: Ready to generate, "
-        "Done with a live note of its own, Error for a human to look "
-        "at, Zero Official Value when there is nothing to regularize.",
+        help="Ready: the note is still to be generated. Done: the credit "
+        "or debit note of this result is live. Error: a person must look "
+        "at it; the reason is shown on the form. Zero Official Value: "
+        "nothing to regularize. The state follows the notes of the "
+        "invoice on its own.",
     )
     line_ids = fields.One2many(
         comodel_name="spms.invoice.verification.line",
@@ -201,7 +200,7 @@ class SpmsInvoiceVerification(models.Model):
         "until that note is cancelled.",
     )
     amount_lines_untaxed = fields.Monetary(
-        string="Claims Amount (Untaxed)",
+        string="Claims Amount (Tax Excluded)",
         compute="_compute_amount_lines_untaxed",
         store=True,
         help="Net sum of the per-prescription differences, without taxes: "
@@ -210,7 +209,7 @@ class SpmsInvoiceVerification(models.Model):
         "(negated on a debit note).",
     )
     amount_lines_negative_untaxed = fields.Monetary(
-        string="Negative Claims Amount (Untaxed)",
+        string="Negative Claims Amount (Tax Excluded)",
         compute="_compute_amount_lines_untaxed",
         store=True,
         help="Sum of the negative differences, without taxes: the claims "
@@ -222,20 +221,23 @@ class SpmsInvoiceVerification(models.Model):
     error_message = fields.Char(
         string="Error Message",
         compute="_compute_error_message",
-        help="Why the result is held in error: a live credit or debit note "
-        "this module did not create or a verification outcome this module does not "
-        "recognise. Computed live and never stored, so fixing the cause "
-        "clears it on its own.",
+        help="Why the result is held in Error: the note generation failed, "
+        "the invoice already has a credit or debit note this module did "
+        "not create, or the verification outcome is one this module does "
+        "not recognise. A foreign note cancelled clears it on its own; a "
+        "generation failure clears when Retry on the exchange record "
+        "processes the document again.",
     )
     completeness_warning = fields.Text(
         string="Completeness Warning",
         readonly=True,
         copy=False,
-        help="Completeness warning raised while parsing the verification "
-        "document: some errors sit at positions the parser does not "
-        "know, so the error list may be incomplete. The raw document "
-        "attached to this result is the authority. Never blocks the "
-        "flow.",
+        help="Warnings raised while reading the verification document: "
+        "errors at positions this module does not know (the error list "
+        "is then incomplete), a claim amount that could not be read "
+        "(stored as 0), a document date that could not be read. The raw "
+        "document attached to this result is the authority. The result "
+        "is processed all the same.",
     )
     generation_error = fields.Text(
         string="Generation Error",
@@ -243,8 +245,9 @@ class SpmsInvoiceVerification(models.Model):
         copy=False,
         help="Why the automatic note generation of this result failed; the "
         "result is held in Error until the cause is fixed and Retry is "
-        "pressed on its exchange record, which processes the document "
-        "again. Other results of the same batch are never dragged along.",
+        "pressed on its exchange record: the EDI input action processes "
+        "the document again at its next hourly pass. Other results of the "
+        "same batch are never dragged along.",
     )
 
     _sql_constraints = [
@@ -531,8 +534,9 @@ class SpmsInvoiceVerification(models.Model):
                 message = (
                     _(
                         "The verification result of %s is ready for generation "
-                        "again: press Retry on its exchange record to generate "
-                        "the note."
+                        "again: press Retry on its exchange record; the EDI "
+                        "input action generates the note at its next hourly "
+                        "pass."
                     )
                     % rec.move_id.display_name
                 )
@@ -785,9 +789,11 @@ class SpmsInvoiceVerification(models.Model):
         ):
             raise UserError(
                 _(
-                    "The draft untaxed total (%(draft).2f) differs from the "
-                    "prescription claims total (%(expected).2f); review the "
-                    "draft lines before retrying."
+                    "The note's untaxed total (%(draft).2f) differs from the "
+                    "claims total of the result (%(expected).2f). Compare the "
+                    "original invoice lines of the affected prescriptions "
+                    "(price, discount, taxes) with the verification lines "
+                    "before retrying."
                 )
                 % {
                     "draft": draft.amount_untaxed,

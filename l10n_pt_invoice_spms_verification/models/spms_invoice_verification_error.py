@@ -62,7 +62,8 @@ class SpmsInvoiceVerificationError(models.Model):
         string="Level",
         required=True,
         readonly=True,
-        help="Nesting point of the verification document the error is anchored to.",
+        help="Where the verification document reports the error: on the "
+        "invoice, on a claim, on a claim line or on the prescription data.",
     )
     error_type_id = fields.Many2one(
         comodel_name="spms.invoice.verification.error.type",
