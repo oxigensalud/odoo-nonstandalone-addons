@@ -89,11 +89,12 @@ class SpmsInvoiceVerificationError(models.Model):
         help="Error description as reported (Erro/Mensagem).",
     )
     provider_system_ref = fields.Char(
-        string="Provider System Ref",
+        string="Prescribed System",
         readonly=True,
-        help="Line-level anchor: provider-system reference of the claim "
-        "line or prescription-data line the error is anchored to. Kept as "
-        "audit of which line came flagged, never used as a dedup key.",
+        help="Code of the prescribed system (SistemaPrescrito) on the claim "
+        "line or prescription-data line the error is reported on: the same "
+        "code the invoice line's product carries. It tells which line the "
+        "CCF flagged.",
     )
 
     # the flat error list (Customers > SPMS > Errors) reads the invoice,

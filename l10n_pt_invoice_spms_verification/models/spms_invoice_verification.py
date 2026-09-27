@@ -56,8 +56,8 @@ class SpmsInvoiceVerification(models.Model):
         ondelete="restrict",
         check_company=True,
         help="Invoice this verification result belongs to. One result per "
-        "invoice: the first definitive answer of the verification closes "
-        "the invoice permanently.",
+        "invoice: once the CCF's definitive answer is received, the "
+        "invoice is not asked about again.",
     )
     company_id = fields.Many2one(
         related="move_id.company_id",
@@ -109,7 +109,7 @@ class SpmsInvoiceVerification(models.Model):
         "(TotalFaturaIVACalculado).",
     )
     credit_official = fields.Monetary(
-        string="Official Credit",
+        string="Official Value",
         compute="_compute_credit_official",
         store=True,
         help="Official value for this invoice, taxes included: "
@@ -419,7 +419,7 @@ class SpmsInvoiceVerification(models.Model):
             elif rec._is_unrecognized_outcome():
                 rec.error_message = _(
                     "The verification result of %(invoice)s does not match any "
-                    "recognised outcome (official credit: %(value)s); it "
+                    "recognised outcome (official value: %(value)s); it "
                     "is held for human review. The raw document attached "
                     "to this result is the authority."
                 ) % {
@@ -846,8 +846,8 @@ class SpmsInvoiceVerification(models.Model):
                     "Only the rounding cent of the tax may be written on the "
                     "tax line of the %(kind)s. A larger difference reveals "
                     "a discrepancy to review before retrying: the Claims "
-                    "Credit of the result must match its official totals "
-                    "before tax (a prescription the verification priced differently "
+                    "Amount (Tax Excluded) of the result must match its official "
+                    "totals before tax (a prescription the verification priced differently "
                     "from the invoice makes them diverge), and the company "
                     "must round its taxes globally (Accounting > Settings > "
                     "Taxes > Rounding Method), as the CCF computes the tax "
