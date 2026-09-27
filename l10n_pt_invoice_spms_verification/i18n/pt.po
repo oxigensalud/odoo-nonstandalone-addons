@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 09:59+0000\n"
-"PO-Revision-Date: 2026-09-27 09:59+0000\n"
+"POT-Creation-Date: 2026-09-27 10:17+0000\n"
+"PO-Revision-Date: 2026-09-27 10:17+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: pt\n"
@@ -63,14 +63,10 @@ msgid "Allowed Amount"
 msgstr "Valor aceite"
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__days_paid
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__days_paid
-msgid ""
-"Allowed/paid days for the claim (QuantidadeCalculado); may be empty in the "
-"document."
-msgstr ""
-"Dias aceites/pagos da prestação (QuantidadeCalculado); pode vir vazio no "
-"documento."
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__days_paid
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__days_paid
+msgid "Allowed Days"
+msgstr "Dias aceites"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_verification.constraint_spms_invoice_verification_error_type_code_uniq
@@ -176,19 +172,30 @@ msgstr ""
 "(ValorTotalCalculado); lido do documento, nunca recalculado."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
+msgid "Claims Amount"
+msgstr "Valor das prestações"
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__amount_lines_untaxed
 msgid "Claims Amount (Tax Excluded)"
 msgstr "Valor das prestações (sem impostos)"
 
 #. module: l10n_pt_invoice_spms_verification
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
-msgid "Claims Credit"
-msgstr "Crédito das prestações"
-
-#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error_type__code
 msgid "Code"
 msgstr "Código"
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__provider_system_ref
+msgid ""
+"Code of the prescribed system (SistemaPrescrito) on the claim line or "
+"prescription-data line the error is reported on: the same code the invoice "
+"line's product carries. It tells which line the CCF flagged."
+msgstr ""
+"Código do sistema prescrito (SistemaPrescrito) da linha de prestação ou de "
+"dados de prescrição em que o erro é reportado: o mesmo código que o produto "
+"da linha da fatura transporta. Indica que linha o CCF assinalou."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model,name:l10n_pt_invoice_spms_verification.model_res_company
@@ -263,6 +270,16 @@ msgstr "Cliente da fatura."
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__document_date
 msgid "Date the CCF issued the verification document."
 msgstr "Data em que o CCF emitiu o documento de conferência."
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__days_paid
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__days_paid
+msgid ""
+"Days the verification allowed for the claim (QuantidadeCalculado); may be "
+"empty in the document."
+msgstr ""
+"Dias que a conferência aceitou para a prestação (QuantidadeCalculado); pode "
+"vir vazio no documento."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -517,12 +534,13 @@ msgstr "Fatura sobre a qual a conferência reportou este erro."
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__move_id
 msgid ""
-"Invoice this verification result belongs to. One result per invoice: the "
-"first definitive answer of the verification closes the invoice permanently."
+"Invoice this verification result belongs to. One result per invoice: once "
+"the CCF's definitive answer is received, the invoice is not asked about "
+"again."
 msgstr ""
 "Fatura a que pertence este resultado de conferência. Um resultado por "
-"fatura: a primeira resposta definitiva da conferência fecha a fatura "
-"permanentemente."
+"fatura: recebida a resposta definitiva do CCF, a fatura não volta a ser "
+"consultada."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__total_billed_taxed
@@ -640,18 +658,6 @@ msgstr ""
 "(apenas auditoria)."
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__provider_system_ref
-msgid ""
-"Line-level anchor: provider-system reference of the claim line or "
-"prescription-data line the error is anchored to. Kept as audit of which line"
-" came flagged, never used as a dedup key."
-msgstr ""
-"Âncora ao nível da linha: referência do sistema do prestador da linha de "
-"prestação ou da linha de dados de prescrição a que o erro está ancorado. "
-"Mantida como auditoria de que linha veio assinalada; nunca usada como chave "
-"de desduplicação."
-
-#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__line_ids
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
 msgid "Lines"
@@ -725,12 +731,6 @@ msgstr ""
 "ID)."
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__credit_official
-#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
-msgid "Official Credit"
-msgstr "Crédito oficial"
-
-#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error_type__description
 msgid "Official Message (PT)"
 msgstr "Mensagem Oficial (PT)"
@@ -740,6 +740,12 @@ msgstr "Mensagem Oficial (PT)"
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
 msgid "Official Result Notice"
 msgstr "Comunicação oficial do resultado"
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__credit_official
+#: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
+msgid "Official Value"
+msgstr "Valor oficial"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__credit_official
@@ -779,10 +785,9 @@ msgstr ""
 "máximo."
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__days_paid
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__days_paid
-msgid "Paid Days"
-msgstr "Dias pagos"
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__provider_system_ref
+msgid "Prescribed System"
+msgstr "Sistema prescrito"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__prescription
@@ -819,11 +824,6 @@ msgid "Prescriptions not matched one-to-one to an original invoice line: %s."
 msgstr ""
 "Prescrições sem correspondência um a um com uma linha da fatura original: "
 "%s."
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__provider_system_ref
-msgid "Provider System Ref"
-msgstr "Ref. sistema do prestador"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_verification.selection__spms_invoice_verification__state__ready
@@ -987,11 +987,11 @@ msgstr "Com impostos"
 msgid ""
 "The %(kind)s cannot be generated: its total %(draft)s differs from the official value %(official)s by %(difference)s, and the SPMS adjustment limit of company %(company)s allows at most %(limit)s.\n"
 "\n"
-"Only the rounding cent of the tax may be written on the tax line of the %(kind)s. A larger difference reveals a discrepancy to review before retrying: the Claims Credit of the result must match its official totals before tax (a prescription the verification priced differently from the invoice makes them diverge), and the company must round its taxes globally (Accounting > Settings > Taxes > Rounding Method), as the CCF computes the tax once on the invoice total. Raise the SPMS adjustment limit of the company only when the difference is legitimate and strictly necessary."
+"Only the rounding cent of the tax may be written on the tax line of the %(kind)s. A larger difference reveals a discrepancy to review before retrying: the Claims Amount (Tax Excluded) of the result must match its official totals before tax (a prescription the verification priced differently from the invoice makes them diverge), and the company must round its taxes globally (Accounting > Settings > Taxes > Rounding Method), as the CCF computes the tax once on the invoice total. Raise the SPMS adjustment limit of the company only when the difference is legitimate and strictly necessary."
 msgstr ""
 "Não é possível gerar a %(kind)s: o seu total %(draft)s difere do valor oficial %(official)s em %(difference)s, e o limite de ajuste SPMS da empresa %(company)s permite no máximo %(limit)s.\n"
 "\n"
-"Na linha de imposto da %(kind)s só pode ser escrito o cêntimo de arredondamento do imposto. Uma diferença maior revela uma discrepância a rever antes de tentar novamente: o Crédito das prestações do resultado tem de coincidir com os seus totais oficiais sem impostos (uma prescrição que a conferência valorizou com um preço diferente do da fatura fá-los divergir), e a empresa tem de arredondar os impostos globalmente (Contabilidade > Configurações > Impostos > Método de arredondamento), porque o CCF calcula o imposto uma única vez sobre o total da fatura. Aumente o limite de ajuste SPMS da empresa apenas quando a diferença for legítima e estritamente necessária."
+"Na linha de imposto da %(kind)s só pode ser escrito o cêntimo de arredondamento do imposto. Uma diferença maior revela uma discrepância a rever antes de tentar novamente: o Valor das prestações (sem impostos) do resultado tem de coincidir com os seus totais oficiais sem impostos (uma prescrição que a conferência valorizou com um preço diferente do da fatura fá-los divergir), e a empresa tem de arredondar os impostos globalmente (Contabilidade > Configurações > Impostos > Método de arredondamento), porque o CCF calcula o imposto uma única vez sobre o total da fatura. Aumente o limite de ajuste SPMS da empresa apenas quando a diferença for legítima e estritamente necessária."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1346,12 +1346,12 @@ msgstr ""
 #, python-format
 msgid ""
 "The verification result of %(invoice)s does not match any recognised outcome"
-" (official credit: %(value)s); it is held for human review. The raw document"
-" attached to this result is the authority."
+" (official value: %(value)s); it is held for human review. The raw document "
+"attached to this result is the authority."
 msgstr ""
 "O resultado de conferência de %(invoice)s não corresponde a nenhum desfecho "
-"reconhecido (crédito oficial: %(value)s); fica retido para revisão humana. O"
-" documento em bruto anexado a este resultado é a autoridade."
+"reconhecido (valor oficial: %(value)s); fica retido para revisão humana. O "
+"documento em bruto anexado a este resultado é a autoridade."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0

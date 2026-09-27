@@ -103,7 +103,7 @@
                         <group name="amounts_untaxed" string="Tax Excluded">
                             <field name="total_billed" string="Billed" />
                             <field name="total_allowed" string="Allowed" />
-                            <field name="amount_lines_untaxed" string="Claims Credit" />
+                            <field name="amount_lines_untaxed" string="Claims Amount" />
                             <field
                                 name="amount_lines_negative_untaxed"
                                 string="Negative Claims"
@@ -113,7 +113,7 @@
                         <group name="amounts_taxed" string="Tax Included">
                             <field name="total_billed_taxed" string="Billed" />
                             <field name="total_allowed_taxed" string="Allowed" />
-                            <field name="credit_official" string="Official Credit" />
+                            <field name="credit_official" string="Official Value" />
                             <field name="currency_id" invisible="1" />
                         </group>
                     </group>
