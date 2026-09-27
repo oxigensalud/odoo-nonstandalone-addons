@@ -444,6 +444,56 @@ class TestSpmsVerification(SavepointCase):
         self.assertAlmostEqual(draft.amount_total, 5.30)
         self.assertEqual(result.state, "done")
 
+    def test_generate_partial_days_one_cent_off_go_on_one_unit(self):
+        # the CCF rounds the billed and the allowed amounts separately, so
+        # with a price of more decimals than the currency the rejected days
+        # at that price can land one cent off the difference: 31 days at
+        # 1.3312 bill 41.27, the 27 allowed days are 35.94, the difference
+        # is 5.33 and 4 days come to 5.32. Such a claim goes on one unit for
+        # the difference over the original period; a claim the days do
+        # reproduce (30 × 1.3312 = 39.94 = 41.27 - 1.33) keeps the days
+        self.env.ref("product.decimal_price").digits = 4
+        move = self._create_invoice(
+            "FT 2026/00425", [("TESTP020", 31, 1.3312), ("TESTP021", 31, 1.3312)]
+        )
+        rows = [
+            {
+                "prescription": "TESTP020",
+                "billed": 41.27,
+                "allowed": 35.94,
+                "days_billed": 31.0,
+                "days_paid": 27.0,
+            },
+            {
+                "prescription": "TESTP021",
+                "billed": 41.27,
+                "allowed": 1.33,
+                "days_billed": 31.0,
+                "days_paid": 1.0,
+            },
+        ]
+        result = self._create_result(move, rows, credit_official=47.99)
+        draft = result._generate_note()
+        by_prescription = {
+            line.spms_prescription: line for line in draft.invoice_line_ids
+        }
+        one_cent_off = by_prescription["TESTP020"]
+        self.assertEqual((one_cent_off.quantity, one_cent_off.price_unit), (1.0, 5.33))
+        self.assertEqual(one_cent_off.discount, 0.0)
+        self.assertEqual(
+            (one_cent_off.spms_start_date, one_cent_off.spms_end_date),
+            (date(2026, 5, 1), date(2026, 5, 31)),
+        )
+        self.assertAlmostEqual(one_cent_off.price_subtotal, 5.33)
+        days = by_prescription["TESTP021"]
+        self.assertEqual(days.quantity, 30.0)
+        self.assertAlmostEqual(days.price_unit, 1.3312, places=4)
+        self.assertEqual(days.spms_end_date, date(2026, 5, 30))
+        self.assertAlmostEqual(days.price_subtotal, 39.94)
+        self.assertAlmostEqual(draft.amount_untaxed, 45.27)
+        self.assertAlmostEqual(draft.amount_total, 47.99)
+        self.assertEqual(result.state, "done")
+
     def test_generate_dates_every_note_line(self):
         # SPMS requires both dates on every line it receives, and the
         # sender's period builder takes min/max over the line dates: one
