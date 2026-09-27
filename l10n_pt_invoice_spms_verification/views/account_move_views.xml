@@ -10,14 +10,14 @@
         <field name="inherit_id" ref="account.view_move_form" />
         <field name="arch" type="xml">
             <div name="button_box" position="inside">
-                <field name="spms_invoice_verification_state" invisible="1" />
+                <field name="spms_invoice_verification_ids" invisible="1" />
                 <button
                     name="action_view_spms_invoice_verification"
                     type="object"
                     class="oe_stat_button"
                     icon="fa-check-square-o"
-                    string="SPMS Verification Line Errors"
-                    attrs="{'invisible': [('spms_invoice_verification_state', '!=', 'with_errors')]}"
+                    string="SPMS Verification"
+                    attrs="{'invisible': [('spms_invoice_verification_ids', '=', [])]}"
                     groups="l10n_pt_invoice_spms_verification.spms_invoice_verification_group_consultation"
                 />
             </div>
