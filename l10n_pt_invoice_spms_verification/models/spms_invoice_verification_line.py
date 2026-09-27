@@ -55,8 +55,9 @@ class SpmsInvoiceVerificationLine(models.Model):
         string="Prescription",
         index=True,
         readonly=True,
-        help="Prescription number (NumeroPrescricao), the billing-line key "
-        "of the claim. Patient-linked: treat as an opaque identifier.",
+        help="Prescription number (NumeroPrescricao): what links the claim "
+        "to its invoice line. It identifies a patient: use it only to find "
+        "the line, never interpret or share it.",
     )
     amount_billed = fields.Monetary(
         string="Billed Amount",

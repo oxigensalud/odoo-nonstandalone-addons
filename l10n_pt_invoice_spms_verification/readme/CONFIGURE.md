@@ -17,8 +17,9 @@
   next pass re-activates that same job rather than queueing another. To
   pause the polling, deactivate the scheduled action — never uninstall
   the module just to stop the calls.
-- Set the *SPMS Adjustment Limit* on the company (SPMS page, visible to
-  *Technical Settings* users; 0.01 by default): the largest difference,
+- Set the *SPMS Adjustment Limit* on the company (SPMS page of the
+  company form, visible to users with *Administration / Settings*; 0.01
+  by default): the largest difference,
   taxes included, between the official value and the draft credit or
   debit note that is written on its tax line. A larger difference holds
   the result in *Error* for review instead of generating the note; raise

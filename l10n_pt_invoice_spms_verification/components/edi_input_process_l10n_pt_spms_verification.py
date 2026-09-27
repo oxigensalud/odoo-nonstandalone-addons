@@ -117,12 +117,15 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         # (credit or debit); a failure holds this result only, with its
         # reason, and raises so that the record is held with Retry
         result._generate_note_or_hold()
+        state_labels = dict(
+            result.fields_get(["verification_state"])["verification_state"]["selection"]
+        )
         return _(
             "SPMS verification result of %(invoice)s processed: %(state)s, "
             "%(lines)s lines, %(errors)s errors."
         ) % {
             "invoice": move.display_name,
-            "state": verification_state,
+            "state": state_labels[verification_state],
             "lines": len(lines),
             "errors": error_count,
         }

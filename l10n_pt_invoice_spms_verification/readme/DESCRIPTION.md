@@ -1,6 +1,7 @@
-This module stores the SPMS/CCMSNS invoice verification results ("Conferência de
-Faturas") of the customer invoices sent to SPMS and manages the resulting
-rectifying credit and debit notes:
+This module stores the results of the invoice verification ("Conferência
+de Faturas") that the CCF (Centro de Conferência de Faturas of the SNS)
+runs on the customer invoices sent to SPMS, and manages the resulting
+credit and debit notes:
 
 - Stores one verification result per invoice — the CCF document number and
   date, the verification state, the read and recomputed totals, the official
