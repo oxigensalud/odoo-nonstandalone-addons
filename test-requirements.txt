@@ -1,2 +1,3 @@
 odoo-addon-l10n_pt_sale_spms@git+https://github.com/oxigensalud/odoo-community-addons.git@18.0#subdirectory=l10n_pt_sale_spms
-odoo-addon-l10n_pt_spms@git+https://github.com/oxigensalud/odoo-community-addons.git@18.0#subdirectory=l10n_pt_spms
+odoo-addon-l10n_pt_invoice_spms@git+https://github.com/oxigensalud/odoo-nonstandalone-addons.git@refs/pull/7/head#subdirectory=l10n_pt_invoice_spms
+odoo-addon-l10n_pt_spms@git+https://github.com/oxigensalud/odoo-community-addons.git@refs/pull/38/head#subdirectory=l10n_pt_spms
