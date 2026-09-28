@@ -88,7 +88,7 @@ class SpmsInvoiceCase(SavepointCase):
 
     @classmethod
     def _create_invoice(cls, company=None):
-        company = company or cls.company
+        company = company if company is not None else cls.company
         move = (
             cls.env["account.move"]
             .with_company(company)
@@ -114,7 +114,6 @@ class SpmsInvoiceCase(SavepointCase):
                 }
             )
         )
-        move.action_post()
         return move
 
     def _sending_record(self, move, state):
