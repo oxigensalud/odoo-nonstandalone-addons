@@ -75,6 +75,7 @@ class TestSpmsVerificationIntegration(SavepointComponentCase):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
         cls.company = cls.env.company
+        cls.company.country_id = cls.env.ref("base.pt")
         cls.company.tax_calculation_rounding_method = "round_globally"
         cls.company.vat = "PT999999990"
         cls.company.spms_username = "test-user"
