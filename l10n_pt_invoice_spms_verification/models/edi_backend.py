@@ -23,3 +23,25 @@ class EdiBackend(models.Model):
         domain = super()._input_pending_records_domain(record_ids=record_ids)
         domain.append(("type_id.code", "!=", "l10n_pt_spms_verification"))
         return domain
+
+    def exchange_process(self, exchange_record):
+        """Hold a processed verification result record whose result is in
+        Error, with the reason, so that Retry generates the note again.
+
+        The component stores the result and holds it with its reason
+        instead of raising: since 18.0 the process runs in a savepoint,
+        and a raise would drop the stored result. edi_oca marks the record
+        processed; it is moved to 'Error on process' here with the same
+        reason, which is the Retry the design promises.
+        """
+        res = super().exchange_process(exchange_record)
+        if (
+            exchange_record.type_id.code == "l10n_pt_spms_verification"
+            and exchange_record.edi_exchange_state == "input_processed"
+        ):
+            result = self.env["spms.invoice.verification"].search(
+                [("exchange_record_id", "=", exchange_record.id)], limit=1
+            )
+            if result.state == "error":
+                result._hold_exchange_record(result.error_message)
+        return res

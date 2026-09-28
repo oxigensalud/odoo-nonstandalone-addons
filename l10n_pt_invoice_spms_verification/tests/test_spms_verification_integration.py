@@ -1,4 +1,5 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import base64
@@ -6,7 +7,7 @@ from collections import Counter
 from datetime import date
 from unittest import mock
 
-from odoo.addons.component.tests.common import SavepointComponentCase
+from odoo.addons.component.tests.common import TransactionComponentCase
 from odoo.addons.queue_job.tests.common import trap_jobs
 
 from .test_spms_verification_process import (
@@ -66,10 +67,10 @@ def _complex_document():
 def _wire_wrap(document):
     encoded = base64.b64encode(document.encode()).decode()
     wrapped = "\n".join(encoded[i : i + 76] for i in range(0, len(encoded), 76))
-    return _result_response("<documento>%s</documento>" % wrapped)
+    return _result_response(f"<documento>{wrapped}</documento>")
 
 
-class TestSpmsVerificationIntegration(SavepointComponentCase):
+class TestSpmsVerificationIntegration(TransactionComponentCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -82,12 +83,8 @@ class TestSpmsVerificationIntegration(SavepointComponentCase):
         cls.backend = cls.env.ref("l10n_pt_invoice_spms.spms_backend")
         cls.income_account = cls.env["account.account"].search(
             [
-                ("company_id", "=", cls.company.id),
-                (
-                    "user_type_id",
-                    "=",
-                    cls.env.ref("account.data_account_type_revenue").id,
-                ),
+                ("company_ids", "in", cls.company.ids),
+                ("account_type", "=", "income"),
             ],
             limit=1,
         )

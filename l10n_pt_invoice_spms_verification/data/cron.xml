@@ -12,8 +12,7 @@
         <field name="interval_number">1</field>
         <field name="interval_type">hours</field>
         <field name="state">code</field>
-        <field name="numbercall">-1</field>
-        <field name="model_id" ref="edi_oca.model_edi_exchange_record" />
+        <field name="model_id" ref="edi_core_oca.model_edi_exchange_record" />
         <field name="code">model._cron_l10n_pt_spms_verification_update()</field>
     </record>
 </odoo>

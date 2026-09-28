@@ -8,33 +8,31 @@ from unittest.mock import patch
 from odoo import fields
 from odoo.tools import mute_logger
 
-from odoo.addons.component.tests.common import SavepointComponentCase
+from odoo.addons.component.tests.common import TransactionComponentCase
 
 # Synthetic CCF document shapes; the synthetic NumeroUtente must never
 # land anywhere.
 
 
 def _erro(code, message="Synthetic message"):
-    return "<Erro><Codigo>%s</Codigo><Mensagem>%s</Mensagem></Erro>" % (code, message)
+    return f"<Erro><Codigo>{code}</Codigo><Mensagem>{message}</Mensagem></Erro>"
 
 
 def _linha(provider_ref, errors):
     return (
         "<LinhaPrestacaoErrosEDiferencas>"
-        "<SistemaPrescrito>%s</SistemaPrescrito>"
+        f"<SistemaPrescrito>{provider_ref}</SistemaPrescrito>"
         "<QuantidadeLida>31</QuantidadeLida>"
         "<QuantidadeCalculado>0</QuantidadeCalculado>"
-        "%s"
-        "</LinhaPrestacaoErrosEDiferencas>" % (provider_ref, errors)
+        f"{errors}</LinhaPrestacaoErrosEDiferencas>"
     )
 
 
 def _linha_prescricao(provider_ref, errors):
     return (
         "<LinhaPrescricaoErrosEDiferencas>"
-        "<SistemaPrescrito>%s</SistemaPrescrito>"
-        "%s"
-        "</LinhaPrescricaoErrosEDiferencas>" % (provider_ref, errors)
+        f"<SistemaPrescrito>{provider_ref}</SistemaPrescrito>"
+        f"{errors}</LinhaPrescricaoErrosEDiferencas>"
     )
 
 
@@ -42,8 +40,7 @@ def _prescricao(content):
     return (
         "<PrescricaoErrosEDiferencas>"
         "<DataPrescricao>2026-04-01</DataPrescricao>"
-        "%s"
-        "</PrescricaoErrosEDiferencas>" % content
+        f"{content}</PrescricaoErrosEDiferencas>"
     )
 
 
@@ -59,24 +56,14 @@ def _prestacao(
 ):
     return (
         "<PrestacoesErrosEDiferencas>"
-        "<NumeroPrescricao>%s</NumeroPrescricao>"
+        f"<NumeroPrescricao>{prescription}</NumeroPrescricao>"
         "<NumeroUtente>000000000</NumeroUtente>"
-        "<QuantidadeLida>%s</QuantidadeLida>"
-        "<QuantidadeCalculado>%s</QuantidadeCalculado>"
-        "<ValorTotalLido>%s</ValorTotalLido>"
-        "<ValorTotalCalculado>%s</ValorTotalCalculado>"
-        "%s%s%s"
+        f"<QuantidadeLida>{days_billed}</QuantidadeLida>"
+        f"<QuantidadeCalculado>{days_paid}</QuantidadeCalculado>"
+        f"<ValorTotalLido>{billed}</ValorTotalLido>"
+        f"<ValorTotalCalculado>{allowed}</ValorTotalCalculado>"
+        f"{errors}{lines}{prescription_data}"
         "</PrestacoesErrosEDiferencas>"
-        % (
-            prescription,
-            days_billed,
-            days_paid,
-            billed,
-            allowed,
-            errors,
-            lines,
-            prescription_data,
-        )
     )
 
 
@@ -92,8 +79,8 @@ def _document(
     reference="",
 ):
     document_reference = (
-        "<DocumentReference><ID>%s</ID><IssueDate>2026-07-02</IssueDate>"
-        "</DocumentReference>" % reference
+        f"<DocumentReference><ID>{reference}</ID><IssueDate>2026-07-02</IssueDate>"
+        "</DocumentReference>"
         if reference
         else ""
     )
@@ -105,44 +92,31 @@ def _document(
         "<IssueDate>2026-05-14</IssueDate>"
         "<DocumentResponse><Response>"
         "<ReferenceID>FT TEST/00001</ReferenceID>"
-        "<Description>%s</Description>"
-        "</Response>%s</DocumentResponse>"
+        f"<Description>{oficio}</Description>"
+        f"</Response>{document_reference}</DocumentResponse>"
         "<UBLExtensions><UBLExtension><ExtensionContent>"
         "<ErrosEDiferencasCRDExtension>"
         "<FacturasErrosEDiferencas>"
-        "<EstadoFactura>%s</EstadoFactura>"
-        "<TotalFaturaLido>%s</TotalFaturaLido>"
-        "<TotalFaturaCalculado>%s</TotalFaturaCalculado>"
-        "<TotalFaturaIVALido>%s</TotalFaturaIVALido>"
-        "<TotalFaturaIVACalculado>%s</TotalFaturaIVACalculado>"
-        "%s"
-        "<LoteErrosEDiferencas>"
+        f"<EstadoFactura>{estado}</EstadoFactura>"
+        f"<TotalFaturaLido>{total_billed}</TotalFaturaLido>"
+        f"<TotalFaturaCalculado>{total_allowed}</TotalFaturaCalculado>"
+        f"<TotalFaturaIVALido>{total_billed_taxed}</TotalFaturaIVALido>"
+        f"<TotalFaturaIVACalculado>{total_allowed_taxed}</TotalFaturaIVACalculado>"
+        f"{invoice_errors}<LoteErrosEDiferencas>"
         "<Numero>1</Numero>"
-        "<TipoLote>992</TipoLote>"
-        "%s"
+        f"<TipoLote>992</TipoLote>{claims}"
         "</LoteErrosEDiferencas>"
         "</FacturasErrosEDiferencas>"
         "</ErrosEDiferencasCRDExtension>"
         "</ExtensionContent></UBLExtension></UBLExtensions>"
         "</ApplicationResponse>"
-        % (
-            oficio,
-            document_reference,
-            estado,
-            total_billed,
-            total_allowed,
-            total_billed_taxed,
-            total_allowed_taxed,
-            invoice_errors,
-            claims,
-        )
     )
 
 
-class TestSpmsVerificationProcess(SavepointComponentCase):
-    """SavepointComponentCase builds the components registry itself:
+class TestSpmsVerificationProcess(TransactionComponentCase):
+    """TransactionComponentCase builds the components registry itself:
     the global one only exists after a full server load, so a plain
-    SavepointCase cannot resolve components at install time."""
+    TransactionCase cannot resolve components at install time."""
 
     @classmethod
     def setUpClass(cls):
@@ -163,12 +137,8 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         )
         cls.income_account = cls.env["account.account"].search(
             [
-                ("company_id", "=", cls.company.id),
-                (
-                    "user_type_id",
-                    "=",
-                    cls.env.ref("account.data_account_type_revenue").id,
-                ),
+                ("company_ids", "in", cls.company.ids),
+                ("account_type", "=", "income"),
             ],
             limit=1,
         )
@@ -702,7 +672,7 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
             claims=_prestacao(
                 "TESTP001",
                 errors=_erro("C011"),
-                prescription_data=_prescricao("<Outro>%s</Outro>" % _erro("C999")),
+                prescription_data=_prescricao(f"<Outro>{_erro('C999')}</Outro>"),
             )
         )
         child = self._process(document)
@@ -948,14 +918,13 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, invoice.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(invoice),
                 "company_id": self.company.id,
+                "journal_id": invoice.journal_id.id,
             }
         )
         wizard.reverse_moves()
-        foreign = invoice.reversal_move_id
+        foreign = invoice.reversal_move_ids
         child = self._process(
             _document(
                 total_billed="31.00",

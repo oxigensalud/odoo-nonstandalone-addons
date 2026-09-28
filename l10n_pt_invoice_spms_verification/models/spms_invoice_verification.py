@@ -1,9 +1,10 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import logging
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_compare, float_is_zero, float_round, formatLang
 
@@ -18,8 +19,8 @@ OFFICIAL_VALUE_FIELDS = (
 
 # the facts the result state and its error message are computed from
 STATE_DEPENDS = (
-    "move_id.reversal_move_id.state",
-    "move_id.reversal_move_id.move_type",
+    "move_id.reversal_move_ids.state",
+    "move_id.reversal_move_ids.move_type",
     "move_id.debit_note_ids.state",
     "move_id.debit_note_ids.move_type",
     "note_move_id.state",
@@ -39,10 +40,10 @@ class SpmsInvoiceVerification(models.Model):
         string="Number",
         readonly=True,
         copy=False,
-        help="Number the CCF gave the verification document (its ApplicationResponse ID).",
+        help="Number the CCF gave the verification document (its "
+        "ApplicationResponse ID).",
     )
     document_date = fields.Date(
-        string="Document Date",
         readonly=True,
         copy=False,
         help="Date the CCF issued the verification document.",
@@ -74,24 +75,20 @@ class SpmsInvoiceVerification(models.Model):
             ("with_errors", "Verified With Errors"),
             ("without_errors", "Verified Without Errors"),
         ],
-        string="Verification State",
         readonly=True,
         help="Definitive state reported by the verification document "
         "(Conferida Com Erros / Conferida Sem Erros).",
     )
     fetch_date = fields.Datetime(
-        string="Fetch Date",
         readonly=True,
         help="When the definitive verification document was fetched from the "
         "web service.",
     )
     total_billed = fields.Monetary(
-        string="Total Billed",
         readonly=True,
         help="Invoice total as read by the verification, untaxed " "(TotalFaturaLido).",
     )
     total_allowed = fields.Monetary(
-        string="Total Allowed",
         readonly=True,
         help="Invoice total recomputed by the verification, untaxed "
         "(TotalFaturaCalculado).",
@@ -153,7 +150,6 @@ class SpmsInvoiceVerification(models.Model):
             ("done", "Done"),
             ("zero_official", "Zero Official Value"),
         ],
-        string="State",
         compute="_compute_state",
         store=True,
         copy=False,
@@ -219,7 +215,6 @@ class SpmsInvoiceVerification(models.Model):
         "official value does.",
     )
     error_message = fields.Char(
-        string="Error Message",
         compute="_compute_error_message",
         help="Why the result is held in Error: the note generation failed, "
         "the invoice already has a credit or debit note this module did "
@@ -229,7 +224,6 @@ class SpmsInvoiceVerification(models.Model):
         "processes the document again.",
     )
     completeness_warning = fields.Text(
-        string="Completeness Warning",
         readonly=True,
         copy=False,
         help="Warnings raised while reading the verification document: "
@@ -240,7 +234,6 @@ class SpmsInvoiceVerification(models.Model):
         "is processed all the same.",
     )
     generation_error = fields.Text(
-        string="Generation Error",
         readonly=True,
         copy=False,
         help="Why the automatic note generation of this result failed; the "
@@ -299,17 +292,19 @@ class SpmsInvoiceVerification(models.Model):
                 if float_compare(difference, 0.0, precision_rounding=rounding) < 0
             )
 
-    def name_get(self):
+    @api.depends("name", "move_id.display_name")
+    def _compute_display_name(self):
         # a result created out of band has no document, hence no number:
         # name it after its invoice so the user still knows what it is
-        return [(rec.id, rec.name or rec.move_id.display_name) for rec in self]
+        for rec in self:
+            rec.display_name = rec.name or rec.move_id.display_name
 
     def write(self, vals):
         if any(field in vals for field in OFFICIAL_VALUE_FIELDS):
             for rec in self:
                 if rec.official_locked:
                     raise UserError(
-                        _(
+                        self.env._(
                             "The official value of %s is already carried by a "
                             "credit or debit note; cancel that note first to "
                             "change it."
@@ -318,18 +313,18 @@ class SpmsInvoiceVerification(models.Model):
                     )
         return super().write(vals)
 
-    def unlink(self):
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_official_locked(self):
         for rec in self:
             if rec.official_locked:
                 raise UserError(
-                    _(
+                    self.env._(
                         "The verification result of %s is carried by a live "
                         "credit or debit note; cancel that note first to "
                         "delete it."
                     )
                     % rec.move_id.display_name
                 )
-        return super().unlink()
 
     def _is_debit(self):
         """A negative official value: the verification computed more than billed,
@@ -347,7 +342,9 @@ class SpmsInvoiceVerification(models.Model):
     def _get_note_kind(self):
         """The kind of note the official value calls for, for messages."""
         self.ensure_one()
-        return _("debit note") if self._is_debit() else _("credit note")
+        if self._is_debit():
+            return self.env._("debit note")
+        return self.env._("credit note")
 
     def _get_note_total(self):
         """The total the generated note must carry: the official value
@@ -366,7 +363,7 @@ class SpmsInvoiceVerification(models.Model):
         if self._is_debit():
             notes, move_type = self.move_id.debit_note_ids, "out_invoice"
         else:
-            notes, move_type = self.move_id.reversal_move_id, "out_refund"
+            notes, move_type = self.move_id.reversal_move_ids, "out_refund"
         return (
             notes.filtered(
                 lambda move: move.move_type == move_type and move.state != "cancel"
@@ -383,22 +380,22 @@ class SpmsInvoiceVerification(models.Model):
         agreement; `notes` is never empty here."""
         self.ensure_one()
         texts = {
-            (False, False): _(
+            (False, False): self.env._(
                 "The invoice already has the credit note %s. No additional "
                 "credit note was generated. Check whether it corresponds to "
                 "this verification result."
             ),
-            (False, True): _(
+            (False, True): self.env._(
                 "The invoice already has the credit notes %s. No additional "
                 "credit note was generated. Check whether they correspond to "
                 "this verification result."
             ),
-            (True, False): _(
+            (True, False): self.env._(
                 "The invoice already has the debit note %s. No additional "
                 "debit note was generated. Check whether it corresponds to "
                 "this verification result."
             ),
-            (True, True): _(
+            (True, True): self.env._(
                 "The invoice already has the debit notes %s. No additional "
                 "debit note was generated. Check whether they correspond to "
                 "this verification result."
@@ -417,7 +414,7 @@ class SpmsInvoiceVerification(models.Model):
             elif rec.generation_error:
                 rec.error_message = rec.generation_error
             elif rec._is_unrecognized_outcome():
-                rec.error_message = _(
+                rec.error_message = self.env._(
                     "The verification result of %(invoice)s does not match any "
                     "recognised outcome (official value: %(value)s); it "
                     "is held for human review. The raw document attached "
@@ -486,15 +483,17 @@ class SpmsInvoiceVerification(models.Model):
 
     def _generate_note_or_hold(self):
         """Generate the note of a ready result, or hold the result in Error
-        with the reason and raise it.
+        with the reason.
 
         The generation runs in its own savepoint, so a failure leaves the
-        result untouched except for its reason. The raise reaches edi_oca,
-        which holds the exchange record in 'Error on process' with the
-        same reason and offers Retry on it: pressing it processes the
-        stored document again, and the note is generated then. A result
-        already held (a foreign note, an unrecognised outcome) raises for
-        the same reason.
+        result untouched except for its reason. Nothing is raised: since
+        edi_core_oca 18.0 the whole process runs in a savepoint, and a
+        raise would drop the stored result along with its reason. Once
+        the record is processed, the backend holds it in 'Error on
+        process' with the same reason and offers Retry on it (see
+        edi_backend.py): pressing it processes the stored document again,
+        and the note is generated then. A result already held (a foreign
+        note, an unrecognised outcome) is held the same way.
         """
         for rec in self:
             if rec.state == "ready":
@@ -508,11 +507,9 @@ class SpmsInvoiceVerification(models.Model):
                         "Note generation of %s failed unexpectedly",
                         rec.move_id.display_name,
                     )
-                    rec.generation_error = _(
+                    rec.generation_error = self.env._(
                         "Unexpected generation failure; see the server log."
                     )
-            if rec.state == "error":
-                raise UserError(rec.error_message)
 
     def _mark_exchange_record_retryable(self):
         """Hold the exchange record of a reopened result in 'Error on
@@ -526,27 +523,30 @@ class SpmsInvoiceVerification(models.Model):
         chatter gets the link.
         """
         for rec in self.filtered(lambda result: result.state == "ready"):
-            record = rec.exchange_record_id
-            # no record: a result created out of band, no document to
-            # process again; not processed: already held, or received
-            # again and waiting to be processed
-            if record and record.edi_exchange_state == "input_processed":
-                message = (
-                    _(
-                        "The verification result of %s is ready for generation "
-                        "again: press Retry on its exchange record; the EDI "
-                        "input action generates the note at its next hourly "
-                        "pass."
-                    )
-                    % rec.move_id.display_name
+            rec._hold_exchange_record(
+                self.env._(
+                    "The verification result of %s is ready for generation "
+                    "again: press Retry on its exchange record; the EDI "
+                    "input action generates the note at its next hourly "
+                    "pass."
                 )
-                record.write(
-                    {
-                        "edi_exchange_state": "input_processed_error",
-                        "exchange_error": message,
-                    }
-                )
-                record._notify_related_record(message, level="warning")
+                % rec.move_id.display_name
+            )
+
+    def _hold_exchange_record(self, message):
+        """Hold the processed exchange record of this result in 'Error on
+        process' with `message`, so that its Retry processes the stored
+        document again; the original invoice's chatter gets the message."""
+        self.ensure_one()
+        record = self.exchange_record_id
+        if record and record.edi_exchange_state == "input_processed":
+            record.write(
+                {
+                    "edi_exchange_state": "input_processed_error",
+                    "exchange_error": message,
+                }
+            )
+            record._notify_related_record(message, level="warning")
 
     def _generate_note(self):
         """Create the draft note for a ready (green) result: a credit note,
@@ -559,18 +559,19 @@ class SpmsInvoiceVerification(models.Model):
         its own savepoint, so a raise leaves this result untouched.
         """
         self.ensure_one()
-        self.invalidate_cache(["credit_official"], self.ids)
-        self.env["account.move"].invalidate_cache(
-            ["state", "reversal_move_id", "debit_note_ids"], self.move_id.ids
+        self.invalidate_recordset(["credit_official"])
+        self.move_id.invalidate_recordset(
+            ["state", "reversal_move_ids", "debit_note_ids"]
         )
         if self.state != "ready":
             raise UserError(
-                _("The result is no longer ready (current state: %s).")
+                self.env._("The result is no longer ready (current state: %s).")
                 % dict(self._fields["state"].selection).get(self.state)
             )
         if self.move_id.state != "posted":
             raise UserError(
-                _("The original invoice %s is not posted.") % self.move_id.display_name
+                self.env._("The original invoice %s is not posted.")
+                % self.move_id.display_name
             )
         rounding = self.currency_id.rounding or 0.01
         # ready means a non-zero official value: its sign picks the note
@@ -584,7 +585,7 @@ class SpmsInvoiceVerification(models.Model):
             > 0
         ):
             raise UserError(
-                _(
+                self.env._(
                     "The official value %(value)s exceeds the total of the "
                     "original invoice %(invoice)s (%(total)s)."
                 )
@@ -626,12 +627,12 @@ class SpmsInvoiceVerification(models.Model):
         lines = self.line_ids.filtered(lambda line: line._is_creditable())
         if not lines:
             raise UserError(
-                _("There is no prescription with a difference to regularize.")
+                self.env._("There is no prescription with a difference to regularize.")
             )
         unmatched = lines.filtered(lambda line: not line.move_line_id)
         if unmatched:
             raise UserError(
-                _(
+                self.env._(
                     "Prescriptions not matched one-to-one to an original "
                     "invoice line: %s."
                 )
@@ -648,7 +649,9 @@ class SpmsInvoiceVerification(models.Model):
         against the invoice lines billing it, each claim needing a distinct
         line with its billed quantity and amount."""
         self.ensure_one()
-        return _("%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)") % {
+        return self.env._(
+            "%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)"
+        ) % {
             "prescription": prescription,
             "claims": len(
                 self.line_ids.filtered(lambda line: line.prescription == prescription)
@@ -665,11 +668,12 @@ class SpmsInvoiceVerification(models.Model):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, self.move_id.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(self),
-                "reason": _("SPMS verification %s") % self.move_id.name,
+                "reason": self.env._("SPMS verification %s") % self.move_id.name,
                 "company_id": self.company_id.id,
+                # required and computed without precompute since 17.0: the
+                # form fills it from the invoice, a create must pass it
+                "journal_id": self.move_id.journal_id.id,
                 # the CCF cut is definitive: the sale order must not reopen
                 "sale_qty_to_reinvoice": False,
             }
@@ -678,7 +682,7 @@ class SpmsInvoiceVerification(models.Model):
         draft = wizard.new_move_ids
         if len(draft) != 1:
             raise UserError(
-                _(
+                self.env._(
                     "The standard reversal did not create a single draft "
                     "credit note for %s."
                 )
@@ -697,7 +701,7 @@ class SpmsInvoiceVerification(models.Model):
             .create(
                 {
                     "date": fields.Date.context_today(self),
-                    "reason": _("SPMS verification %s") % self.move_id.name,
+                    "reason": self.env._("SPMS verification %s") % self.move_id.name,
                     "copy_lines": True,
                 }
             )
@@ -710,7 +714,7 @@ class SpmsInvoiceVerification(models.Model):
             or draft.move_type != "out_invoice"
         ):
             raise UserError(
-                _(
+                self.env._(
                     "The standard debit-note flow did not create a single "
                     "draft debit note for %s."
                 )
@@ -738,7 +742,7 @@ class SpmsInvoiceVerification(models.Model):
             draft_line = draft_line_by_original.get(line.move_line_id.id)
             if draft_line is None:
                 raise UserError(
-                    _(
+                    self.env._(
                         "The note draft has no line for prescription "
                         "%(prescription)s (invoice line %(line)s)."
                     )
@@ -788,7 +792,7 @@ class SpmsInvoiceVerification(models.Model):
             != 0
         ):
             raise UserError(
-                _(
+                self.env._(
                     "The note's untaxed total (%(draft).2f) differs from the "
                     "claims total of the result (%(expected).2f). Compare the "
                     "original invoice lines of the affected prescriptions "
@@ -813,7 +817,7 @@ class SpmsInvoiceVerification(models.Model):
             != 0
         ):
             raise UserError(
-                _(
+                self.env._(
                     "The draft tax amount (%(draft).2f) differs from the "
                     "expected tax (%(expected).2f) for the taxes on its "
                     "lines; review the tax configuration before retrying."
@@ -838,7 +842,7 @@ class SpmsInvoiceVerification(models.Model):
         limit = self.company_id.spms_adjustment_limit
         if float_compare(abs(difference), limit, precision_rounding=rounding) > 0:
             raise UserError(
-                _(
+                self.env._(
                     "The %(kind)s cannot be generated: its total %(draft)s "
                     "differs from the official value %(official)s by "
                     "%(difference)s, and the SPMS adjustment limit of company "
@@ -846,9 +850,10 @@ class SpmsInvoiceVerification(models.Model):
                     "Only the rounding cent of the tax may be written on the "
                     "tax line of the %(kind)s. A larger difference reveals "
                     "a discrepancy to review before retrying: the Claims "
-                    "Amount (Tax Excluded) of the result must match its official "
-                    "totals before tax (a prescription the verification priced differently "
-                    "from the invoice makes them diverge), and the company "
+                    "Amount (Tax Excluded) of the result must match its "
+                    "official totals before tax (a prescription the "
+                    "verification priced differently from the invoice makes "
+                    "them diverge), and the company "
                     "must round its taxes globally (Accounting > Settings > "
                     "Taxes > Rounding Method), as the CCF computes the tax "
                     "once on the invoice total. Raise the SPMS adjustment "
@@ -889,7 +894,7 @@ class SpmsInvoiceVerification(models.Model):
         tax_line = draft.line_ids.filtered("tax_line_id")
         if len(tax_line) != 1:
             raise UserError(
-                _(
+                self.env._(
                     "Expected exactly one tax line on the draft %(kind)s "
                     "%(move)s to carry the difference with the official "
                     "value, found %(count)d."
@@ -901,11 +906,11 @@ class SpmsInvoiceVerification(models.Model):
                 }
             )
         term_line = draft.line_ids.filtered(
-            lambda line: line.account_id.user_type_id.type in ("receivable", "payable")
+            lambda line: line.display_type == "payment_term"
         )
         if len(term_line) != 1:
             raise UserError(
-                _(
+                self.env._(
                     "Expected exactly one receivable/payable line on the "
                     "draft %(kind)s %(move)s, found %(count)d."
                 )
@@ -920,7 +925,7 @@ class SpmsInvoiceVerification(models.Model):
         debit_note = draft.move_type == "out_invoice"
         tax_side = "credit" if debit_note else "debit"
         term_side = "debit" if debit_note else "credit"
-        draft.with_context(check_move_validity=False).write(
+        draft.with_context(skip_invoice_sync=True).write(
             {
                 "line_ids": [
                     (
@@ -953,7 +958,7 @@ class SpmsInvoiceVerification(models.Model):
             != 0
         ):
             raise UserError(
-                _(
+                self.env._(
                     "The %(kind)s total %(total).2f still differs from "
                     "the official value %(official).2f after imposing the "
                     "tax amount."
@@ -971,9 +976,9 @@ class SpmsInvoiceVerification(models.Model):
             return False
         return {
             "type": "ir.actions.act_window",
-            "name": _("Debit Note")
+            "name": self.env._("Debit Note")
             if self.note_move_id.move_type == "out_invoice"
-            else _("Credit Note"),
+            else self.env._("Credit Note"),
             "res_model": "account.move",
             "res_id": self.note_move_id.id,
             "view_mode": "form",
@@ -983,9 +988,9 @@ class SpmsInvoiceVerification(models.Model):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
-            "name": _("Verification Lines"),
+            "name": self.env._("Verification Lines"),
             "res_model": "spms.invoice.verification.line",
-            "view_mode": "tree,form",
+            "view_mode": "list,form",
             "domain": [("result_id", "=", self.id)],
             "context": {"search_default_with_difference": 1},
         }

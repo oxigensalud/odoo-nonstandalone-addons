@@ -1,10 +1,11 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 {
     "name": "SPMS Invoice Verification",
     "summary": "SPMS verification results log and credit/debit note generation",
-    "version": "14.0.1.0.0",
+    "version": "18.0.1.0.0",
     "development_status": "Beta",
     "license": "AGPL-3",
     "author": "Oxigen Salud SA, NuoBiT Solutions SL",

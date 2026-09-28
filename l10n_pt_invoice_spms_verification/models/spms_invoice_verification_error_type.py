@@ -31,14 +31,13 @@ class SpmsInvoiceVerificationErrorType(models.Model):
         ),
     ]
 
-    def name_get(self):
-        result = []
+    @api.depends("code", "description")
+    def _compute_display_name(self):
         for record in self:
             name = record.code
             if record.description:
-                name = "%s - %s" % (record.code, record.description)
-            result.append((record.id, name))
-        return result
+                name = f"{record.code} - {record.description}"
+            record.display_name = name
 
     @api.model
     def _get_or_create(self, code, message=None):

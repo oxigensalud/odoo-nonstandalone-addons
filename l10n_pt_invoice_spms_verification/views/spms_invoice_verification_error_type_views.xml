@@ -19,10 +19,10 @@
     <record id="spms_invoice_verification_error_type_tree_view" model="ir.ui.view">
         <field name="model">spms.invoice.verification.error.type</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="code" />
                 <field name="description" />
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -42,7 +42,8 @@
     >
         <field name="name">SPMS Error Types</field>
         <field name="res_model">spms.invoice.verification.error.type</field>
-        <field name="view_mode">tree,form</field>
+        <field name="path">spms-error-types</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <record id="spms_invoice_verification_error_type_menu" model="ir.ui.menu">

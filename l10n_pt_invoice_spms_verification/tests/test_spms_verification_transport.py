@@ -9,7 +9,7 @@ from xml.sax.saxutils import escape
 import requests
 from zeep.transports import Transport
 
-from odoo.addons.component.tests.common import SavepointComponentCase
+from odoo.addons.component.tests.common import TransactionComponentCase
 from odoo.addons.l10n_pt_invoice_spms_verification.models.edi_exchange_record import (
     SpmsVerificationTransport,
 )
@@ -59,9 +59,8 @@ def _result_response(inner):
 def _document_response(payload):
     """A verification answer carrying the verification document, base64 as the
     service encodes it."""
-    return _result_response(
-        "<documento>%s</documento>" % base64.b64encode(payload).decode()
-    )
+    encoded = base64.b64encode(payload).decode()
+    return _result_response(f"<documento>{encoded}</documento>")
 
 
 def _empty_response():
@@ -136,10 +135,10 @@ class _FakeTransport(SpmsVerificationTransport):
         return response
 
 
-class TestSpmsVerificationTransport(SavepointComponentCase):
+class TestSpmsVerificationTransport(TransactionComponentCase):
     """Exercise the polling cron against a mocked CCF web service.
 
-    SavepointComponentCase builds the components registry itself: a
+    TransactionComponentCase builds the components registry itself: a
     received document is processed by the parser component right away,
     so the class must not depend on another test class having loaded
     the components before it."""
@@ -155,12 +154,8 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         cls.backend = cls.env.ref("l10n_pt_invoice_spms.spms_backend")
         cls.income_account = cls.env["account.account"].search(
             [
-                ("company_id", "=", cls.company.id),
-                (
-                    "user_type_id",
-                    "=",
-                    cls.env.ref("account.data_account_type_revenue").id,
-                ),
+                ("company_ids", "in", cls.company.ids),
+                ("account_type", "=", "income"),
             ],
             limit=1,
         )
@@ -249,10 +244,10 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self._run_cron(transport)
         self.assertEqual(len(transport.envelopes), 1)
         envelope = transport.envelopes[0]
-        username = envelope.find(".//{%s}Username" % WSSE_NS)
+        username = envelope.find(f".//{{{WSSE_NS}}}Username")
         self.assertEqual(username.text, "test-user")
         factura = envelope.find(
-            "{%s}Body/{%s}obterResultadoConferencia/factura" % (SOAP_NS, SERVICE_NS)
+            f"{{{SOAP_NS}}}Body/{{{SERVICE_NS}}}obterResultadoConferencia/factura"
         )
         self.assertIsNotNone(factura)
         self.assertEqual(
@@ -457,7 +452,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertEqual(child.edi_exchange_state, "input_receive_error")
         self.assertIn("HTTP 500 Internal Server Error", child.exchange_error)
         self.assertIn("Fault", child.exchange_error)
-        child.invalidate_cache(["exchange_error", "exchange_error_traceback"])
+        child.invalidate_recordset(["exchange_error", "exchange_error_traceback"])
         sent = post.call_args[0][1].decode()
         for value in (self.company.spms_username, self.company.spms_password):
             self.assertIn(value, sent)
@@ -619,7 +614,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         encoded = base64.b64encode(DOCUMENT_XML.encode()).decode()
         wrapped = "\n".join(encoded[i : i + 76] for i in range(0, len(encoded), 76))
         transport = _FakeTransport(
-            _result_response("<documento>%s</documento>" % wrapped)
+            _result_response(f"<documento>{wrapped}</documento>")
         )
         self._run_cron(transport)
         child = self._children()
@@ -660,7 +655,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
             [("method_name", "=", "action_l10n_pt_spms_verification_poll")]
         )
         self.assertEqual(len(jobs), 1)
-        self.assertEqual(jobs.record_ids, [child.id])
+        self.assertEqual(jobs.records.ids, [child.id])
         self.assertTrue(jobs.identity_key)
 
     def _fail_queued_poll(self):
@@ -741,7 +736,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertEqual(self.exchange.ack_received_on, child.exchanged_on)
         # the result itself answers nothing: no ACK expected on it, even
         # when computed in one batch with the sent invoice
-        self.env["edi.exchange.record"].invalidate_cache(["ack_expected"])
+        self.env["edi.exchange.record"].invalidate_model(["ack_expected"])
         records = self.exchange | child
         self.assertEqual(records.mapped("ack_expected"), [True, False])
 
@@ -836,10 +831,16 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
 
     def test_unexpected_failure_fails_the_job(self):
         # a software failure is the only thing that turns a job red,
-        # and it leaves the record exactly as it was
-        with mock.patch(FETCH_PATH, side_effect=RuntimeError("a bug")):
-            with self.assertRaises(RuntimeError):
-                self._run_cron(_FakeTransport())
+        # and it leaves the record exactly as it was; the poll is queued
+        # before assertRaises, whose savepoint would undo the record too
+        with (
+            mock.patch(TRANSPORT_PATH, return_value=_FakeTransport()),
+            trap_jobs() as trap,
+        ):
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_verification_update()
+            with mock.patch(FETCH_PATH, side_effect=RuntimeError("a bug")):
+                with self.assertRaises(RuntimeError):
+                    trap.perform_enqueued_jobs()
         child = self._children()
         self.assertEqual(len(child), 1)
         self.assertEqual(child.edi_exchange_state, "input_pending")

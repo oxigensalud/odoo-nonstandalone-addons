@@ -12,8 +12,8 @@ from zeep.exceptions import Fault
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 
-from odoo import _, api, fields, models
-from odoo.modules.module import get_resource_path
+from odoo import api, fields, models
+from odoo.tools.misc import file_path
 
 REQUEST_TIMEOUT = 60
 
@@ -52,7 +52,7 @@ class EdiExchangeRecord(models.Model):
     )
 
     @api.depends("type_id.ack_type_id", "model", "res_id")
-    def _compute_ack_expected(self):
+    def _compute_ack_expected(self):  # pylint: disable=missing-return
         """A sent invoice expects its verification result as its ACK; a sent
         credit or debit note expects nothing.
 
@@ -226,9 +226,7 @@ class EdiExchangeRecord(models.Model):
         verification file as a plain string — zeep against the raw live
         WSDL cannot work.
         """
-        wsdl = get_resource_path(
-            "l10n_pt_invoice_spms_verification", "api", "FacturaCRDWS.wsdl"
-        )
+        wsdl = file_path("l10n_pt_invoice_spms_verification/api/FacturaCRDWS.wsdl")
         return Client(
             wsdl,
             wsse=UsernameToken(company.spms_username, company.spms_password),
@@ -249,7 +247,7 @@ class EdiExchangeRecord(models.Model):
         except requests.Timeout as err:
             # no answer at all within the timeout
             self._l10n_pt_spms_verification_receive_error(
-                _(
+                self.env._(
                     "The CCF did not answer within %(seconds)s seconds. This "
                     "says nothing about the invoice or its data; the next "
                     "hourly pass asks again on its own. Technical detail: "
@@ -263,7 +261,7 @@ class EdiExchangeRecord(models.Model):
             # the host itself could not be reached: DNS, refused
             # connection, TLS
             self._l10n_pt_spms_verification_receive_error(
-                _(
+                self.env._(
                     "The CCF web service could not be reached (connection "
                     "problem). This says nothing about the invoice or its "
                     "data; the next hourly pass asks again on its own. "
@@ -281,20 +279,20 @@ class EdiExchangeRecord(models.Model):
             # The peer's reason phrase is free text too: use the standard one.
             reason = HTTP_REASONS.get(status)
             if status and reason:
-                answer_status = "HTTP %s %s" % (status, reason)
+                answer_status = f"HTTP {status} {reason}"
             elif status:
-                answer_status = "HTTP %s" % status
+                answer_status = f"HTTP {status}"
             else:
-                answer_status = _("no HTTP status")
+                answer_status = self.env._("no HTTP status")
             if status and status >= 500:
-                message = _(
+                message = self.env._(
                     "The CCF answered with a server error (%(status)s) and no "
                     "usable content. This says nothing about the invoice or "
                     "its data; the next hourly pass asks again on its own. "
                     "Technical detail: %(detail)s."
                 )
             else:
-                message = _(
+                message = self.env._(
                     "The CCF returned an answer that could not be interpreted "
                     "(%(status)s). Technical detail: %(detail)s."
                 )
@@ -309,7 +307,7 @@ class EdiExchangeRecord(models.Model):
             self._l10n_pt_spms_verification_still_waiting(answer)
         elif code == "301":
             self._l10n_pt_spms_verification_receive_error(
-                _(
+                self.env._(
                     "The CCF does not recognise invoice %(invoice)s even though "
                     "it was sent successfully (%(code)s)."
                 )
@@ -320,17 +318,21 @@ class EdiExchangeRecord(models.Model):
             # the CCF's own "service unavailable" answer, seen for weeks
             # at a time
             self._l10n_pt_spms_verification_receive_error(
-                _("The CCF web service is unavailable (%s).") % code,
+                self.env._("The CCF web service is unavailable (%s).") % code,
                 answer=answer,
             )
         elif code:
             self._l10n_pt_spms_verification_receive_error(
-                _("The CCF answered with an unexpected return code: %s.") % code,
+                self.env._("The CCF answered with an unexpected return code: %s.")
+                % code,
                 answer=answer,
             )
         else:
             self._l10n_pt_spms_verification_receive_error(
-                _("The CCF answered without a verification document or a return code.")
+                self.env._(
+                    "The CCF answered without a verification document or a return "
+                    "code."
+                )
             )
 
     def _l10n_pt_spms_verification_receive(self, document):
@@ -390,11 +392,11 @@ class EdiExchangeRecord(models.Model):
             traceback_txt = "\n".join(
                 ["Traceback (most recent call last):"]
                 + [
-                    '  File "%s", line %s, in %s'
-                    % (frame.f_code.co_filename, lineno, frame.f_code.co_name)
+                    f'  File "{frame.f_code.co_filename}", '
+                    f"line {lineno}, in {frame.f_code.co_name}"
                     for frame, lineno in traceback.walk_tb(exception.__traceback__)
                 ]
-                + ["%s.%s" % (type(exception).__module__, type(exception).__name__)]
+                + [f"{type(exception).__module__}.{type(exception).__name__}"]
             )
         else:
             traceback_txt = False

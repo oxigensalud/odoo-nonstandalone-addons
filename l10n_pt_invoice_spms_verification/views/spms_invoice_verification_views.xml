@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
     <record id="spms_invoice_verification_view_tree" model="ir.ui.view">
         <field name="name">spms.invoice.verification.tree</field>
         <field name="model">spms.invoice.verification</field>
         <field name="arch" type="xml">
-            <tree
+            <list
                 delete="false"
                 decoration-danger="state == 'error'"
                 decoration-muted="state == 'zero_official'"
@@ -27,9 +28,9 @@
                     type="object"
                     icon="fa-external-link"
                     title="Credit/Debit Note"
-                    attrs="{'invisible': [('note_move_id', '=', False)]}"
+                    invisible="not note_move_id"
                 />
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -48,21 +49,17 @@
                 <div
                     class="alert alert-danger"
                     role="alert"
-                    attrs="{'invisible': [('error_message', '=', False)]}"
+                    invisible="not error_message"
                 >
                     <field name="error_message" nolabel="1" />
                 </div>
-                <div
-                    class="alert alert-info"
-                    role="alert"
-                    attrs="{'invisible': [('state', '!=', 'ready')]}"
-                >
+                <div class="alert alert-info" role="alert" invisible="state != 'ready'">
                     Ready for generation: press Retry on the exchange record; the EDI input action processes the document again at its next hourly pass and generates the note then.
                 </div>
                 <div
                     class="alert alert-warning"
                     role="alert"
-                    attrs="{'invisible': [('completeness_warning', '=', False)]}"
+                    invisible="not completeness_warning"
                 >
                     <field name="completeness_warning" nolabel="1" />
                 </div>
@@ -109,7 +106,7 @@
                             <field
                                 name="amount_lines_negative_untaxed"
                                 string="Negative Claims"
-                                attrs="{'invisible': [('amount_lines_negative_untaxed', '=', 0)]}"
+                                invisible="amount_lines_negative_untaxed == 0"
                             />
                         </group>
                         <group name="amounts_taxed" string="Tax Included">
@@ -122,18 +119,18 @@
                     <group
                         name="oficio"
                         string="Official Result Notice"
-                        attrs="{'invisible': [('oficio', '=', False)]}"
+                        invisible="not oficio"
                     >
                         <field name="oficio" nolabel="1" />
                     </group>
-                    <notebook attrs="{'invisible': [('document_error_ids', '=', [])]}">
+                    <notebook invisible="not document_error_ids">
                         <page name="document_errors" string="Document Errors">
                             <field name="document_error_ids" readonly="1">
-                                <tree decoration-danger="level == 'invoice'">
+                                <list decoration-danger="level == 'invoice'">
                                     <field name="level" />
                                     <field name="code" />
                                     <field name="description" />
-                                </tree>
+                                </list>
                             </field>
                         </page>
                     </notebook>
@@ -200,7 +197,8 @@
     <record id="spms_invoice_verification_action" model="ir.actions.act_window">
         <field name="name">SPMS Invoice Verifications</field>
         <field name="res_model">spms.invoice.verification</field>
-        <field name="view_mode">tree,form</field>
+        <field name="path">spms-invoice-verifications</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <!-- an SPMS section of the Customers menu, like the one Configuration has -->
