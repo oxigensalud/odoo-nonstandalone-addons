@@ -10,9 +10,12 @@ class EdiExchangeRecord(models.Model):
 
     @api.constrains("type_id", "model", "res_id", "parent_id")
     def _check_spms_company(self):
-        for exchange in self.filtered(
-            lambda record: record.type_id.code == "l10n_pt_spms"
-        ):
+        # Descendants can inherit the changed document even when hidden by rules.
+        # Elevation is limited to checking consistency; no record is modified.
+        exchanges = self.sudo().search(
+            [("id", "child_of", self.ids), ("type_id.code", "=", "l10n_pt_spms")]
+        )
+        for exchange in exchanges:
             invoice = exchange.record
             if (
                 invoice
