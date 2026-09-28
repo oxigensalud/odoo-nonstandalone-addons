@@ -310,7 +310,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
                 for line_vals, _line_errors in lines
             ],
         )
-        for (line_vals, _line_errors), original in zip(lines, originals):
+        for (line_vals, _line_errors), original in zip(lines, originals, strict=False):
             line_vals["move_line_id"] = original.id
         return lines, errors
 

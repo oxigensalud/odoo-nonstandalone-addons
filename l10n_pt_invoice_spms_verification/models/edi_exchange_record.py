@@ -7,7 +7,8 @@ from http.client import responses as HTTP_REASONS
 
 import requests
 from zeep import Client
-from zeep.exceptions import Error as ZeepError, Fault
+from zeep.exceptions import Error as ZeepError
+from zeep.exceptions import Fault
 from zeep.transports import Transport
 from zeep.wsse.username import UsernameToken
 

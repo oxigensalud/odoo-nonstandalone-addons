@@ -1059,13 +1059,16 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         # a failure that is not a business refusal still holds the result
         # with a reason a person can act on, and the record with Retry;
         # the traceback is in the server log
-        with patch.object(
-            self.registry["spms.invoice.verification"],
-            "_generate_note",
-            side_effect=RuntimeError("boom"),
-        ), mute_logger(
-            "odoo.addons.l10n_pt_invoice_spms_verification.models."
-            "spms_invoice_verification"
+        with (
+            patch.object(
+                self.registry["spms.invoice.verification"],
+                "_generate_note",
+                side_effect=RuntimeError("boom"),
+            ),
+            mute_logger(
+                "odoo.addons.l10n_pt_invoice_spms_verification.models."
+                "spms_invoice_verification"
+            ),
         ):
             child = self._process(
                 _document(claims=_prestacao("TESTP001", errors=_erro("C011")))
