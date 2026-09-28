@@ -137,3 +137,136 @@ class TestSpmsCompany(SpmsInvoiceCase):
             ValidationError, "Portuguese company"
         ), self.cr.savepoint():
             self.backend.create_record("l10n_pt_spms", {"parent_id": action["res_id"]})
+
+    def test_parent_relink_cannot_change_spms_child_company(self):
+        portuguese_invoice = self._create_invoice()
+        portuguese_invoice.action_post()
+        spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
+        action = portuguese_invoice.edi_create_exchange_record(
+            self.other_exchange_type.id
+        )
+        parent = self.env["edi.exchange.record"].browse(action["res_id"])
+        child = self.backend.create_record("l10n_pt_spms", {"parent_id": parent.id})
+        self.assertEqual(child.record, portuguese_invoice)
+        with self.assertRaisesRegex(
+            ValidationError, "Portuguese company"
+        ), self.cr.savepoint():
+            parent.write({"res_id": spanish_invoice.id})
+        self.assertEqual(parent.record, portuguese_invoice)
+        self.assertEqual(child.record, portuguese_invoice)
+
+    def test_ancestor_relink_cannot_change_spms_descendant_company(self):
+        portuguese_invoice = self._create_invoice()
+        portuguese_invoice.action_post()
+        spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
+        action = portuguese_invoice.edi_create_exchange_record(
+            self.other_exchange_type.id
+        )
+        parent = self.env["edi.exchange.record"].browse(action["res_id"])
+        middle = self.backend.create_record(
+            "company_scope_test", {"parent_id": parent.id}
+        )
+        child = self.backend.create_record("l10n_pt_spms", {"parent_id": middle.id})
+        self.assertEqual(child.record, portuguese_invoice)
+        with self.assertRaisesRegex(
+            ValidationError, "Portuguese company"
+        ), self.cr.savepoint():
+            parent.write({"res_id": spanish_invoice.id})
+        self.assertEqual(child.record, portuguese_invoice)
+
+    def test_batch_parent_relink_preserves_all_documents_on_failure(self):
+        first_invoice = self._create_invoice()
+        first_invoice.action_post()
+        second_invoice = self._create_invoice()
+        second_invoice.action_post()
+        spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
+        first_action = first_invoice.edi_create_exchange_record(
+            self.other_exchange_type.id
+        )
+        second_action = second_invoice.edi_create_exchange_record(
+            self.other_exchange_type.id
+        )
+        first = self.env["edi.exchange.record"].browse(first_action["res_id"])
+        second = self.env["edi.exchange.record"].browse(second_action["res_id"])
+        child = self.backend.create_record("l10n_pt_spms", {"parent_id": second.id})
+        parents = first + second
+        with self.assertRaisesRegex(
+            ValidationError, "Portuguese company"
+        ), self.cr.savepoint():
+            parents.write({"res_id": spanish_invoice.id})
+        self.assertEqual(first.record, first_invoice)
+        self.assertEqual(second.record, second_invoice)
+        self.assertEqual(child.record, second_invoice)
+
+    def test_parent_relink_preserves_explicit_child_document(self):
+        portuguese_invoice = self._create_invoice()
+        portuguese_invoice.action_post()
+        spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
+        action = portuguese_invoice.edi_create_exchange_record(
+            self.other_exchange_type.id
+        )
+        parent = self.env["edi.exchange.record"].browse(action["res_id"])
+        child = self.backend.create_record(
+            "l10n_pt_spms",
+            {
+                "parent_id": parent.id,
+                "model": "account.move",
+                "res_id": portuguese_invoice.id,
+            },
+        )
+        parent.write({"res_id": spanish_invoice.id})
+        self.assertEqual(parent.record, spanish_invoice)
+        self.assertEqual(child.record, portuguese_invoice)
+
+    def test_parent_relink_checks_hidden_spms_children(self):
+        portuguese_invoice = self._create_invoice()
+        portuguese_invoice.action_post()
+        spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
+        action = portuguese_invoice.edi_create_exchange_record(
+            self.other_exchange_type.id
+        )
+        parent = self.env["edi.exchange.record"].browse(action["res_id"])
+        child = self.backend.create_record("l10n_pt_spms", {"parent_id": parent.id})
+        user = (
+            self.env["res.users"]
+            .with_context(no_reset_password=True)
+            .create(
+                {
+                    "name": "SPMS company rule test user",
+                    "login": "spms_company_rule@example.invalid",
+                    "company_id": self.company.id,
+                    "company_ids": [(6, 0, [self.company.id, self.spanish_company.id])],
+                    "groups_id": [
+                        (
+                            6,
+                            0,
+                            [
+                                self.env.ref("base.group_user").id,
+                                self.env.ref("base_edi.group_edi_user").id,
+                                self.env.ref("account.group_account_invoice").id,
+                            ],
+                        )
+                    ],
+                }
+            )
+        )
+        self.env["ir.rule"].create(
+            {
+                "name": "Hide SPMS exchanges in company rule test",
+                "model_id": self.env.ref("edi_oca.model_edi_exchange_record").id,
+                "domain_force": "[('type_id.code', '!=', 'l10n_pt_spms')]",
+            }
+        )
+        visible = self.env["edi.exchange.record"].with_user(user)
+        self.assertEqual(visible.search([("id", "=", parent.id)]).ids, [parent.id])
+        self.assertFalse(visible.search([("id", "=", child.id)]))
+        with self.assertRaisesRegex(
+            ValidationError, "Portuguese company"
+        ), self.cr.savepoint():
+            parent.with_user(user).write({"res_id": spanish_invoice.id})
+        self.assertEqual(child.record, portuguese_invoice)
