@@ -12,7 +12,7 @@ class AccountEdiFormat(models.Model):
 
     def _get_xml_builder(self, company):
         """Override to return the SPMS XML builder."""
-        if self.code == "spms_cius_pt_211" and company.country_id.code == "PT":
+        if self.code == "spms_cius_pt_211" and company._is_spms_company():
             return self.env["account.edi.xml.spms_cius_pt_211"]
         return super()._get_xml_builder(company)
 

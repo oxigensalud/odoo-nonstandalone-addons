@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- Copyright 2025 Dixmit
+     Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
 
@@ -35,6 +36,6 @@
         >[('state', '!=', 'draft'), ('partner_id', '!=', False), ('partner_id.spms_information', '=', True),('move_type', 'in', ['out_invoice', 'out_refund'])]</field>
         <field
             name="enable_snippet"
-        >result = not record._has_exchange_record(exchange_type)</field>
+        >result = record.company_id._is_spms_company() and not record._has_exchange_record(exchange_type)</field>
     </record>
 </odoo>
