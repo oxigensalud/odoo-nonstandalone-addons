@@ -12,11 +12,13 @@ class AccountMove(models.Model):
         comodel_name="spms.invoice.verification",
         inverse_name="move_id",
         string="SPMS Invoice Verifications",
+        groups="l10n_pt_invoice_spms_verification.spms_invoice_verification_group_consultation",
     )
     spms_note_invoice_verification_ids = fields.One2many(
         comodel_name="spms.invoice.verification",
         inverse_name="note_move_id",
         string="SPMS Invoice Verifications (Credit/Debit Note)",
+        groups="l10n_pt_invoice_spms_verification.spms_invoice_verification_group_consultation",
     )
 
     def action_view_spms_invoice_verification(self):
