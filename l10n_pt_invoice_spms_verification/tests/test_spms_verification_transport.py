@@ -1,4 +1,5 @@
 # Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import base64
@@ -149,6 +150,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
         cls.company = cls.env.company
+        cls.company.country_id = cls.env.ref("base.pt")
         cls.company.vat = "PT999999990"
         cls.company.spms_username = "test-user"
         cls.company.spms_password = "test-secret"

@@ -34,6 +34,7 @@ class TestSpmsVerification(SavepointCase):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
         cls.company = cls.env.company
+        cls.company.country_id = cls.env.ref("base.pt")
         cls.tax6 = cls.env["account.tax"].create(
             {
                 "name": "IVA 6% (OBS) test",
