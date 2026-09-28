@@ -37,11 +37,18 @@ class AccountMove(models.Model):
         """Verification results these moves take part in: the ones whose
         generated note they are, and the ones of the invoices they
         reverse or debit (a foreign note in the eyes of the result)."""
-        return (
-            self.spms_note_invoice_verification_ids
-            | self.reversed_entry_id.spms_invoice_verification_ids
-            | self.debit_origin_id.spms_invoice_verification_ids
-        )
+        # Accounting users need to distinguish ordinary moves from SPMS notes.
+        # Only resolve the links as sudo; reading/updating results keeps their ACLs.
+        moves = self.sudo()
+        results = (
+            moves.spms_note_invoice_verification_ids
+            | moves.reversed_entry_id.spms_invoice_verification_ids
+            | moves.debit_origin_id.spms_invoice_verification_ids
+        ).with_env(self.env)
+        if results:
+            results.check_access_rights("read")
+            results.check_access_rule("read")
+        return results
 
     def button_cancel(self):
         """Release the verification results these notes belong to, in the
@@ -56,7 +63,7 @@ class AccountMove(models.Model):
         """
         results = self._spms_verification_results()
         res = super().button_cancel()
-        own = self.spms_note_invoice_verification_ids
+        own = results.filtered(lambda result: result.note_move_id in self)
         for result in own:
             result.move_id.message_post(
                 body=_(
@@ -69,7 +76,8 @@ class AccountMove(models.Model):
                 },
                 subtype_xmlid="mail.mt_note",
             )
-        own.write({"note_move_id": False})
+        if own:
+            own.write({"note_move_id": False})
         results._mark_exchange_record_retryable()
         return res
 
