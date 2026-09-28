@@ -3,11 +3,11 @@
 
 from odoo.exceptions import AccessError
 from odoo.tests import Form, tagged
-from odoo.tests.common import SavepointCase
+from odoo.tests.common import TransactionCase
 
 
 @tagged("post_install", "-at_install")
-class TestAccountMoveAccess(SavepointCase):
+class TestAccountMoveAccess(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -16,14 +16,17 @@ class TestAccountMoveAccess(SavepointCase):
         cls.partner = cls.env["res.partner"].create(
             {"name": "Accounting access test partner"}
         )
-        for kind in ("receivable", "payable"):
+        for kind, account_type in (
+            ("receivable", "asset_receivable"),
+            ("payable", "liability_payable"),
+        ):
             account = cls.env["account.account"].create(
                 {
                     "name": "Access test " + kind,
                     "code": "ACCESS" + kind.upper(),
-                    "company_id": cls.company.id,
+                    "company_ids": [(6, 0, cls.company.ids)],
                     "reconcile": True,
-                    "user_type_id": cls.env.ref("account.data_account_type_" + kind).id,
+                    "account_type": account_type,
                 }
             )
             cls.partner["property_account_" + kind + "_id"] = account
@@ -34,15 +37,15 @@ class TestAccountMoveAccess(SavepointCase):
             ("general", "ATGN"),
             ("bank", "ATBK"),
         ):
-            cls.journals[kind] = cls.env["account.journal"].create(
-                {
-                    "name": "Accounting access test " + kind,
-                    "code": code,
-                    "type": kind,
-                    "company_id": cls.company.id,
-                    "edi_format_ids": [(5, 0, 0)],
-                }
-            )
+            journal_vals = {
+                "name": "Accounting access test " + kind,
+                "code": code,
+                "type": kind,
+                "company_id": cls.company.id,
+            }
+            if "edi_format_ids" in cls.env["account.journal"]._fields:
+                journal_vals["edi_format_ids"] = [(5, 0, 0)]
+            cls.journals[kind] = cls.env["account.journal"].create(journal_vals)
         cls.user = (
             cls.env["res.users"]
             .with_context(no_reset_password=True)
@@ -82,8 +85,8 @@ class TestAccountMoveAccess(SavepointCase):
                 "journal_id": self.journals[journal_type].id,
             }
         )
-        invoice.flush()
-        self.env.cache.invalidate()
+        self.env.flush_all()
+        self.env.invalidate_all()
         return invoice.with_user(self.user)
 
     def test_open_customer_draft_without_spms_access(self):
@@ -143,14 +146,14 @@ class TestAccountMoveAccess(SavepointCase):
         self.assertNotIn("spms_note_invoice_verification_ids", values)
 
     def test_optional_fields_follow_spms_access_on_delegated_models(self):
-        for model in ("account.move", "account.payment", "account.bank.statement.line"):
+        for model in ("account.move", "account.bank.statement.line"):
             with self.subTest(model=model):
                 fields = self.env[model].with_user(self.user).fields_get()
                 self.assertNotIn("spms_invoice_verification_ids", fields)
                 self.assertNotIn("spms_note_invoice_verification_ids", fields)
 
         self.user.groups_id = [(4, self.consultation.id)]
-        for model in ("account.move", "account.payment", "account.bank.statement.line"):
+        for model in ("account.move", "account.bank.statement.line"):
             with self.subTest(model=model):
                 fields = self.env[model].with_user(self.user).fields_get()
                 self.assertIn("spms_invoice_verification_ids", fields)
@@ -175,8 +178,8 @@ class TestAccountMoveAccess(SavepointCase):
                         }
                     )
                 )
-                payment.flush()
-                self.env.cache.invalidate()
+                self.env.flush_all()
+                self.env.invalidate_all()
                 payment = payment.with_user(self.user)
                 fields = payment.fields_get(
                     [
@@ -192,10 +195,10 @@ class TestAccountMoveAccess(SavepointCase):
                 form = Form(payment)
                 self.assertEqual(form.amount, 10.0)
                 payment.action_post()
-                self.assertEqual(payment.state, "posted")
+                self.assertEqual(payment.state, "in_process")
                 payment.action_draft()
                 payment.action_cancel()
-                self.assertEqual(payment.state, "cancel")
+                self.assertEqual(payment.state, "canceled")
                 move = payment.move_id
                 payment.unlink()
                 self.assertFalse(payment.exists())
@@ -214,8 +217,8 @@ class TestAccountMoveAccess(SavepointCase):
                 "partner_id": self.partner.id,
             }
         )
-        line.flush()
-        self.env.cache.invalidate()
+        self.env.flush_all()
+        self.env.invalidate_all()
         line = line.with_user(self.user)
         fields = line.fields_get(
             [
@@ -247,6 +250,8 @@ class TestAccountMoveAccess(SavepointCase):
 
     def test_open_posted_journal_entry_without_spms_access(self):
         entry = self._draft("entry")
+        receivable = self.partner.property_account_receivable_id
+        payable = self.partner.property_account_payable_id
         entry.write(
             {
                 "date": "2026-01-10",
@@ -256,7 +261,7 @@ class TestAccountMoveAccess(SavepointCase):
                         0,
                         {
                             "name": "Synthetic debit",
-                            "account_id": self.partner.property_account_receivable_id.id,
+                            "account_id": receivable.id,
                             "partner_id": self.partner.id,
                             "debit": 10.0,
                         },
@@ -266,7 +271,7 @@ class TestAccountMoveAccess(SavepointCase):
                         0,
                         {
                             "name": "Synthetic credit",
-                            "account_id": self.partner.property_account_payable_id.id,
+                            "account_id": payable.id,
                             "partner_id": self.partner.id,
                             "credit": 10.0,
                         },
@@ -275,8 +280,8 @@ class TestAccountMoveAccess(SavepointCase):
             }
         )
         entry.action_post()
-        entry.flush()
-        self.env.cache.invalidate()
+        self.env.flush_all()
+        self.env.invalidate_all()
         form = Form(entry)
         self.assertEqual(form.state, "posted")
         self.assertNotIn("spms_invoice_verification_ids", form._view["fields"])

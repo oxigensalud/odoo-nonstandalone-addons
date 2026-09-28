@@ -12,7 +12,9 @@ class TestSpmsVerificationFiscalDocument(SpmsVerificationCase):
         # its VAT groups
         cls.company.pt_invoicing = True
         cls.company.l10n_pt_create_default_fiscal_doc_types(["invoice"])
-        cls.tax6.tax_group_id = cls.env.ref("ptplus.tax_group_iva_6")
+        cls.tax6.tax_group_id = cls.env["account.tax.group"].create(
+            {"name": "VAT 6%", "l10n_pt_genre": "IVA"}
+        )
 
     def test_generate_from_another_company_creates_fiscal_credit_note(self):
         move = self._standard_invoice()

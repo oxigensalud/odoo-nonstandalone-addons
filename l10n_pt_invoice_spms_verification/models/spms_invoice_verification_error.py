@@ -1,7 +1,8 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -59,7 +60,6 @@ class SpmsInvoiceVerificationError(models.Model):
             ("linha", "Line"),
             ("prescricao", "Prescription Data"),
         ],
-        string="Level",
         required=True,
         readonly=True,
         help="Where the verification document reports the error: on the "
@@ -160,14 +160,15 @@ class SpmsInvoiceVerificationError(models.Model):
         for rec in self:
             if rec.line_id and rec.line_id.result_id != rec.result_id:
                 raise ValidationError(
-                    _(
-                        "Error %(code)s hangs under a line of another invoice verification."
+                    self.env._(
+                        "Error %(code)s hangs under a line of another invoice "
+                        "verification."
                     )
                     % {"code": rec.error_type_id.code}
                 )
             if bool(rec.line_id) != (rec.level in self._LINE_LEVELS):
                 raise ValidationError(
-                    _(
+                    self.env._(
                         "Error %(code)s at level %(level)s must hang under a line "
                         "if and only if the level is below the claim."
                     )
@@ -183,7 +184,7 @@ class SpmsInvoiceVerificationError(models.Model):
                 for name in ("result_id", "line_id")
             ):
                 raise ValidationError(
-                    _(
+                    self.env._(
                         "An imported error cannot be moved to another invoice "
                         "verification or claim."
                     )

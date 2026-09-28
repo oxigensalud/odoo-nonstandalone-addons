@@ -7,7 +7,7 @@
             name="name"
         >edi.exchange.record.form.inherit.l10n_pt_invoice_spms_verification</field>
         <field name="model">edi.exchange.record</field>
-        <field name="inherit_id" ref="edi_oca.edi_exchange_record_view_form" />
+        <field name="inherit_id" ref="edi_core_oca.edi_exchange_record_view_form" />
         <field name="arch" type="xml">
             <xpath
                 expr="//group[@name='status']/field[@name='exchanged_on']"
@@ -15,13 +15,13 @@
             >
                 <field
                     name="l10n_pt_spms_verification_answer"
-                    attrs="{'invisible': [('l10n_pt_spms_verification_answer', '=', False)]}"
+                    invisible="not l10n_pt_spms_verification_answer"
                 />
             </xpath>
             <xpath expr="//page[@name='error']" position="attributes">
                 <attribute
-                    name="attrs"
-                >{'invisible': [('exchange_error', '=', False), ('exchange_error_traceback', '=', False)]}</attribute>
+                    name="invisible"
+                >not exchange_error and not exchange_error_traceback</attribute>
             </xpath>
         </field>
     </record>
@@ -30,7 +30,7 @@
             name="name"
         >edi.exchange.record.tree.inherit.l10n_pt_invoice_spms_verification</field>
         <field name="model">edi.exchange.record</field>
-        <field name="inherit_id" ref="edi_oca.edi_exchange_record_view_tree" />
+        <field name="inherit_id" ref="edi_core_oca.edi_exchange_record_view_tree" />
         <field name="arch" type="xml">
             <field name="exchange_error" position="after">
                 <field name="l10n_pt_spms_verification_answer" optional="hide" />

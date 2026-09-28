@@ -5,7 +5,7 @@ import logging
 
 from lxml import etree
 
-from odoo import _, fields
+from odoo import fields
 from odoo.exceptions import UserError
 
 from odoo.addons.component.core import Component
@@ -63,7 +63,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         move = exchange_record.record
         if not move:
             raise UserError(
-                _("The exchange record %s is not linked to an invoice.")
+                self.env._("The exchange record %s is not linked to an invoice.")
                 % exchange_record.identifier
             )
         raw = exchange_record._get_file_content(as_bytes=True)
@@ -73,7 +73,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
             root = etree.fromstring(raw, parser)
         except etree.XMLSyntaxError as err:
             raise UserError(
-                _(
+                self.env._(
                     "The verification document of %(invoice)s is not parseable XML: "
                     "%(error)s"
                 )
@@ -83,7 +83,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         fact = _find_first(root, "FacturasErrosEDiferencas")
         if fact is None:
             raise UserError(
-                _(
+                self.env._(
                     "The verification document of %s carries no "
                     "FacturasErrosEDiferencas extension."
                 )
@@ -115,12 +115,12 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         self._attach_document(move, result, exchange_record)
         # a definitive with-errors result goes straight to its draft note
         # (credit or debit); a failure holds this result only, with its
-        # reason, and raises so that the record is held with Retry
+        # reason, and the backend then holds the record with Retry
         result._generate_note_or_hold()
         state_labels = dict(
             result.fields_get(["verification_state"])["verification_state"]["selection"]
         )
-        return _(
+        return self.env._(
             "SPMS verification result of %(invoice)s processed: %(state)s, "
             "%(lines)s lines, %(errors)s errors."
         ) % {
@@ -146,7 +146,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         expected = move._get_spms_invoice_number()
         if number and number != expected:
             raise UserError(
-                _(
+                self.env._(
                     "The verification document of %(invoice)s refers to another "
                     "invoice: %(number)s instead of %(expected)s."
                 )
@@ -164,11 +164,14 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         if "com erros" in estado:
             return "with_errors"
         raise UserError(
-            _(
+            self.env._(
                 "The verification document of %(invoice)s reports an unknown "
                 "EstadoFactura: %(estado)s"
             )
-            % {"invoice": move.display_name, "estado": estado or _("(empty)")}
+            % {
+                "invoice": move.display_name,
+                "estado": estado or self.env._("(empty)"),
+            }
         )
 
     def _parse_total(self, move, fact, name):
@@ -177,14 +180,16 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         text = _child_text(fact, name)
         if not text:
             raise UserError(
-                _("The verification document of %(invoice)s carries no %(field)s")
+                self.env._(
+                    "The verification document of %(invoice)s carries no %(field)s"
+                )
                 % {"invoice": move.display_name, "field": name}
             )
         try:
             return float(text.replace(",", "."))
         except ValueError as err:
             raise UserError(
-                _(
+                self.env._(
                     "The verification document of %(invoice)s carries an "
                     "unparseable %(field)s: %(text)s"
                 )
@@ -203,7 +208,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
             return _child_float(claim, name)
         except ValueError:
             problems.append(
-                _(
+                self.env._(
                     "Unparseable %(field)s of prescription "
                     "%(prescription)s: %(text)s (stored as 0)."
                 )
@@ -323,7 +328,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         warnings = []
         if missing > 0:
             warnings.append(
-                _(
+                self.env._(
                     "%(count)s of the %(total)s errors of the verification document "
                     "sit at positions this parser does not know: the error "
                     "list below is incomplete. The raw document attached to "
@@ -342,7 +347,10 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
             return fields.Date.to_date(text)
         except ValueError:
             problems.append(
-                _("IssueDate %r is not a date: the document date is left empty.") % text
+                self.env._(
+                    "IssueDate %r is not a date: the document date is left empty."
+                )
+                % text
             )
             return False
 
@@ -356,7 +364,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         result = move.spms_invoice_verification_ids[:1]
         if result and result.official_locked:
             raise UserError(
-                _(
+                self.env._(
                     "The verification result of %s is already carried by a live "
                     "credit or debit note; cancel that note before "
                     "reprocessing the document."
@@ -393,7 +401,8 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
 
     def _attach_document(self, move, result, exchange_record):
         """One attachment per result: reprocessing replaces its content."""
-        name = "%s-spms-verification.xml" % (move.name or "invoice").replace("/", "_")
+        stem = (move.name or "invoice").replace("/", "_")
+        name = f"{stem}-spms-verification.xml"
         attachment = self.env["ir.attachment"].search(
             [
                 ("res_model", "=", result._name),

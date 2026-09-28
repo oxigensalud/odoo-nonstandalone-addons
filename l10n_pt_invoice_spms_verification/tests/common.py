@@ -4,10 +4,10 @@
 from datetime import date
 
 from odoo import fields
-from odoo.tests.common import SavepointCase
+from odoo.tests.common import TransactionCase
 
 
-class SpmsVerificationCase(SavepointCase):
+class SpmsVerificationCase(TransactionCase):
     """Invoices and verification results built the way the parser does."""
 
     @classmethod
@@ -27,12 +27,8 @@ class SpmsVerificationCase(SavepointCase):
         )
         cls.income_account = cls.env["account.account"].search(
             [
-                ("company_id", "=", cls.company.id),
-                (
-                    "user_type_id",
-                    "=",
-                    cls.env.ref("account.data_account_type_revenue").id,
-                ),
+                ("company_ids", "in", cls.company.ids),
+                ("account_type", "=", "income"),
             ],
             limit=1,
         )

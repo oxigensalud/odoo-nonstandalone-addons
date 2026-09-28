@@ -1,4 +1,5 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from datetime import date
@@ -9,7 +10,8 @@ from psycopg2 import IntegrityError
 from odoo import fields
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.osv import expression
-from odoo.tests.common import Form, new_test_user
+from odoo.tests import Form
+from odoo.tests.common import new_test_user
 from odoo.tools import mute_logger
 from odoo.tools.safe_eval import safe_eval
 
@@ -192,7 +194,7 @@ class TestSpmsVerification(SpmsVerificationCase):
         other_result.note_move_id = draft
         action = draft.action_view_spms_invoice_verification()
         self.assertEqual(action["name"], "Invoice Verifications")
-        self.assertEqual(action["view_mode"], "tree,form")
+        self.assertEqual(action["view_mode"], "list,form")
         self.assertEqual(
             self.env["spms.invoice.verification"].search(action["domain"]),
             result + other_result,
@@ -669,8 +671,9 @@ class TestSpmsVerification(SpmsVerificationCase):
             self.env.cr.savepoint(),
         ):
             result._generate_note()
-        with self.assertRaisesRegex(UserError, "adjustment limit"):
-            result._generate_note_or_hold()
+        # held with its reason, never raised: the process runs in a
+        # savepoint since 18.0 and a raise would drop the stored result
+        result._generate_note_or_hold()
         self.assertEqual(result.state, "error")
         self.assertIn("adjustment limit", result.generation_error)
         self.assertFalse(result.note_move_id)
@@ -707,7 +710,7 @@ class TestSpmsVerification(SpmsVerificationCase):
             self.env.cr.savepoint(),
         ):
             self.company.spms_adjustment_limit = -0.01
-            self.company.flush()
+            self.company.flush_recordset()
 
     def test_generate_official_exceeds_total_blocks(self):
         # an official value above the original invoice total can only be a
@@ -808,14 +811,13 @@ class TestSpmsVerification(SpmsVerificationCase):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, move.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(move),
                 "company_id": self.company.id,
+                "journal_id": move.journal_id.id,
             }
         )
         wizard.reverse_moves()
-        foreign = move.reversal_move_id
+        foreign = move.reversal_move_ids
         result = self._create_result(
             move,
             [
@@ -844,16 +846,15 @@ class TestSpmsVerification(SpmsVerificationCase):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, move.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(result),
                 "company_id": self.company.id,
+                "journal_id": move.journal_id.id,
             }
         )
         wizard.reverse_moves()
         self.assertEqual(result.state, "error")
         self.assertEqual(result.note_move_id, own)
-        foreign = move.reversal_move_id - own
+        foreign = move.reversal_move_ids - own
         self.assertIn(foreign.display_name, result.error_message)
         foreign.button_cancel()
         self.assertEqual(result.state, "done")
@@ -877,33 +878,33 @@ class TestSpmsVerification(SpmsVerificationCase):
         )
         self.assertEqual(result.state, "ready")
         self._reverse(move)
-        one = move.reversal_move_id
+        one = move.reversal_move_ids
         self.assertEqual(len(one), 1)
         self.assertEqual(result.state, "error")
         self.assertEqual(
             result.error_message,
-            "The invoice already has the credit note %s. No additional credit "
-            "note was generated. Check whether it corresponds to this "
-            "verification result." % one.display_name,
+            f"The invoice already has the credit note {one.display_name}. No "
+            "additional credit note was generated. Check whether it corresponds "
+            "to this verification result.",
         )
         self._reverse(move)
-        several = move.reversal_move_id
+        several = move.reversal_move_ids
         self.assertEqual(len(several), 2)
+        names = ", ".join(several.mapped("display_name"))
         self.assertEqual(
             result.error_message,
-            "The invoice already has the credit notes %s. No additional credit "
+            f"The invoice already has the credit notes {names}. No additional credit "
             "note was generated. Check whether they correspond to this "
-            "verification result." % ", ".join(several.mapped("display_name")),
+            "verification result.",
         )
 
     def _reverse(self, move):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, move.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(move),
                 "company_id": self.company.id,
+                "journal_id": move.journal_id.id,
             }
         )
         wizard.reverse_moves()
@@ -916,14 +917,13 @@ class TestSpmsVerification(SpmsVerificationCase):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, move.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(move),
                 "company_id": self.company.id,
+                "journal_id": move.journal_id.id,
             }
         )
         wizard.reverse_moves()
-        foreign = move.reversal_move_id
+        foreign = move.reversal_move_ids
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         self.assertEqual(result.state, "error")
         foreign.button_cancel()
@@ -973,7 +973,7 @@ class TestSpmsVerification(SpmsVerificationCase):
         self.assertEqual(draft.state, "draft")
         self.assertEqual(draft.debit_origin_id, move)
         self.assertEqual(move.debit_note_ids, draft)
-        self.assertFalse(move.reversal_move_id)
+        self.assertFalse(move.reversal_move_ids)
         self.assertEqual(len(draft.invoice_line_ids), 1)
         line = draft.invoice_line_ids
         self.assertEqual(line.spms_prescription, "TESTP010")
@@ -1101,14 +1101,13 @@ class TestSpmsVerification(SpmsVerificationCase):
         wizard = self.env["account.move.reversal"].create(
             {
                 "move_ids": [(6, 0, debit_move.ids)],
-                "refund_method": "refund",
-                "date_mode": "custom",
                 "date": fields.Date.context_today(debit_move),
                 "company_id": self.company.id,
+                "journal_id": debit_move.journal_id.id,
             }
         )
         wizard.reverse_moves()
-        self.assertTrue(debit_move.reversal_move_id)
+        self.assertTrue(debit_move.reversal_move_ids)
         result = self._create_result(debit_move, rows, credit_official=-2.12)
         self.assertEqual(result.state, "ready")
 
@@ -1176,9 +1175,9 @@ class TestSpmsVerification(SpmsVerificationCase):
         )
         error = result.error_ids.with_user(user)
         form = Form(error)
-        with self.assertRaisesRegex(AssertionError, "readonly field result_id"):
+        with self.assertRaisesRegex(AssertionError, "readonly field 'result_id'"):
             form.result_id = other.with_user(user)
-        with self.assertRaisesRegex(AssertionError, "readonly field line_id"):
+        with self.assertRaisesRegex(AssertionError, "readonly field 'line_id'"):
             form.line_id = other.line_ids.with_user(user)
         form.save()
         self.assertEqual(error.result_id, result)
@@ -1195,7 +1194,7 @@ class TestSpmsVerification(SpmsVerificationCase):
             company_ids=[(6, 0, self.company.ids)],
         )
         error = result.error_ids.with_user(user)
-        self.assertTrue(error.check_access_rights("write"))
+        self.assertTrue(error.has_access("write"))
         # A consistent result/line pair must not move existing evidence.
         with self.assertRaises(ValidationError), self.cr.savepoint():
             error.write({"result_id": other.id, "line_id": other.line_ids.id})
@@ -1315,11 +1314,8 @@ class TestSpmsVerification(SpmsVerificationCase):
                 "search_default_filter_document": 1,
             },
         )
-        arch = etree.fromstring(
-            self.env["spms.invoice.verification.error"].fields_view_get(
-                view_type="search"
-            )["arch"]
-        )
+        view = self.env["spms.invoice.verification.error"].get_view(view_type="search")
+        arch = etree.fromstring(view["arch"])
         domains = {
             node.get("name"): safe_eval(node.get("domain"))
             for node in arch.iter("filter")
@@ -1425,8 +1421,8 @@ class TestSpmsVerification(SpmsVerificationCase):
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         note = result._generate_note()
         user = self._accounting_user_without_spms()
-        self.env["account.move"].flush()
-        self.env.cache.invalidate()
+        self.env.flush_all()
+        self.env.invalidate_all()
         with self.assertRaises(AccessError), self.cr.savepoint():
             note.with_user(user).button_cancel()
         self.assertEqual(note.state, "draft")
@@ -1437,8 +1433,8 @@ class TestSpmsVerification(SpmsVerificationCase):
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         note = result._generate_note()
         user = self._accounting_user_without_spms()
-        self.env["account.move"].flush()
-        self.env.cache.invalidate()
+        self.env.flush_all()
+        self.env.invalidate_all()
         with self.assertRaises(AccessError), self.cr.savepoint():
             note.with_user(user).unlink()
         self.assertTrue(note.exists())

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
      License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
 <odoo>
     <record id="spms_invoice_verification_line_view_tree" model="ir.ui.view">
         <field name="name">spms.invoice.verification.line.tree</field>
         <field name="model">spms.invoice.verification.line</field>
         <field name="arch" type="xml">
-            <tree create="false" delete="false">
+            <list create="false" delete="false">
                 <field name="result_id" optional="hide" />
                 <field name="lot_type" optional="hide" />
                 <field name="lot_number" optional="hide" />
@@ -20,7 +21,7 @@
                 <field name="move_line_id" optional="hide" />
                 <field name="note_move_line_id" optional="hide" />
                 <field name="currency_id" invisible="1" />
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -55,7 +56,7 @@
                     <notebook>
                         <page name="errors" string="Errors">
                             <field name="error_ids">
-                                <tree
+                                <list
                                     decoration-primary="level == 'prestacao'"
                                     decoration-info="level == 'linha'"
                                     decoration-success="level == 'prescricao'"
@@ -64,7 +65,7 @@
                                     <field name="code" />
                                     <field name="description" />
                                     <field name="provider_system_ref" optional="hide" />
-                                </tree>
+                                </list>
                             </field>
                         </page>
                     </notebook>

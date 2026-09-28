@@ -1,8 +1,8 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _, fields, models
-from odoo.tools import html_escape
+from odoo import fields, models
 
 
 class AccountMove(models.Model):
@@ -34,7 +34,7 @@ class AccountMove(models.Model):
         elif len(results) == 1:
             action = {
                 "type": "ir.actions.act_window",
-                "name": _("Invoice Verification"),
+                "name": self.env._("Invoice Verification"),
                 "res_model": "spms.invoice.verification",
                 "res_id": results.id,
                 "view_mode": "form",
@@ -42,10 +42,10 @@ class AccountMove(models.Model):
         else:
             action = {
                 "type": "ir.actions.act_window",
-                "name": _("Invoice Verifications"),
+                "name": self.env._("Invoice Verifications"),
                 "res_model": "spms.invoice.verification",
                 "domain": [("id", "in", results.ids)],
-                "view_mode": "tree,form",
+                "view_mode": "list,form",
             }
         return action
 
@@ -62,8 +62,7 @@ class AccountMove(models.Model):
             | moves.debit_origin_id.spms_invoice_verification_ids
         ).with_env(self.env)
         if results:
-            results.check_access_rights("read")
-            results.check_access_rule("read")
+            results.check_access("read")
         return results
 
     def button_cancel(self):
@@ -81,14 +80,15 @@ class AccountMove(models.Model):
         res = super().button_cancel()
         own = results.filtered(lambda result: result.note_move_id in self)
         for result in own:
+            # a plain-text body: message_post escapes it itself since 16.0
             result.move_id.message_post(
-                body=_(
+                body=self.env._(
                     "The generated note %(note)s was cancelled: the verification "
                     "result of invoice %(invoice)s no longer carries a note."
                 )
                 % {
-                    "note": html_escape(result.note_move_id.display_name),
-                    "invoice": html_escape(result.move_id.display_name),
+                    "note": result.note_move_id.display_name,
+                    "invoice": result.move_id.display_name,
                 },
                 subtype_xmlid="mail.mt_note",
             )

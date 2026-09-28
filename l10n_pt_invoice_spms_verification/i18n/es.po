@@ -4,13 +4,12 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 14.0\n"
+"Project-Id-Version: Odoo Server 18.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-29 07:39+0000\n"
-"PO-Revision-Date: 2026-09-29 07:39+0000\n"
+"POT-Creation-Date: 2026-10-26 17:22+0000\n"
+"PO-Revision-Date: 2026-10-26 17:22+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
-"Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
@@ -27,8 +26,8 @@ msgid "# Lines"
 msgstr "Nº de líneas"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "%(count)s of the %(total)s errors of the verification document sit at "
 "positions this parser does not know: the error list below is incomplete. The"
@@ -39,15 +38,15 @@ msgstr ""
 "incompleta. El documento en bruto adjunto a este resultado es la autoridad."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "%(prescription)s (claims: %(claims)s, invoice lines: %(lines)s)"
 msgstr ""
 "%(prescription)s (prestaciones: %(claims)s, líneas de factura: %(lines)s)"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid "(empty)"
 msgstr "(vacío)"
 
@@ -74,8 +73,8 @@ msgid "An error type with this code already exists."
 msgstr "Ya existe un tipo de error con este código."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification_error.py:0
-#, python-format
 msgid ""
 "An imported error cannot be moved to another invoice verification or claim."
 msgstr ""
@@ -237,8 +236,8 @@ msgid "Created on"
 msgstr "Creado el"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "Credit Note"
 msgstr "Nota de crédito"
 
@@ -283,8 +282,8 @@ msgstr ""
 "(QuantidadeCalculado); puede venir vacío en el documento."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "Debit Note"
 msgstr "Nota de débito"
 
@@ -304,10 +303,6 @@ msgid "Difference"
 msgstr "Diferencia"
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move__display_name
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_backend__display_name
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record__display_name
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_res_company__display_name
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__display_name
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__display_name
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error_type__display_name
@@ -363,8 +358,8 @@ msgid "Error"
 msgstr "Error"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification_error.py:0
-#, python-format
 msgid ""
 "Error %(code)s at level %(level)s must hang under a line if and only if the "
 "level is below the claim."
@@ -373,8 +368,8 @@ msgstr ""
 " si, el nivel es inferior a la prestación."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification_error.py:0
-#, python-format
 msgid "Error %(code)s hangs under a line of another invoice verification."
 msgstr ""
 "El error %(code)s está enlazado a una línea de otra verificación de factura."
@@ -449,8 +444,8 @@ msgid "Exchange Record"
 msgstr "Registro de intercambio"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "Expected exactly one receivable/payable line on the draft %(kind)s %(move)s,"
 " found %(count)d."
@@ -459,8 +454,8 @@ msgstr ""
 "%(move)s; se han encontrado %(count)d."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "Expected exactly one tax line on the draft %(kind)s %(move)s to carry the "
 "difference with the official value, found %(count)d."
@@ -487,10 +482,6 @@ msgid "Group By"
 msgstr "Agrupar por"
 
 #. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move__id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_backend__id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record__id
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_res_company__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error_type__id
@@ -511,19 +502,19 @@ msgid "Invoice Level"
 msgstr "Nivel factura"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/account_move.py:0
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error__result_id
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line__result_id
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_error_view_search
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_line_view_search
-#, python-format
 msgid "Invoice Verification"
 msgstr "Verificación de factura"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/account_move.py:0
 #: model:ir.ui.menu,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_menu
-#, python-format
 msgid "Invoice Verifications"
 msgstr "Verificaciones de facturas"
 
@@ -578,8 +569,8 @@ msgstr ""
 "(TotalFaturaCalculado)."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid "IssueDate %r is not a date: the document date is left empty."
 msgstr "IssueDate %r no es una fecha: la fecha del documento se deja vacía."
 
@@ -606,18 +597,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record__l10n_pt_spms_verification_answer
 msgid "Last CCF Answer"
 msgstr "Última respuesta del CCF"
-
-#. module: l10n_pt_invoice_spms_verification
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_backend____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_edi_exchange_record____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_res_company____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_error_type____last_update
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification_line____last_update
-msgid "Last Modified on"
-msgstr "Última modificación el"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__write_uid
@@ -823,8 +802,8 @@ msgstr ""
 "línea, no lo interprete ni lo comparta."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "Prescriptions not matched one-to-one to an original invoice line: %s."
 msgstr ""
 "Prescripciones sin pareja uno a uno con una línea de la factura original: "
@@ -905,14 +884,12 @@ msgstr "Línea de verificación SPMS de factura"
 #: model:ir.actions.act_window,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_action
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_bank_statement_line__spms_invoice_verification_ids
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move__spms_invoice_verification_ids
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_payment__spms_invoice_verification_ids
 msgid "SPMS Invoice Verifications"
 msgstr "Verificaciones SPMS de facturas"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_bank_statement_line__spms_note_invoice_verification_ids
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_move__spms_note_invoice_verification_ids
-#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_payment__spms_note_invoice_verification_ids
 msgid "SPMS Invoice Verifications (Credit/Debit Note)"
 msgstr "Verificaciones SPMS de facturas (nota de crédito/débito)"
 
@@ -927,15 +904,14 @@ msgid "SPMS Verification Errors"
 msgstr "Errores de verificación SPMS"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "SPMS verification %s"
 msgstr "Verificación SPMS %s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "SPMS verification result of %(invoice)s processed: %(state)s, %(lines)s "
 "lines, %(errors)s errors."
@@ -945,8 +921,6 @@ msgstr ""
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.actions.server,name:l10n_pt_invoice_spms_verification.cron_spms_verification_update_ir_actions_server
-#: model:ir.cron,cron_name:l10n_pt_invoice_spms_verification.cron_spms_verification_update
-#: model:ir.cron,name:l10n_pt_invoice_spms_verification.cron_spms_verification_update
 msgid "SPMS: get verification results from the CCF"
 msgstr "SPMS: obtener resultados de verificación del CCF"
 
@@ -981,8 +955,8 @@ msgid "Tax Included"
 msgstr "Con impuestos"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The %(kind)s cannot be generated: its total %(draft)s differs from the official value %(official)s by %(difference)s, and the SPMS adjustment limit of company %(company)s allows at most %(limit)s.\n"
 "\n"
@@ -993,8 +967,8 @@ msgstr ""
 "En la línea de impuesto de la %(kind)s solo puede escribirse el céntimo de redondeo del impuesto. Una diferencia mayor revela una discrepancia a revisar antes de reintentar: el Importe de prestaciones (sin impuestos) del resultado debe coincidir con sus totales oficiales sin impuestos (una receta que la verificación ha valorado con un precio distinto del de la factura los hace divergir), y la empresa debe redondear los impuestos globalmente (Contabilidad > Configuración > Impuestos > Método de redondeo), porque el CCF calcula el impuesto una sola vez sobre el total de la factura. Aumente el límite de ajuste SPMS de la empresa solo cuando la diferencia sea legítima y resulte estrictamente necesario."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The %(kind)s total %(total).2f still differs from the official value "
 "%(official).2f after imposing the tax amount."
@@ -1003,8 +977,8 @@ msgstr ""
 "%(official).2f tras imponer el importe del impuesto."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid ""
 "The CCF answered with a server error (%(status)s) and no usable content. "
 "This says nothing about the invoice or its data; the next run of the "
@@ -1016,21 +990,21 @@ msgstr ""
 "técnico: %(detail)s."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid "The CCF answered with an unexpected return code: %s."
 msgstr "El CCF ha respondido con un código de retorno inesperado: %s."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid "The CCF answered without a verification document or a return code."
 msgstr ""
 "El CCF ha respondido sin documento de verificación ni código de retorno."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid ""
 "The CCF did not answer within %(seconds)s seconds. This says nothing about "
 "the invoice or its data; the next run of the scheduled action asks again on "
@@ -1041,8 +1015,8 @@ msgstr ""
 "vuelve a preguntar por sí sola. Detalle técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid ""
 "The CCF does not recognise invoice %(invoice)s even though it was sent "
 "successfully (%(code)s)."
@@ -1051,8 +1025,8 @@ msgstr ""
 "(%(code)s)."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid ""
 "The CCF returned an answer that could not be interpreted (%(status)s). "
 "Technical detail: %(detail)s."
@@ -1061,8 +1035,8 @@ msgstr ""
 "(%(status)s). Detalle técnico: %(detail)s."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid ""
 "The CCF web service could not be reached (connection problem). This says "
 "nothing about the invoice or its data; the next run of the scheduled action "
@@ -1074,8 +1048,8 @@ msgstr ""
 "técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid "The CCF web service is unavailable (%s)."
 msgstr "El servicio web del CCF no está disponible (%s)."
 
@@ -1099,8 +1073,8 @@ msgid "The SPMS adjustment limit cannot be negative."
 msgstr "El límite de ajuste SPMS no puede ser negativo."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The draft tax amount (%(draft).2f) differs from the expected tax "
 "(%(expected).2f) for the taxes on its lines; review the tax configuration "
@@ -1111,14 +1085,14 @@ msgstr ""
 "configuración de impuestos antes de reintentar."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid "The exchange record %s is not linked to an invoice."
 msgstr "El registro de intercambio %s no está vinculado a una factura."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/account_move.py:0
-#, python-format
 msgid ""
 "The generated note %(note)s was cancelled: the verification result of "
 "invoice %(invoice)s no longer carries a note."
@@ -1127,8 +1101,8 @@ msgstr ""
 "la factura %(invoice)s ya no lleva ninguna nota."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The invoice already has the credit note %s. No additional credit note was "
 "generated. Check whether it corresponds to this verification result."
@@ -1138,8 +1112,8 @@ msgstr ""
 "verificación."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The invoice already has the credit notes %s. No additional credit note was "
 "generated. Check whether they correspond to this verification result."
@@ -1149,8 +1123,8 @@ msgstr ""
 "verificación."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The invoice already has the debit note %s. No additional debit note was "
 "generated. Check whether it corresponds to this verification result."
@@ -1159,8 +1133,8 @@ msgstr ""
 "débito adicional. Compruebe si corresponde a este resultado de verificación."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The invoice already has the debit notes %s. No additional debit note was "
 "generated. Check whether they correspond to this verification result."
@@ -1187,8 +1161,8 @@ msgstr ""
 "La última modificación del registro es la hora de la última pregunta."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The note draft has no line for prescription %(prescription)s (invoice line "
 "%(line)s)."
@@ -1197,8 +1171,8 @@ msgstr ""
 "%(prescription)s (línea de factura %(line)s)."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The note's untaxed total (%(draft).2f) differs from the claims total of the "
 "result (%(expected).2f). Compare the original invoice lines of the affected "
@@ -1211,8 +1185,8 @@ msgstr ""
 "impuestos) con las líneas de verificación antes de reintentar."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The official value %(value)s exceeds the total of the original invoice "
 "%(invoice)s (%(total)s)."
@@ -1221,8 +1195,8 @@ msgstr ""
 "%(invoice)s (%(total)s)."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The official value of %s is already carried by a credit or debit note; "
 "cancel that note first to change it."
@@ -1240,8 +1214,8 @@ msgstr ""
 "verificación, tal como se recibe."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "The original invoice %s is not posted."
 msgstr "La factura original %s no está publicada."
 
@@ -1257,14 +1231,14 @@ msgstr ""
 "nota se cancele."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "The result is no longer ready (current state: %s)."
 msgstr "El resultado ya no está listo (estado actual: %s)."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The standard debit-note flow did not create a single draft debit note for "
 "%s."
@@ -1273,16 +1247,16 @@ msgstr ""
 "borrador para %s."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The standard reversal did not create a single draft credit note for %s."
 msgstr ""
 "La reversión estándar no creó una única nota de crédito borrador para %s."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "The verification document of %(invoice)s carries an unparseable %(field)s: "
 "%(text)s"
@@ -1291,22 +1265,22 @@ msgstr ""
 "%(text)s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid "The verification document of %(invoice)s carries no %(field)s"
 msgstr "El documento de verificación de %(invoice)s no lleva ningún %(field)s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "The verification document of %(invoice)s is not parseable XML: %(error)s"
 msgstr ""
 "El documento de verificación de %(invoice)s no es XML analizable: %(error)s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "The verification document of %(invoice)s refers to another invoice: "
 "%(number)s instead of %(expected)s."
@@ -1315,8 +1289,8 @@ msgstr ""
 "%(number)s en lugar de %(expected)s."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "The verification document of %(invoice)s reports an unknown EstadoFactura: "
 "%(estado)s"
@@ -1325,8 +1299,8 @@ msgstr ""
 "desconocido: %(estado)s"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "The verification document of %s carries no FacturasErrosEDiferencas "
 "extension."
@@ -1335,8 +1309,8 @@ msgstr ""
 "FacturasErrosEDiferencas."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The verification result of %(invoice)s does not match any recognised outcome"
 " (official value: %(value)s); it is held for human review. The raw document "
@@ -1348,8 +1322,8 @@ msgstr ""
 "autoridad."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "The verification result of %s is already carried by a live credit or debit "
 "note; cancel that note before reprocessing the document."
@@ -1358,8 +1332,8 @@ msgstr ""
 "débito viva; cancele esa nota antes de reprocesar el documento."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The verification result of %s is carried by a live credit or debit note; "
 "cancel that note first to delete it."
@@ -1368,8 +1342,8 @@ msgstr ""
 "viva; cancele antes esa nota para eliminarlo."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid ""
 "The verification result of %s is ready for generation again: press Retry on "
 "its exchange record; the EDI input action generates the note at its next "
@@ -1380,8 +1354,8 @@ msgstr ""
 " nota en la siguiente ejecución."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "There is no prescription with a difference to regularize."
 msgstr "No hay ninguna prescripción con diferencia que regularizar."
 
@@ -1428,14 +1402,14 @@ msgstr ""
 "códigos desconocidos se crean allí a medida que llegan los documentos."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "Unexpected generation failure; see the server log."
 msgstr "Fallo de generación inesperado; consulte el registro del servidor."
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/components/edi_input_process_l10n_pt_spms_verification.py:0
-#, python-format
 msgid ""
 "Unparseable %(field)s of prescription %(prescription)s: %(text)s (stored as "
 "0)."
@@ -1449,8 +1423,8 @@ msgid "Verification Errors"
 msgstr "Errores de verificación"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "Verification Lines"
 msgstr "Líneas de verificación"
 
@@ -1552,19 +1526,19 @@ msgid "Zero Official Value"
 msgstr "Valor oficial cero"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "credit note"
 msgstr "nota de crédito"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
-#, python-format
 msgid "debit note"
 msgstr "nota de débito"
 
 #. module: l10n_pt_invoice_spms_verification
+#. odoo-python
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
-#, python-format
 msgid "no HTTP status"
 msgstr "sin estado HTTP"

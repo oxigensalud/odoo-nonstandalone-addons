@@ -6,7 +6,7 @@ from pathlib import Path
 
 from odoo.modules.module import get_module_path
 from odoo.tests import tagged
-from odoo.tests.common import SavepointCase
+from odoo.tests.common import TransactionCase
 
 # The interval and the hour of a scheduled action are the administrator's to
 # set: a text that names one goes stale the day it changes. A text names one
@@ -47,9 +47,7 @@ CADENCE = r"""(?:
 )"""
 NEAR = r"\W+ (?:\w+\W+){0,6}?"
 INTERVAL = re.compile(
-    r"(?<!\w)(?:%(action)s %(near)s %(cadence)s"
-    r" | %(cadence)s %(near)s %(action)s)(?!\w)"
-    % {"action": ACTION, "near": NEAR, "cadence": CADENCE},
+    rf"(?<!\w)(?:{ACTION} {NEAR} {CADENCE} | {CADENCE} {NEAR} {ACTION})(?!\w)",
     re.IGNORECASE | re.VERBOSE,
 )
 TEXT_SUFFIXES = (".py", ".xml", ".md", ".rst", ".html", ".po", ".pot", ".csv")
@@ -113,14 +111,14 @@ NAMES_NO_INTERVAL = (
 
 
 @tagged("post_install", "-at_install")
-class TestSpmsVerificationTexts(SavepointCase):
+class TestSpmsVerificationTexts(TransactionCase):
     def test_no_text_names_an_interval(self):
         module = Path(get_module_path("l10n_pt_invoice_spms_verification"))
         named = []
         for path in sorted(module.rglob("*")):
             if path.suffix in TEXT_SUFFIXES and path.name != Path(__file__).name:
                 for found in INTERVAL.finditer(path.read_text(encoding="utf-8")):
-                    named.append("%s: %s" % (path.relative_to(module), found.group()))
+                    named.append(f"{path.relative_to(module)}: {found.group()}")
         self.assertEqual(named, [])
 
     def test_a_cadence_next_to_the_action_is_found(self):

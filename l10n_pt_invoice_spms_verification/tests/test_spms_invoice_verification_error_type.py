@@ -4,11 +4,11 @@
 from psycopg2 import IntegrityError
 
 from odoo.exceptions import AccessError
-from odoo.tests.common import SavepointCase
+from odoo.tests.common import TransactionCase
 from odoo.tools import mute_logger
 
 
-class TestSpmsInvoiceVerificationErrorType(SavepointCase):
+class TestSpmsInvoiceVerificationErrorType(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

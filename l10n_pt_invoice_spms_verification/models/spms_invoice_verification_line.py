@@ -1,4 +1,5 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import api, fields, models
@@ -39,17 +40,14 @@ class SpmsInvoiceVerificationLine(models.Model):
         readonly=True,
     )
     lot_type = fields.Char(
-        string="Lot Type",
         readonly=True,
         help="Type of the lot the claim belongs to (TipoLote).",
     )
     lot_number = fields.Char(
-        string="Lot Number",
         readonly=True,
         help="Number of the lot the claim belongs to (Numero).",
     )
     prescription = fields.Char(
-        string="Prescription",
         index=True,
         readonly=True,
         help="Prescription number (NumeroPrescricao): what links the claim "
