@@ -28,7 +28,7 @@ class TestAccountMoveAccess(SavepointCase):
             )
             cls.partner["property_account_" + kind + "_id"] = account
         cls.journals = {}
-        for kind, code in (("sale", "ATSL"), ("purchase", "ATPU")):
+        for kind, code in (("sale", "ATSL"), ("purchase", "ATPU"), ("general", "ATGN")):
             cls.journals[kind] = cls.env["account.journal"].create(
                 {
                     "name": "Accounting access test " + kind,
@@ -65,7 +65,11 @@ class TestAccountMoveAccess(SavepointCase):
         )
 
     def _draft(self, move_type):
-        journal_type = "sale" if move_type == "out_invoice" else "purchase"
+        journal_type = {
+            "out_invoice": "sale",
+            "in_invoice": "purchase",
+            "entry": "general",
+        }[move_type]
         invoice = self.env["account.move"].create(
             {
                 "move_type": move_type,
@@ -118,3 +122,55 @@ class TestAccountMoveAccess(SavepointCase):
     def test_accounting_user_does_not_gain_spms_read_access(self):
         with self.assertRaises(AccessError):
             self.env["spms.invoice.verification"].with_user(self.user).search([])
+
+    def test_open_journal_entry_without_spms_access(self):
+        entry = self._draft("entry")
+        form = Form(entry)
+        self.assertEqual(form.move_type, "entry")
+        self.assertNotIn("spms_invoice_verification_ids", form._view["fields"])
+
+    def test_cancel_journal_entry_without_spms_access(self):
+        entry = self._draft("entry")
+        entry.button_cancel()
+        self.assertEqual(entry.state, "cancel")
+
+    def test_delete_journal_entry_without_spms_access(self):
+        entry = self._draft("entry")
+        entry.unlink()
+        self.assertFalse(entry.exists())
+
+    def test_open_posted_journal_entry_without_spms_access(self):
+        entry = self._draft("entry")
+        entry.write(
+            {
+                "date": "2026-01-10",
+                "line_ids": [
+                    (
+                        0,
+                        0,
+                        {
+                            "name": "Synthetic debit",
+                            "account_id": self.partner.property_account_receivable_id.id,
+                            "partner_id": self.partner.id,
+                            "debit": 10.0,
+                        },
+                    ),
+                    (
+                        0,
+                        0,
+                        {
+                            "name": "Synthetic credit",
+                            "account_id": self.partner.property_account_payable_id.id,
+                            "partner_id": self.partner.id,
+                            "credit": 10.0,
+                        },
+                    ),
+                ],
+            }
+        )
+        entry.action_post()
+        entry.flush()
+        self.env.cache.invalidate()
+        form = Form(entry)
+        self.assertEqual(form.state, "posted")
+        self.assertNotIn("spms_invoice_verification_ids", form._view["fields"])
