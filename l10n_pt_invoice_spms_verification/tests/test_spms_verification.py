@@ -50,9 +50,11 @@ class TestSpmsVerification(SpmsVerificationCase):
     def test_result_move_unique(self):
         move = self._standard_invoice()
         self._create_result(move, self._standard_rows(), credit_official=38.16)
-        with self.assertRaises(IntegrityError), mute_logger(
-            "odoo.sql_db"
-        ), self.env.cr.savepoint():
+        with (
+            self.assertRaises(IntegrityError),
+            mute_logger("odoo.sql_db"),
+            self.env.cr.savepoint(),
+        ):
             self._create_result(move, [])
 
     def test_line_original_unique_per_result(self):
@@ -61,9 +63,11 @@ class TestSpmsVerification(SpmsVerificationCase):
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         line = result.line_ids[:1]
-        with self.assertRaises(IntegrityError), mute_logger(
-            "odoo.sql_db"
-        ), self.env.cr.savepoint():
+        with (
+            self.assertRaises(IntegrityError),
+            mute_logger("odoo.sql_db"),
+            self.env.cr.savepoint(),
+        ):
             self.env["spms.invoice.verification.line"].create(
                 {
                     "result_id": result.id,
@@ -660,9 +664,10 @@ class TestSpmsVerification(SpmsVerificationCase):
         # limit says otherwise
         move = self._standard_invoice()
         result = self._create_result(move, self._standard_rows(), credit_official=38.22)
-        with self.assertRaisesRegex(
-            UserError, "SPMS adjustment limit of company"
-        ), self.env.cr.savepoint():
+        with (
+            self.assertRaisesRegex(UserError, "SPMS adjustment limit of company"),
+            self.env.cr.savepoint(),
+        ):
             result._generate_note()
         with self.assertRaisesRegex(UserError, "adjustment limit"):
             result._generate_note_or_hold()
@@ -696,9 +701,11 @@ class TestSpmsVerification(SpmsVerificationCase):
         self.assertEqual(len(draft.invoice_line_ids), 3)
 
     def test_company_adjustment_limit_not_negative(self):
-        with self.assertRaises(IntegrityError), mute_logger(
-            "odoo.sql_db"
-        ), self.env.cr.savepoint():
+        with (
+            self.assertRaises(IntegrityError),
+            mute_logger("odoo.sql_db"),
+            self.env.cr.savepoint(),
+        ):
             self.company.spms_adjustment_limit = -0.01
             self.company.flush()
 
@@ -1376,9 +1383,10 @@ class TestSpmsVerification(SpmsVerificationCase):
         result = self._create_result(move, self._standard_rows(), credit_official=38.16)
         draft = result._generate_note()
         self.assertEqual(result.state, "done")
-        with self.assertRaisesRegex(
-            UserError, "cancel that note first to delete"
-        ), self.cr.savepoint():
+        with (
+            self.assertRaisesRegex(UserError, "cancel that note first to delete"),
+            self.cr.savepoint(),
+        ):
             result.unlink()
         self.assertTrue(result.exists())
         # the note cancelled, the result reopens and can go; the note stays

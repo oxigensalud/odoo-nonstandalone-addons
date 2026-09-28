@@ -132,7 +132,7 @@ class SpmsVerificationCase(SavepointCase):
             ],
         )
         line_vals_list = []
-        for line, original in zip(lines, originals):
+        for line, original in zip(lines, originals, strict=False):
             line_vals_list.append(
                 {
                     "result_id": result.id,
