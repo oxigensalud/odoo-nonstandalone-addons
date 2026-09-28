@@ -22,6 +22,7 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_portuguese_invoice_can_create_spms_exchange(self):
         invoice = self._create_invoice()
+        invoice.action_post()
         action = invoice.edi_create_exchange_record(self.exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
         self.assertEqual(exchange.record, invoice)
@@ -29,6 +30,7 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_spanish_invoice_cannot_create_spms_exchange(self):
         invoice = self._create_invoice(self.spanish_company)
+        invoice.action_post()
         with self.assertRaisesRegex(
             ValidationError, "Portuguese company"
         ), self.cr.savepoint():
@@ -37,6 +39,7 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_direct_create_cannot_bypass_company_check(self):
         invoice = self._create_invoice(self.spanish_company)
+        invoice.action_post()
         with self.assertRaisesRegex(
             ValidationError, "Portuguese company"
         ), self.cr.savepoint():
@@ -51,7 +54,9 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_exchange_cannot_be_relinked_to_spanish_invoice(self):
         portuguese_invoice = self._create_invoice()
+        portuguese_invoice.action_post()
         spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
         action = portuguese_invoice.edi_create_exchange_record(self.exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
         with self.assertRaisesRegex(
@@ -61,17 +66,21 @@ class TestSpmsCompany(SpmsInvoiceCase):
         self.assertEqual(exchange.record, portuguese_invoice)
 
     def test_portuguese_active_company_does_not_allow_spanish_invoice(self):
-        invoice = self._create_invoice(self.spanish_company).with_company(self.company)
+        invoice = self._create_invoice(self.spanish_company)
+        invoice.action_post()
+        invoice = invoice.with_company(self.company)
         with self.assertRaisesRegex(
             ValidationError, "Portuguese company"
         ), self.cr.savepoint():
             invoice.edi_create_exchange_record(self.exchange_type.id)
 
     def test_spms_button_uses_the_invoice_company(self):
-        portuguese_invoice = self._create_invoice().with_company(self.spanish_company)
-        spanish_invoice = self._create_invoice(self.spanish_company).with_company(
-            self.company
-        )
+        portuguese_invoice = self._create_invoice()
+        portuguese_invoice.action_post()
+        portuguese_invoice = portuguese_invoice.with_company(self.spanish_company)
+        spanish_invoice = self._create_invoice(self.spanish_company)
+        spanish_invoice.action_post()
+        spanish_invoice = spanish_invoice.with_company(self.company)
         for invoice, available in (
             (portuguese_invoice, True),
             (spanish_invoice, False),
@@ -83,13 +92,16 @@ class TestSpmsCompany(SpmsInvoiceCase):
                 self.assertEqual(self.exchange_type.id in visible_types, available)
 
     def test_spanish_active_company_allows_portuguese_invoice(self):
-        invoice = self._create_invoice().with_company(self.spanish_company)
+        invoice = self._create_invoice()
+        invoice.action_post()
+        invoice = invoice.with_company(self.spanish_company)
         action = invoice.edi_create_exchange_record(self.exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
         self.assertEqual(exchange.record, invoice)
 
     def test_missing_company_country_cannot_create_spms_exchange(self):
         invoice = self._create_invoice()
+        invoice.action_post()
         self.company.country_id = False
         with self.assertRaisesRegex(
             ValidationError, "Portuguese company"
@@ -98,6 +110,7 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_other_exchange_type_allows_spanish_invoice(self):
         invoice = self._create_invoice(self.spanish_company)
+        invoice.action_post()
         exchange_type = self.other_exchange_type
         action = invoice.edi_create_exchange_record(exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
@@ -105,6 +118,7 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_changing_exchange_type_cannot_bypass_company_check(self):
         invoice = self._create_invoice(self.spanish_company)
+        invoice.action_post()
         exchange_type = self.other_exchange_type
         action = invoice.edi_create_exchange_record(exchange_type.id)
         exchange = self.env["edi.exchange.record"].browse(action["res_id"])
@@ -116,6 +130,7 @@ class TestSpmsCompany(SpmsInvoiceCase):
 
     def test_parent_invoice_cannot_bypass_company_check(self):
         invoice = self._create_invoice(self.spanish_company)
+        invoice.action_post()
         exchange_type = self.other_exchange_type
         action = invoice.edi_create_exchange_record(exchange_type.id)
         with self.assertRaisesRegex(
