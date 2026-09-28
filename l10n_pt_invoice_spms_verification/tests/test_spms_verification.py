@@ -1573,3 +1573,51 @@ class TestSpmsVerification(SavepointCase):
         result.unlink()
         self.assertFalse(result.exists())
         self.assertEqual(draft.state, "cancel")
+
+    def _accounting_user_without_spms(self):
+        return (
+            self.env["res.users"]
+            .with_context(no_reset_password=True)
+            .create(
+                {
+                    "name": "Accounting lifecycle test user",
+                    "login": "accounting_lifecycle_test@example.invalid",
+                    "company_id": self.company.id,
+                    "company_ids": [(6, 0, self.company.ids)],
+                    "groups_id": [
+                        (
+                            6,
+                            0,
+                            [
+                                self.env.ref("base.group_user").id,
+                                self.env.ref("account.group_account_invoice").id,
+                            ],
+                        )
+                    ],
+                }
+            )
+        )
+
+    def test_accounting_user_cannot_cancel_a_linked_spms_note(self):
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        note = result._generate_note()
+        user = self._accounting_user_without_spms()
+        self.env["account.move"].flush()
+        self.env.cache.invalidate()
+        with self.assertRaises(AccessError), self.cr.savepoint():
+            note.with_user(user).button_cancel()
+        self.assertEqual(note.state, "draft")
+        self.assertEqual(result.note_move_id, note)
+
+    def test_accounting_user_cannot_delete_a_linked_spms_note(self):
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        note = result._generate_note()
+        user = self._accounting_user_without_spms()
+        self.env["account.move"].flush()
+        self.env.cache.invalidate()
+        with self.assertRaises(AccessError), self.cr.savepoint():
+            note.with_user(user).unlink()
+        self.assertTrue(note.exists())
+        self.assertEqual(result.note_move_id, note)
