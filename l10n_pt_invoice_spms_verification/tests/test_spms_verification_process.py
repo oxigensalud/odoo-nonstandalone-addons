@@ -1,4 +1,5 @@
 # Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import base64
@@ -149,6 +150,7 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         super().setUpClass()
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
         cls.company = cls.env.company
+        cls.company.country_id = cls.env.ref("base.pt")
         # the SPMS flow relies on global tax rounding (production setting)
         cls.company.tax_calculation_rounding_method = "round_globally"
         cls.backend = cls.env.ref("l10n_pt_invoice_spms.spms_backend")
