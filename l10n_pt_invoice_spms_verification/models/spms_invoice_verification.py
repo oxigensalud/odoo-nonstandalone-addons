@@ -559,6 +559,8 @@ class SpmsInvoiceVerification(models.Model):
         its own savepoint, so a raise leaves this result untouched.
         """
         self.ensure_one()
+        # ptplus needs the invoice's company active to set the fiscal data
+        self = self.with_company(self.company_id)
         self.invalidate_cache(["credit_official"], self.ids)
         self.env["account.move"].invalidate_cache(
             ["state", "reversal_move_id", "debit_note_ids"], self.move_id.ids

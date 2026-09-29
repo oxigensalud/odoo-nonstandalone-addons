@@ -4,7 +4,7 @@
 {
     "name": "SPMS Invoice Verification",
     "summary": "SPMS verification results log and credit/debit note generation",
-    "version": "14.0.1.0.1",
+    "version": "14.0.1.0.2",
     "development_status": "Beta",
     "license": "AGPL-3",
     "author": "Oxigen Salud SA, NuoBiT Solutions SL",
