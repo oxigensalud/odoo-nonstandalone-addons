@@ -221,9 +221,3 @@ class SpmsInvoiceCase(TransactionCase):
         xml_content, errors = builder._export_invoice(move)
         self.assertEqual(errors, set())
         return etree.fromstring(xml_content)
-
-    def _envelope(self, move):
-        component = self.backend._get_component(
-            self._sending_record(move, "new"), "send"
-        )
-        return etree.fromstring(component._prepare_envelope(move, b"<Document/>"))

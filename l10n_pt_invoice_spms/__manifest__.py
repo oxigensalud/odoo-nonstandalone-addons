@@ -17,7 +17,7 @@
         "l10n_pt_spms",
         "account_debit_note",
     ],
-    "external_dependencies": {"python": ["cryptography", "xmlsig"]},
+    "external_dependencies": {"python": ["cryptography", "xmlsig", "zeep"]},
     "data": [
         "views/menu.xml",
         "views/account_move.xml",
