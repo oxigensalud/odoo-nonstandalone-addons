@@ -405,6 +405,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         values = {
             "datas": exchange_record.exchange_file,
             "mimetype": "application/xml",
+            "company_id": result.company_id.id,
         }
         if attachment:
             attachment.write(values)
