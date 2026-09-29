@@ -951,7 +951,7 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         self.assertFalse(result.note_move_id)
         self.company.spms_adjustment_limit = 0.05
         # the user's path: Retry on the held record, then the process job
-        # the hourly input action of the EDI framework queues for it
+        # the input action of the EDI framework queues for it
         child.action_retry()
         self.assertEqual(child.edi_exchange_state, "input_received")
         child.action_exchange_process()
