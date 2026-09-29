@@ -557,8 +557,14 @@ class SpmsInvoiceVerification(models.Model):
         prescriptions, with the sign flipped on a debit note. Raises
         UserError with the blocking reason; the caller runs each result in
         its own savepoint, so a raise leaves this result untouched.
+
+        Runs in the company of the invoice: its callers are jobs, which run
+        in the company of their user, and the localization leaves the
+        fiscal marks of a new move incomplete unless the company of the
+        move is the active one.
         """
         self.ensure_one()
+        self = self.with_company(self.company_id)
         self.invalidate_cache(["credit_official"], self.ids)
         self.env["account.move"].invalidate_cache(
             ["state", "reversal_move_id", "debit_note_ids"], self.move_id.ids

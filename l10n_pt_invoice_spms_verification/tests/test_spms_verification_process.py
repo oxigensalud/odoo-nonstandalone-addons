@@ -736,6 +736,26 @@ class TestSpmsVerificationProcess(SavepointComponentCase):
         self.assertEqual(result.error_count, 1)
         self.assertEqual(len(self._attachments(result)), 1)
 
+    def test_process_from_another_company_attaches_in_the_invoice_company(self):
+        # the jobs that process the documents run as a user of another company
+        other_company = self.env["res.company"].create({"name": "Other company"})
+        self.env.user.company_id = other_company
+        self._process(_document(claims=_prestacao("TESTP001", errors=_erro("C011"))))
+        attachment = self._attachments(self._result())
+        self.assertEqual(attachment.company_id, self.invoice.company_id)
+
+    def test_reprocess_moves_the_attachment_to_the_invoice_company(self):
+        # held generation: the result never locks, reprocess stays allowed
+        document = _document(claims=_prestacao("TESTMISSING", errors=_erro("C011")))
+        child = self._process(document)
+        attachment = self._attachments(self._result())
+        # an attachment that a job of another company created
+        other_company = self.env["res.company"].create({"name": "Other company"})
+        attachment.company_id = other_company
+        child.action_retry()
+        child.action_exchange_process()
+        self.assertEqual(attachment.company_id, self.invoice.company_id)
+
     def test_document_supersedes_bare_result(self):
         # a bare result created out of band — no document, no verdict —
         # is held in error and named after its invoice until the verification

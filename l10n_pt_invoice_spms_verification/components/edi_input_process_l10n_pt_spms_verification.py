@@ -392,7 +392,8 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         return result
 
     def _attach_document(self, move, result, exchange_record):
-        """One attachment per result: reprocessing replaces its content."""
+        """One attachment per result, in its company: reprocessing replaces
+        its content."""
         name = "%s-spms-verification.xml" % (move.name or "invoice").replace("/", "_")
         attachment = self.env["ir.attachment"].search(
             [
@@ -405,6 +406,7 @@ class EdiInputProcessL10nPtSpmsVerification(Component):
         values = {
             "datas": exchange_record.exchange_file,
             "mimetype": "application/xml",
+            "company_id": result.company_id.id,
         }
         if attachment:
             attachment.write(values)
