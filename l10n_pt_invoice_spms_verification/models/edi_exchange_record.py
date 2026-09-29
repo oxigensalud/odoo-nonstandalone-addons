@@ -1,4 +1,5 @@
 # Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 import re
@@ -256,9 +257,9 @@ class EdiExchangeRecord(models.Model):
             self._l10n_pt_spms_verification_receive_error(
                 _(
                     "The CCF did not answer within %(seconds)s seconds. This "
-                    "says nothing about the invoice or its data; the next "
-                    "hourly pass asks again on its own. Technical detail: "
-                    "%(detail)s"
+                    "says nothing about the invoice or its data; the next pass "
+                    "of the scheduled action asks again on its own. Technical "
+                    "detail: %(detail)s"
                 )
                 % {"seconds": REQUEST_TIMEOUT, "detail": type(err).__name__},
                 exception=err,
@@ -271,8 +272,8 @@ class EdiExchangeRecord(models.Model):
                 _(
                     "The CCF web service could not be reached (connection "
                     "problem). This says nothing about the invoice or its "
-                    "data; the next hourly pass asks again on its own. "
-                    "Technical detail: %(detail)s"
+                    "data; the next pass of the scheduled action asks again on "
+                    "its own. Technical detail: %(detail)s"
                 )
                 % {"detail": type(err).__name__},
                 exception=err,
@@ -295,8 +296,8 @@ class EdiExchangeRecord(models.Model):
                 message = _(
                     "The CCF answered with a server error (%(status)s) and no "
                     "usable content. This says nothing about the invoice or "
-                    "its data; the next hourly pass asks again on its own. "
-                    "Technical detail: %(detail)s."
+                    "its data; the next pass of the scheduled action asks again "
+                    "on its own. Technical detail: %(detail)s."
                 )
             else:
                 message = _(

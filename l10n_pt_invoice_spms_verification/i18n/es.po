@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 14.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 10:17+0000\n"
-"PO-Revision-Date: 2026-09-27 10:17+0000\n"
+"POT-Creation-Date: 2026-09-29 07:39+0000\n"
+"PO-Revision-Date: 2026-09-29 07:39+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es\n"
@@ -840,12 +840,12 @@ msgstr "Listo"
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_form
 msgid ""
 "Ready for generation: press Retry on the exchange record; the EDI input "
-"action processes the document again at its next hourly pass and generates "
-"the note then."
+"action processes the document again at its next pass and generates the note "
+"then."
 msgstr ""
 "Listo para generar: pulse Retry en el registro de intercambio; la acción de "
-"entrada EDI vuelve a procesar el documento en la siguiente pasada horaria y "
-"entonces genera la nota."
+"entrada EDI vuelve a procesar el documento en la siguiente pasada y entonces"
+" genera la nota."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__state
@@ -1007,12 +1007,13 @@ msgstr ""
 #, python-format
 msgid ""
 "The CCF answered with a server error (%(status)s) and no usable content. "
-"This says nothing about the invoice or its data; the next hourly pass asks "
-"again on its own. Technical detail: %(detail)s."
+"This says nothing about the invoice or its data; the next pass of the "
+"scheduled action asks again on its own. Technical detail: %(detail)s."
 msgstr ""
 "El CCF ha respondido con un error de servidor (%(status)s) y sin contenido "
 "utilizable. Esto no dice nada de la factura ni de sus datos; la siguiente "
-"pasada horaria vuelve a preguntar por sí sola. Detalle técnico: %(detail)s."
+"pasada de la acción planificada vuelve a preguntar por sí sola. Detalle "
+"técnico: %(detail)s."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
@@ -1032,12 +1033,12 @@ msgstr ""
 #, python-format
 msgid ""
 "The CCF did not answer within %(seconds)s seconds. This says nothing about "
-"the invoice or its data; the next hourly pass asks again on its own. "
-"Technical detail: %(detail)s"
+"the invoice or its data; the next pass of the scheduled action asks again on"
+" its own. Technical detail: %(detail)s"
 msgstr ""
 "El CCF no ha respondido en %(seconds)s segundos. Esto no dice nada de la "
-"factura ni de sus datos; la siguiente pasada horaria vuelve a preguntar por "
-"sí sola. Detalle técnico: %(detail)s"
+"factura ni de sus datos; la siguiente pasada de la acción planificada vuelve"
+" a preguntar por sí sola. Detalle técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
@@ -1064,12 +1065,13 @@ msgstr ""
 #, python-format
 msgid ""
 "The CCF web service could not be reached (connection problem). This says "
-"nothing about the invoice or its data; the next hourly pass asks again on "
-"its own. Technical detail: %(detail)s"
+"nothing about the invoice or its data; the next pass of the scheduled action"
+" asks again on its own. Technical detail: %(detail)s"
 msgstr ""
 "No se ha podido contactar con el servicio web del CCF (problema de "
 "conexión). Esto no dice nada de la factura ni de sus datos; la siguiente "
-"pasada horaria vuelve a preguntar por sí sola. Detalle técnico: %(detail)s"
+"pasada de la acción planificada vuelve a preguntar por sí sola. Detalle "
+"técnico: %(detail)s"
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/edi_exchange_record.py:0
@@ -1083,13 +1085,13 @@ msgid ""
 "The EDI exchange record that received the verification document this result "
 "comes from and processed it. A result held in Error, or reopened by "
 "accounting, is generated again by pressing Retry on that record: the EDI "
-"input action processes the stored document again at its next hourly pass."
+"input action processes the stored document again at its next pass."
 msgstr ""
 "El registro de intercambio EDI que recibió el documento de verificación del "
 "que procede este resultado y lo procesó. Un resultado retenido en Error, o "
 "reabierto por contabilidad, se vuelve a generar pulsando Retry en ese "
 "registro: la acción de entrada EDI vuelve a procesar el documento en la "
-"siguiente pasada horaria."
+"siguiente pasada."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.constraint,message:l10n_pt_invoice_spms_verification.constraint_res_company_spms_adjustment_limit_positive
@@ -1371,11 +1373,11 @@ msgstr ""
 msgid ""
 "The verification result of %s is ready for generation again: press Retry on "
 "its exchange record; the EDI input action generates the note at its next "
-"hourly pass."
+"pass."
 msgstr ""
 "El resultado de verificación de %s vuelve a estar listo para generar: pulse "
 "Retry en su registro de intercambio; la acción de entrada EDI genera la nota"
-" en la siguiente pasada horaria."
+" en la siguiente pasada."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1506,14 +1508,14 @@ msgstr ""
 msgid ""
 "Why the automatic note generation of this result failed; the result is held "
 "in Error until the cause is fixed and Retry is pressed on its exchange "
-"record: the EDI input action processes the document again at its next hourly"
-" pass. Other results of the same batch are never dragged along."
+"record: the EDI input action processes the document again at its next pass. "
+"Other results of the same batch are never dragged along."
 msgstr ""
 "Por qué falló la generación automática de la nota de este resultado; el "
 "resultado queda retenido en Error hasta que se corrige la causa y se pulsa "
 "Retry en su registro de intercambio: la acción de entrada EDI vuelve a "
-"procesar el documento en la siguiente pasada horaria. Los demás resultados "
-"del mismo lote nunca se arrastran."
+"procesar el documento en la siguiente pasada. Los demás resultados del mismo"
+" lote nunca se arrastran."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__error_message

@@ -848,8 +848,8 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertEqual(len(transport.envelopes), 1)
 
     def test_generic_input_sync_leaves_the_result_records_alone(self):
-        # a waiting result has no receive component: the hourly input
-        # sync of edi_oca must not pick it up, the module's own
+        # a waiting result has no receive component: the input sync
+        # of edi_oca must not pick it up, the module's own
         # scheduled action asks the CCF instead
         self._run_cron(_FakeTransport(_fault_response(NOT_VERIFIED_YET)))
         child = self._children()

@@ -1,9 +1,9 @@
 Results arrive on their own: the EDI record of every invoice sent to
 SPMS expects the verification result as its answer (its ACK); the credit
-and debit notes the same circuit sends expect nothing. An hourly
+and debit notes the same circuit sends expect nothing. A
 scheduled action (*SPMS: get verification results from the CCF*) creates
 that result record — *Waiting to be received* — at its first pass after
-the sending and asks the CCF about it every hour, in its own queue job
+the sending and asks the CCF about it at every pass, in its own queue job
 (*Queue → Jobs* lists them). *Not verified yet* (302) keeps it waiting; a
 verification document is received on it and processed from there (a
 document naming another invoice than the record's is rejected: *Error on
@@ -62,7 +62,7 @@ that result alone is held in *Error* with the reason on its form, and
 its exchange record — the result form links to it — in *Error on
 process* with the same reason; fix the cause and press *Retry* on that
 record: the stored document is processed again at the next pass of the
-hourly input action of the EDI framework, and the note is generated
+input action of the EDI framework, and the note is generated
 then. The rest of the batch is never dragged along. A
 prescription the verification priced above the billed amount (a negative
 difference) gets its own negative line, so the credit note nets it
