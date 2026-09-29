@@ -72,18 +72,18 @@ Configuration
   it until that note is cancelled.
 - The polling scheduled action (*SPMS: get verification results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
-  runs hourly out of the box. It creates the expected result record of
-  every posted invoice sent to SPMS that has no definitive verification
-  result yet, and asks the CCF about each waiting record in its own
-  queue job, with each company's own SPMS credentials, so a database
-  where nothing was sent makes no calls. Every answer of the CCF —
-  including a transport failure — is written on the result record; a job
-  fails only on a software failure, stays visible under *Queue → Jobs*,
-  and the next pass re-activates that same job rather than queueing
-  another. These jobs go behind every other waiting job, so a CCF that
-  does not answer holds up the rest of the queue for one question at
-  most. To pause the polling, deactivate the scheduled action — never
-  uninstall the module just to stop the calls.
+  runs at the interval set on it. It creates the expected result record
+  of every posted invoice sent to SPMS that has no definitive
+  verification result yet, and asks the CCF about each waiting record in
+  its own queue job, with each company's own SPMS credentials, so a
+  database where nothing was sent makes no calls. Every answer of the
+  CCF — including a transport failure — is written on the result record;
+  a job fails only on a software failure, stays visible under *Queue →
+  Jobs*, and the next pass re-activates that same job rather than
+  queueing another. These jobs go behind every other waiting job, so a
+  CCF that does not answer holds up the rest of the queue for one
+  question at most. To pause the polling, deactivate the scheduled
+  action — never uninstall the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page of the
   company form, visible to users with *Administration / Settings*; 0.01
   by default): the largest difference, taxes included, between the
@@ -102,10 +102,10 @@ Usage
 
 Results arrive on their own: the EDI record of every invoice sent to
 SPMS expects the verification result as its answer (its ACK); the credit
-and debit notes the same circuit sends expect nothing. An hourly
-scheduled action (*SPMS: get verification results from the CCF*) creates
-that result record — *Waiting to be received* — at its first pass after
-the sending and asks the CCF about it every hour, in its own queue job
+and debit notes the same circuit sends expect nothing. A scheduled
+action (*SPMS: get verification results from the CCF*) creates that
+result record — *Waiting to be received* — at its first pass after the
+sending and asks the CCF about it at every pass, in its own queue job
 (*Queue → Jobs* lists them). *Not verified yet* (302) keeps it waiting;
 a verification document is received on it and processed from there (a
 document naming another invoice than the record's is rejected: *Error on
@@ -163,25 +163,25 @@ adjustment limit), that result alone is held in *Error* with the reason
 on its form, and its exchange record — the result form links to it — in
 *Error on process* with the same reason; fix the cause and press *Retry*
 on that record: the stored document is processed again at the next pass
-of the hourly input action of the EDI framework, and the note is
-generated then. The rest of the batch is never dragged along. A
-prescription the verification priced above the billed amount (a negative
-difference) gets its own negative line, so the credit note nets it
-against the rejected claims exactly as the official value does; the
-result form shows their sum as *Negative Claims*. The claim bases come
-from the verification document itself, so the draft can only differ from
-the official value by the rounding of the tax, which the CCF computes
-once on the invoice total: that cent is written on the tax line of the
-draft, the same correction an accountant would pencil on the tax journal
-item, with no extra line, so the total matches the official value
-exactly. A residual beyond the *SPMS Adjustment Limit* of the company
-(0.01 by default) holds the result in *Error* with the reason, because
-it reveals a discrepancy to review rather than rounding noise: a claim
-priced differently (the *Claims Amount* of the result then differs from
-its official totals before tax), or a company rounding its taxes per
-line; raise the limit only when the difference is legitimate and
-strictly necessary. Drafts stay drafts: the accounting team reviews and
-posts them; the EDI circuit takes over from there.
+of the input action of the EDI framework, and the note is generated
+then. The rest of the batch is never dragged along. A prescription the
+verification priced above the billed amount (a negative difference) gets
+its own negative line, so the credit note nets it against the rejected
+claims exactly as the official value does; the result form shows their
+sum as *Negative Claims*. The claim bases come from the verification
+document itself, so the draft can only differ from the official value by
+the rounding of the tax, which the CCF computes once on the invoice
+total: that cent is written on the tax line of the draft, the same
+correction an accountant would pencil on the tax journal item, with no
+extra line, so the total matches the official value exactly. A residual
+beyond the *SPMS Adjustment Limit* of the company (0.01 by default)
+holds the result in *Error* with the reason, because it reveals a
+discrepancy to review rather than rounding noise: a claim priced
+differently (the *Claims Amount* of the result then differs from its
+official totals before tax), or a company rounding its taxes per line;
+raise the limit only when the difference is legitimate and strictly
+necessary. Drafts stay drafts: the accounting team reviews and posts
+them; the EDI circuit takes over from there.
 
 A negative official value — the verification computed more than the
 invoice billed — calls for a debit note instead. The module generates it

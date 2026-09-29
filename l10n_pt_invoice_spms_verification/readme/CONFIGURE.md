@@ -7,7 +7,7 @@
   is cancelled.
 - The polling scheduled action (*SPMS: get verification results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
-  runs hourly out of the box. It creates the expected result record of
+  runs at the interval set on it. It creates the expected result record of
   every posted invoice sent to SPMS that has no definitive verification result
   yet, and asks the CCF about each waiting record in its own queue job,
   with each company's own SPMS credentials, so a database where nothing

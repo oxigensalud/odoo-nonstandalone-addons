@@ -5,3 +5,4 @@ from . import test_spms_verification_transport
 from . import test_spms_invoice_verification_error_type
 from . import test_account_move_access
 from . import test_spms_verification_fiscal_document
+from . import test_spms_verification_texts
