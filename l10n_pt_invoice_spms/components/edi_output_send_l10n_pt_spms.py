@@ -1,36 +1,41 @@
 # Copyright 2026 Dixmit
 # @author: Enric Tobella
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2026 NuoBiT Solutions SL - Deniz Gallo <dgallo@nuobit.com>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-import base64
-import logging
-from uuid import uuid4
+from zeep import Client
+from zeep.exceptions import Error as ZeepError
+from zeep.exceptions import Fault, TransportError
+from zeep.transports import Transport
+from zeep.wsse.username import UsernameToken
 
-import requests
-from lxml import etree
-
-from odoo import _, fields
+from odoo import _
 from odoo.exceptions import UserError
+from odoo.tools.misc import file_path
 
 from odoo.addons.component.core import Component
 
-_logger = logging.getLogger(__name__)
-
-WSU_NS = (
-    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
-)
-WSSE_NS = (
-    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-)
-SOAPENV_NS = "http://schemas.xmlsoap.org/soap/envelope/"
-FACTURA_NS = "http://facturaElectronica.service.cc.ccf/"
+REQUEST_TIMEOUT = 60
 
 
-WSDL = "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDWS"
-WSDL_TEST = (
-    "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDServiceDEV"
-)
+class SpmsTransport(Transport):
+    """zeep's transport, remembering the last answer of the CCF: its HTTP
+    status and its body as received. zeep drops both once it has
+    interpreted the answer, and they are what an error must show for the
+    reader to see what the CCF actually said.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_status = None
+        self.last_body = None
+
+    def post(self, address, message, headers):
+        response = super().post(address, message, headers)
+        self.last_status = response.status_code
+        self.last_body = response.text
+        return response
 
 
 class EdiOutputSendL10nPtSpms(Component):
@@ -40,84 +45,82 @@ class EdiOutputSendL10nPtSpms(Component):
     _backend_type = "l10n_pt_spms"
     _action = "send"
 
+    def _client(self, company):
+        """One zeep client per sending: the WSSE token carries the portal
+        credentials of the invoice's company.
+
+        The shipped WSDL is the live one with its write path fixed (see
+        api/FacturaCRDWS.wsdl): the live file declares the credit note
+        request without its <nota> wrapper, omits the <return> wrapper
+        of the answers, points to an internal host and types the base64
+        document as a plain string — zeep against the raw live WSDL
+        cannot work.
+        """
+        wsdl = file_path("l10n_pt_invoice_spms/api/FacturaCRDWS.wsdl")
+        return Client(
+            wsdl,
+            wsse=UsernameToken(company.spms_username, company.spms_password),
+            transport=SpmsTransport(
+                timeout=REQUEST_TIMEOUT, operation_timeout=REQUEST_TIMEOUT
+            ),
+        )
+
     def send(self):
         invoice = self.exchange_record.record
-        data = self.exchange_record._get_file_content().encode()
+        document = self.exchange_record._get_file_content(as_bytes=True)
         vat = invoice.company_id.vat
         if vat and len(vat) >= 11:
             vat = vat[-9:]
-        root = etree.Element(
-            f"{{{SOAPENV_NS}}}Envelope",
-            nsmap={"soapenv": SOAPENV_NS, "fac": FACTURA_NS},
-        )
-        header = etree.SubElement(root, f"{{{SOAPENV_NS}}}Header")
-        security = etree.SubElement(
-            header, f"{{{WSSE_NS}}}Security", nsmap={"wsse": WSSE_NS, "wsu": WSU_NS}
-        )
-        security.set(etree.QName(SOAPENV_NS, "mustUnderstand"), "1")
-        username_token = etree.SubElement(security, f"{{{WSSE_NS}}}UsernameToken")
-        username_token.set(
-            etree.QName(WSU_NS, "Id"),
-            f"UsernameToken-{uuid4()}",
-        )
-        username = etree.SubElement(username_token, f"{{{WSSE_NS}}}Username")
-        username.text = invoice.company_id.spms_username
-        password = etree.SubElement(username_token, f"{{{WSSE_NS}}}Password")
-        password.set(
-            "Type",
-            "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText",  # noqa: B950
-        )
-        password.text = invoice.company_id.spms_password
-        body = etree.SubElement(root, f"{{{SOAPENV_NS}}}Body")
-        if not invoice.reversed_entry_id:
-            action = etree.SubElement(
-                body, f"{{{FACTURA_NS}}}submeterFacturaElectronicaCRD"
-            )
-            factura = etree.SubElement(action, "factura")
-        else:
-            action = etree.SubElement(body, f"{{{FACTURA_NS}}}submeterNotaCredDebCRD")
-            factura = etree.SubElement(action, "nota")
-
-        etree.SubElement(factura, "areaConferencia").text = "3"
-        etree.SubElement(
-            factura, "codigoPrestador"
-        ).text = invoice.partner_id.sudo().spms_assigned_id
-        etree.SubElement(factura, "dataFactura").text = fields.Date.to_string(
-            (invoice.reversed_entry_id or invoice).invoice_date
-        )
-        etree.SubElement(factura, "nif").text = vat
-        etree.SubElement(factura, "numeroFactura").text = (
-            invoice.reversed_entry_id or invoice
-        )._get_spms_invoice_number()
-        if not invoice.reversed_entry_id:
-            etree.SubElement(factura, "ficheiroComprimido").text = "N"
-        else:
-            etree.SubElement(factura, "tipoNota").text = "C"
-            etree.SubElement(
-                factura, "numeroNota"
-            ).text = invoice._get_spms_invoice_number()
-        etree.SubElement(factura, "documento").text = base64.b64encode(data).decode(
-            "ascii"
-        )
-        xml = etree.tostring(root, encoding="utf-8", xml_declaration=False)
-        response = requests.post(
-            WSDL,
-            data=xml.decode("utf-8"),
-            headers={
-                "Content-Type": "text/xml; charset=utf-8",
-                "SOAPAction": "submeterFacturaElectronicaCRD",
-            },
-            timeout=60,
-        )
+        original = invoice.reversed_entry_id or invoice
+        identification = {
+            "areaConferencia": 3,
+            "codigoPrestador": invoice.partner_id.sudo().spms_assigned_id,
+            "dataFactura": original.invoice_date,
+            "nif": vat,
+            "numeroFactura": original._get_spms_invoice_number(),
+        }
+        client = self._client(invoice.company_id)
+        transport = client.transport
         try:
-            response.raise_for_status()
-        except requests.HTTPError as err:
-            err.args = (f"{err.args[0]}\nSPMS response body:\n{response.text}",)
+            if invoice.reversed_entry_id:
+                answer = client.service.submeterNotaCredDebCRD(
+                    nota={
+                        **identification,
+                        "tipoNota": "C",
+                        "numeroNota": invoice._get_spms_invoice_number(),
+                        "documento": document,
+                    }
+                )
+            else:
+                # <factura> types the nif as xsd:long; <nota> keeps a string
+                answer = client.service.submeterFacturaElectronicaCRD(
+                    factura={
+                        **identification,
+                        "nif": int(vat) if vat and vat.isdigit() else None,
+                        "documento": document,
+                        "ficheiroComprimido": "N",
+                    }
+                )
+        except (Fault, TransportError) as err:
+            # an HTTP error answer: retried by the queue as the HTTPError
+            # of the hand-built envelope was (see models/edi_backend.py),
+            # with the answer in the error
+            err.args = (f"{err.args[0]}\nSPMS response body:\n{transport.last_body}",)
             raise
-        response_xml = etree.fromstring(response.content)
-        aceite = response_xml.xpath("//aceite")
-        if not aceite or aceite[0].text != "S":
+        except ZeepError as err:
+            # HTTP 200, but the answer does not follow the shipped WSDL:
+            # neither an acceptance nor a refusal
             raise UserError(
-                _("Invoice not accepted: %s") % response.content.decode("utf-8")
-            )
-        return response.content.decode("utf-8")
+                _(
+                    "The CCF answer could not be interpreted (HTTP %(status)s, "
+                    "%(detail)s).\nSPMS response body:\n%(body)s"
+                )
+                % {
+                    "status": transport.last_status,
+                    "detail": type(err).__name__,
+                    "body": transport.last_body,
+                }
+            ) from err
+        if answer is None or answer.aceite != "S":
+            raise UserError(_("Invoice not accepted: %s") % transport.last_body)
+        return transport.last_body

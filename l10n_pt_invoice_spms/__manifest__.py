@@ -16,7 +16,7 @@
         "edi_oca",
         "l10n_pt_spms",
     ],
-    "external_dependencies": {"python": ["OpenSSL", "xmlsig"]},
+    "external_dependencies": {"python": ["OpenSSL", "xmlsig", "zeep"]},
     "data": [
         "views/menu.xml",
         "views/account_move.xml",

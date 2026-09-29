@@ -373,6 +373,12 @@ ul.auto-toc {
 <p>Generate invoice for SPMS</p>
 <p>Once SPMS has accepted an invoice, it can no longer be cancelled or
 reset to draft; corrections go through a credit note.</p>
+<p>Invoices and credit notes are submitted to the CCF web service
+(FacturaCRDWS) with a zeep client built from the WSDL shipped in
+<tt class="docutils literal">api/FacturaCRDWS.wsdl</tt>. The WSDL SPMS publishes cannot be used as is;
+the header of that file documents every correction and its evidence, and
+the WSDL as served by SPMS on the date in its name sits next to it for
+comparison.</p>
 <p><strong>Table of contents</strong></p>
 <div class="contents local topic" id="contents">
 <ul class="simple">
