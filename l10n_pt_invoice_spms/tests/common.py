@@ -3,6 +3,8 @@
 
 from datetime import date
 
+from lxml import etree
+
 from odoo.tests.common import SavepointCase
 
 
@@ -13,6 +15,7 @@ class SpmsInvoiceCase(SavepointCase):
         cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
         cls.company = cls.env.company
         cls.company.country_id = cls.env.ref("base.pt")
+        cls.company.vat = "PT500000000"
         cls.spanish_company = cls.env["res.company"].create(
             {
                 "name": "SPMS Spanish test company",
@@ -21,10 +24,15 @@ class SpmsInvoiceCase(SavepointCase):
             }
         )
         cls.partner = cls.env["res.partner"].create(
-            {"name": "SPMS shared test customer", "spms_information": True}
+            {
+                "name": "SPMS shared test customer",
+                "spms_information": True,
+                "spms_assigned_id": "1234567",
+            }
         )
+        cls.lot = cls.env["spms.lot"].create({"name": "SPMS test lot", "code": "TST"})
         cls.product = cls.env["product.product"].create(
-            {"name": "SPMS test service", "type": "service"}
+            {"name": "SPMS test service", "type": "service", "spms_lot_id": cls.lot.id}
         )
         cls.journals = {}
         cls.income_accounts = {}
@@ -87,8 +95,12 @@ class SpmsInvoiceCase(SavepointCase):
         cls.exchange_type = cls.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
 
     @classmethod
-    def _create_invoice(cls, company=None):
+    def _create_invoice(cls, company=None, invoice_date=None, accounting_date=None):
         company = company if company is not None else cls.company
+        invoice_date = invoice_date if invoice_date is not None else date(2026, 5, 31)
+        accounting_date = (
+            accounting_date if accounting_date is not None else invoice_date
+        )
         move = (
             cls.env["account.move"]
             .with_company(company)
@@ -97,7 +109,8 @@ class SpmsInvoiceCase(SavepointCase):
                     "move_type": "out_invoice",
                     "partner_id": cls.partner.id,
                     "journal_id": cls.journals[company.id].id,
-                    "invoice_date": date(2026, 5, 31),
+                    "invoice_date": invoice_date,
+                    "date": accounting_date,
                     "invoice_line_ids": [
                         (
                             0,
@@ -108,6 +121,8 @@ class SpmsInvoiceCase(SavepointCase):
                                 "quantity": 1,
                                 "price_unit": 100.0,
                                 "tax_ids": [(6, 0, cls.taxes[company.id].ids)],
+                                "spms_start_date": date(2026, 5, 1),
+                                "spms_end_date": date(2026, 5, 31),
                             },
                         )
                     ],
@@ -116,8 +131,31 @@ class SpmsInvoiceCase(SavepointCase):
         )
         return move
 
+    @classmethod
+    def _create_credit_note(cls, invoice, note_date):
+        wizard = cls.env["account.move.reversal"].create(
+            {
+                "move_ids": [(6, 0, invoice.ids)],
+                "refund_method": "refund",
+                "date_mode": "custom",
+                "date": note_date,
+                "reason": "SPMS test reversal",
+                "company_id": invoice.company_id.id,
+            }
+        )
+        wizard.reverse_moves()
+        return wizard.new_move_ids
+
     def _sending_record(self, move, state):
         return self.backend.create_record(
             "l10n_pt_spms",
             {"edi_exchange_state": state, "model": "account.move", "res_id": move.id},
         )
+
+    def _document(self, move):
+        """The UBL document the sender builds for a move, before signing."""
+        edi_format = self.env.ref("l10n_pt_invoice_spms.spms_edi_format")
+        builder = edi_format._get_xml_builder(move.company_id)
+        xml_content, errors = builder._export_invoice(move)
+        self.assertEqual(errors, set())
+        return etree.fromstring(xml_content)
