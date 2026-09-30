@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Copyright 2025 Dixmit
+     Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="spms_backend_type" model="edi.backend.type">
+        <field name="name">SPMS Backend type</field>
+        <field name="code">l10n_pt_spms</field>
+    </record>
+    <record id="spms_backend" model="edi.backend">
+        <field name="name">SPMS</field>
+        <field name="backend_type_id" ref="spms_backend_type" />
+        <field name="output_sent_processed_auto" eval="True" />
+    </record>
+    <record id="spms_exchange_type" model="edi.exchange.type">
+        <field name="backend_id" ref="spms_backend" />
+        <field name="name">SPMS Electronic invoice</field>
+        <field name="code">l10n_pt_spms</field>
+        <field name="backend_type_id" ref="spms_backend_type" />
+        <field name="direction">output</field>
+        <field name="exchange_filename_pattern">{record_name}--{dt}</field>
+        <field name="exchange_file_ext">xml</field>
+        <field name="exchange_file_auto_generate" eval="True" />
+        <field
+            name="generate_model_id"
+            ref="edi_component_oca.model_edi_oca_component_handler"
+        />
+        <field
+            name="send_model_id"
+            ref="edi_component_oca.model_edi_oca_component_handler"
+        />
+    </record>
+    <record id="spms_face_exchange_type_rule" model="edi.exchange.type.rule">
+        <field name="name">Default</field>
+        <field name="type_id" ref="spms_exchange_type" />
+        <field name="model_id" ref="account.model_account_move" />
+        <field
+            name="enable_domain"
+        >[('state', '!=', 'draft'), ('partner_id', '!=', False), ('partner_id.spms_information', '=', True),('move_type', 'in', ['out_invoice', 'out_refund'])]</field>
+        <field
+            name="enable_snippet"
+        >result = record.company_id._is_spms_company() and not record._has_exchange_record(exchange_type)</field>
+    </record>
+</odoo>
