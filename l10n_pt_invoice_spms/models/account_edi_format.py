@@ -5,6 +5,21 @@ from datetime import timedelta
 
 from odoo import models
 
+# Note required by the CCF DebitNote profile
+DEBIT_NOTE_NOTE = (
+    "Nota de Débito %(note)s para rectificação à fatura %(invoice)s de %(date)s"
+)
+# the core builder renders no DebitNote, the module's templates do
+INVOICE_TEMPLATE_VALS = {
+    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
+}
+DEBIT_NOTE_TEMPLATE_VALS = {
+    "main_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNote",
+    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNoteType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNoteLine",
+}
+
 
 class AccountEdiFormat(models.Model):
 
@@ -23,7 +38,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
     _description = "SPMS CIUS PT 2.11 XML Builder"
 
     def _get_invoice_period_vals_list(self, invoice):
-        origin_invoice = invoice.reversed_entry_id or invoice.debit_origin_id or invoice
+        origin_invoice = invoice._spms_origin_invoice() or invoice
         start_date = min(origin_invoice.invoice_line_ids.mapped("spms_start_date"))
         start_date = start_date.replace(day=1)
         if start_date:
@@ -52,9 +67,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
 
         vals.update(
             {
-                "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
                 "InvoiceExtension_spms": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms",  # noqa: B950
-                "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
                 "PartyType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_PartyType",
                 "AddressType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_AddressType",
                 "TaxCategoryType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType",  # noqa: B950
@@ -145,7 +158,6 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                     "numero_lotes": len(lots),
                     "lotes": lotes,
                 },
-                "is_spms_invoice": not invoice.reversed_entry_id,
                 "profile_id": False,
                 "ubl_version_id": "UBL 2.0 CS (2006.10) + SIC (2007.03)",
                 "customization_id": "1.0",
@@ -154,17 +166,51 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                 "customer_assigned_account_id": invoice.partner_id.spms_assigned_id,
             }
         )
-        if not vals["vals"]["is_spms_invoice"]:
-            # the CCF holds the invoice under its invoice date
-            vals["vals"].update(
-                {
-                    "billing_reference_vals": {
-                        "id": invoice.reversed_entry_id._get_spms_invoice_number(),
-                        "issue_date": invoice.reversed_entry_id.invoice_date.isoformat(),
-                    }
-                }
+        note_type = invoice._spms_note_type()
+        if note_type is None:
+            template_vals = INVOICE_TEMPLATE_VALS
+            document_vals = {"is_spms_invoice": True}
+        elif note_type == "C":
+            template_vals = INVOICE_TEMPLATE_VALS
+            document_vals = {
+                "is_spms_invoice": False,
+                "billing_reference_vals": self._get_billing_reference_vals(
+                    invoice._spms_origin_invoice()
+                ),
+            }
+        elif note_type == "D":
+            billing_reference_vals = self._get_billing_reference_vals(
+                invoice._spms_origin_invoice()
             )
+            template_vals = DEBIT_NOTE_TEMPLATE_VALS
+            document_vals = {
+                "billing_reference_vals": billing_reference_vals,
+                "note_vals": self._get_debit_note_note_vals_list(
+                    invoice, billing_reference_vals
+                ),
+            }
+        else:
+            raise ValueError("unknown SPMS note type %r" % (note_type,))
+        vals.update(template_vals)
+        vals["vals"].update(document_vals)
         return vals
+
+    def _get_billing_reference_vals(self, origin_invoice):
+        # the CCF holds the invoice under its invoice date
+        return {
+            "id": origin_invoice._get_spms_invoice_number(),
+            "issue_date": origin_invoice.invoice_date.isoformat(),
+        }
+
+    def _get_debit_note_note_vals_list(self, invoice, billing_reference_vals):
+        return [
+            DEBIT_NOTE_NOTE
+            % {
+                "note": invoice._get_spms_invoice_number(),
+                "invoice": billing_reference_vals["id"],
+                "date": billing_reference_vals["issue_date"],
+            }
+        ]
 
     def _get_invoice_line_price_vals(self, line):
         result = super()._get_invoice_line_price_vals(line)
