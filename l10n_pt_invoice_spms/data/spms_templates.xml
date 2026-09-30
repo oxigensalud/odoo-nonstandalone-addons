@@ -194,4 +194,126 @@
         </t>
     </template>
 
+    <template id="spms_cius_pt_211_DebitNote">
+        <DebitNote
+            xmlns="urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2"
+            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        >
+            <t t-call="{{InvoiceType_template}}" />
+        </DebitNote>
+    </template>
+
+    <!-- The DebitNote profile of the CCF specification: the header, the
+         invoice the nota rectifies, the parties, the tax total, the requested
+         total and one line per lot type. The signature extension is added by
+         the generate component. -->
+    <template id="spms_cius_pt_211_DebitNoteType">
+        <t
+            xmlns="urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2"
+            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        >
+            <cbc:UBLVersionID t-esc="vals.get('ubl_version_id')" />
+            <cbc:CustomizationID t-esc="vals.get('customization_id')" />
+            <cbc:ID t-esc="vals.get('id')" />
+            <cbc:IssueDate t-esc="vals.get('issue_date')" />
+            <t t-foreach="vals.get('note_vals', [])" t-as="note">
+                <cbc:Note t-esc="note" />
+            </t>
+            <cbc:DocumentCurrencyCode t-esc="invoice.currency_id.name.upper()" />
+            <cac:BillingReference>
+                <cac:InvoiceDocumentReference>
+                    <cbc:ID t-esc="vals['billing_reference_vals'].get('id')" />
+                    <cbc:IssueDate
+                        t-esc="vals['billing_reference_vals'].get('issue_date')"
+                    />
+                </cac:InvoiceDocumentReference>
+            </cac:BillingReference>
+            <cac:AccountingSupplierParty>
+                <cbc:CustomerAssignedAccountID
+                    t-esc="vals.get('customer_assigned_account_id')"
+                />
+                <t
+                    t-set="accounting_supplier_vals"
+                    t-value="vals.get('accounting_supplier_party_vals', {})"
+                />
+                <cac:Party>
+                    <t t-call="{{PartyType_template}}">
+                        <t
+                            t-set="vals"
+                            t-value="accounting_supplier_vals.get('party_vals', {})"
+                        />
+                    </t>
+                </cac:Party>
+            </cac:AccountingSupplierParty>
+            <cac:AccountingCustomerParty>
+                <t
+                    t-set="accounting_customer_vals"
+                    t-value="vals.get('accounting_customer_party_vals', {})"
+                />
+                <cac:Party>
+                    <t t-call="{{PartyType_template}}">
+                        <t
+                            t-set="vals"
+                            t-value="accounting_customer_vals.get('party_vals', {})"
+                        />
+                    </t>
+                </cac:Party>
+            </cac:AccountingCustomerParty>
+            <t t-foreach="vals.get('tax_total_vals', [])" t-as="foreach_vals">
+                <cac:TaxTotal>
+                    <t t-call="{{TaxTotalType_template}}">
+                        <t t-set="vals" t-value="foreach_vals" />
+                    </t>
+                </cac:TaxTotal>
+            </t>
+            <!-- the profile's PayableAmount is the total of the nota, not the
+                 amount left to pay -->
+            <cac:RequestedMonetaryTotal>
+                <t
+                    t-set="monetary_tot_vals"
+                    t-value="vals.get('legal_monetary_total_vals', {})"
+                />
+                <cbc:TaxExclusiveAmount
+                    t-att-currencyID="monetary_tot_vals['currency'].name"
+                    t-esc="format_float(monetary_tot_vals.get('tax_exclusive_amount'), monetary_tot_vals.get('currency_dp'))"
+                />
+                <cbc:PayableAmount
+                    t-att-currencyID="monetary_tot_vals['currency'].name"
+                    t-esc="format_float(monetary_tot_vals.get('tax_inclusive_amount'), monetary_tot_vals.get('currency_dp'))"
+                />
+            </cac:RequestedMonetaryTotal>
+            <t t-foreach="vals.get('invoice_line_vals', [])" t-as="foreach_vals">
+                <cac:DebitNoteLine>
+                    <t t-call="{{InvoiceLineType_template}}">
+                        <t t-set="vals" t-value="foreach_vals" />
+                    </t>
+                </cac:DebitNoteLine>
+            </t>
+        </t>
+    </template>
+
+    <template id="spms_cius_pt_211_DebitNoteLine">
+        <t
+            xmlns="urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2"
+            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        >
+            <cbc:ID t-esc="vals.get('id')" />
+            <cbc:DebitedQuantity>1</cbc:DebitedQuantity>
+            <cbc:LineExtensionAmount
+                t-att-currencyID="vals['currency'].name"
+                t-esc="format_float(vals.get('line_extension_amount'), vals.get('currency_dp'))"
+            />
+            <t t-foreach="vals.get('tax_total_vals', [])" t-as="foreach_vals">
+                <cac:TaxTotal>
+                    <t t-call="{{TaxTotalType_template}}">
+                        <t t-set="vals" t-value="foreach_vals" />
+                    </t>
+                </cac:TaxTotal>
+            </t>
+        </t>
+    </template>
+
 </odoo>

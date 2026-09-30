@@ -94,7 +94,8 @@ class EdiOutputSendL10nPtSpms(Component):
         )
         password.text = invoice.company_id.spms_password
         body = etree.SubElement(root, f"{{{SOAPENV_NS}}}Body")
-        if not invoice.reversed_entry_id:
+        note_type = invoice._spms_note_type()
+        if note_type is None:
             action = etree.SubElement(
                 body, f"{{{FACTURA_NS}}}submeterFacturaElectronicaCRD"
             )
@@ -103,21 +104,22 @@ class EdiOutputSendL10nPtSpms(Component):
             action = etree.SubElement(body, f"{{{FACTURA_NS}}}submeterNotaCredDebCRD")
             factura = etree.SubElement(action, "nota")
 
+        origin_invoice = invoice._spms_origin_invoice() or invoice
         etree.SubElement(factura, "areaConferencia").text = "3"
         etree.SubElement(
             factura, "codigoPrestador"
         ).text = invoice.partner_id.sudo().spms_assigned_id
         etree.SubElement(factura, "dataFactura").text = fields.Date.to_string(
-            (invoice.reversed_entry_id or invoice).invoice_date
+            origin_invoice.invoice_date
         )
         etree.SubElement(factura, "nif").text = vat
-        etree.SubElement(factura, "numeroFactura").text = (
-            invoice.reversed_entry_id or invoice
-        )._get_spms_invoice_number()
-        if not invoice.reversed_entry_id:
+        etree.SubElement(
+            factura, "numeroFactura"
+        ).text = origin_invoice._get_spms_invoice_number()
+        if note_type is None:
             etree.SubElement(factura, "ficheiroComprimido").text = "N"
         else:
-            etree.SubElement(factura, "tipoNota").text = "C"
+            etree.SubElement(factura, "tipoNota").text = note_type
             etree.SubElement(
                 factura, "numeroNota"
             ).text = invoice._get_spms_invoice_number()

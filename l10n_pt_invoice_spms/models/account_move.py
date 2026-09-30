@@ -6,7 +6,7 @@ import re
 from odoo import _, fields, models
 from odoo.exceptions import UserError
 
-# once SPMS holds the invoice it stays posted; corrections go through a credit note
+# once SPMS holds the invoice it stays posted; corrections are one credit or debit note
 SPMS_ACCEPTED_STATES = ("output_sent", "output_sent_and_processed")
 
 
@@ -22,7 +22,8 @@ class AccountMove(models.Model):
                     raise UserError(
                         _(
                             "SPMS has accepted %(name)s, so it can no longer be "
-                            "cancelled or reset to draft. Issue a credit note instead."
+                            "cancelled or reset to draft. SPMS takes corrections of "
+                            "an invoice as one credit or debit note."
                         )
                         % {"name": move.name}
                     )
@@ -35,6 +36,46 @@ class AccountMove(models.Model):
             self.env.ref("l10n_pt_invoice_spms.spms_exchange_type"),
             extra_domain=[("edi_exchange_state", "in", SPMS_ACCEPTED_STATES)],
         )
+
+    def _spms_note_type(self):
+        """The kind of nota this move is for SPMS, as its ``tipoNota``: "C"
+        for a credit note, "D" for a debit note, None for an invoice."""
+        self.ensure_one()
+        if self.reversed_entry_id and self.debit_origin_id:
+            raise UserError(
+                _(
+                    "%(name)s both reverses %(reversed)s and debits %(debited)s, "
+                    "so it cannot be sent to SPMS as a credit or a debit note."
+                )
+                % {
+                    "name": self.name,
+                    "reversed": self.reversed_entry_id.name,
+                    "debited": self.debit_origin_id.name,
+                }
+            )
+        elif self.reversed_entry_id:
+            note_type = "C"
+        elif self.debit_origin_id:
+            note_type = "D"
+        else:
+            note_type = None
+        if note_type is not None:
+            origin = self._spms_origin_invoice()
+            if origin._spms_note_type() is not None:
+                raise UserError(
+                    _(
+                        "SPMS takes corrections of an invoice as one credit or debit "
+                        "note, so %(name)s cannot be sent: it corrects %(origin)s, "
+                        "which is itself a note."
+                    )
+                    % {"name": self.name, "origin": origin.name}
+                )
+        return note_type
+
+    def _spms_origin_invoice(self):
+        """The invoice this note regularizes; empty for an invoice."""
+        self.ensure_one()
+        return self.reversed_entry_id or self.debit_origin_id
 
     def _get_spms_invoice_number(self):
         """

@@ -5,10 +5,10 @@ from datetime import date
 
 from lxml import etree
 
-from odoo.tests.common import SavepointCase
+from odoo.addons.component.tests.common import SavepointComponentCase
 
 
-class SpmsInvoiceCase(SavepointCase):
+class SpmsInvoiceCase(SavepointComponentCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -16,6 +16,8 @@ class SpmsInvoiceCase(SavepointCase):
         cls.company = cls.env.company
         cls.company.country_id = cls.env.ref("base.pt")
         cls.company.vat = "PT500000000"
+        cls.company.spms_username = "test"
+        cls.company.spms_password = "test"
         cls.spanish_company = cls.env["res.company"].create(
             {
                 "name": "SPMS Spanish test company",
@@ -36,7 +38,6 @@ class SpmsInvoiceCase(SavepointCase):
         )
         cls.journals = {}
         cls.income_accounts = {}
-        cls.taxes = {}
         for company in cls.company + cls.spanish_company:
             accounts = cls.env["account.account"].with_company(company)
             income = accounts.create(
@@ -77,29 +78,38 @@ class SpmsInvoiceCase(SavepointCase):
             )
             cls.journals[company.id] = journal
             cls.income_accounts[company.id] = income
-            cls.taxes[company.id] = (
-                cls.env["account.tax"]
-                .with_company(company)
-                .create(
-                    {
-                        "name": "SPMS test sales tax",
-                        "type_tax_use": "sale",
-                        "amount_type": "percent",
-                        "amount": 23,
-                        "company_id": company.id,
-                    }
-                )
-            )
         cls.journal = cls.journals[cls.company.id]
         cls.backend = cls.env.ref("l10n_pt_invoice_spms.spms_backend")
         cls.exchange_type = cls.env.ref("l10n_pt_invoice_spms.spms_exchange_type")
 
     @classmethod
-    def _create_invoice(cls, company=None, invoice_date=None, accounting_date=None):
+    def _create_invoice(
+        cls,
+        company=None,
+        invoice_date=None,
+        accounting_date=None,
+        price_unit=None,
+        tax_rate=None,
+    ):
         company = company if company is not None else cls.company
         invoice_date = invoice_date if invoice_date is not None else date(2026, 5, 31)
         accounting_date = (
             accounting_date if accounting_date is not None else invoice_date
+        )
+        price_unit = price_unit if price_unit is not None else 100.0
+        tax_rate = tax_rate if tax_rate is not None else 23
+        tax = (
+            cls.env["account.tax"]
+            .with_company(company)
+            .create(
+                {
+                    "name": "SPMS test sales tax",
+                    "type_tax_use": "sale",
+                    "amount_type": "percent",
+                    "amount": tax_rate,
+                    "company_id": company.id,
+                }
+            )
         )
         move = (
             cls.env["account.move"]
@@ -119,8 +129,8 @@ class SpmsInvoiceCase(SavepointCase):
                                 "product_id": cls.product.id,
                                 "account_id": cls.income_accounts[company.id].id,
                                 "quantity": 1,
-                                "price_unit": 100.0,
-                                "tax_ids": [(6, 0, cls.taxes[company.id].ids)],
+                                "price_unit": price_unit,
+                                "tax_ids": [(6, 0, tax.ids)],
                                 "spms_start_date": date(2026, 5, 1),
                                 "spms_end_date": date(2026, 5, 31),
                             },
@@ -146,6 +156,18 @@ class SpmsInvoiceCase(SavepointCase):
         wizard.reverse_moves()
         return wizard.new_move_ids
 
+    @classmethod
+    def _create_debit_note(cls, invoice, note_date):
+        wizard = (
+            cls.env["account.debit.note"]
+            .with_context(active_model="account.move", active_ids=invoice.ids)
+            .create(
+                {"date": note_date, "reason": "SPMS test debit", "copy_lines": True}
+            )
+        )
+        action = wizard.create_debit()
+        return cls.env["account.move"].browse(action["res_id"])
+
     def _sending_record(self, move, state):
         return self.backend.create_record(
             "l10n_pt_spms",
@@ -159,3 +181,11 @@ class SpmsInvoiceCase(SavepointCase):
         xml_content, errors = builder._export_invoice(move)
         self.assertEqual(errors, set())
         return etree.fromstring(xml_content)
+
+    def _envelope(self, move):
+        """The SOAP envelope the sender would post for a move, around a
+        stand-in document."""
+        component = self.backend._get_component(
+            self._sending_record(move, "new"), "send"
+        )
+        return etree.fromstring(component._prepare_envelope(move, b"<Document/>"))
