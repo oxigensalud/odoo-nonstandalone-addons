@@ -155,11 +155,12 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             }
         )
         if not vals["vals"]["is_spms_invoice"]:
+            # the CCF holds the invoice under its invoice date
             vals["vals"].update(
                 {
                     "billing_reference_vals": {
                         "id": invoice.reversed_entry_id._get_spms_invoice_number(),
-                        "issue_date": invoice.reversed_entry_id.date.isoformat(),
+                        "issue_date": invoice.reversed_entry_id.invoice_date.isoformat(),
                     }
                 }
             )
