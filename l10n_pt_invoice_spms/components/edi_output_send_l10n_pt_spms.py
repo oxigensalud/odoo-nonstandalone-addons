@@ -42,7 +42,32 @@ class EdiOutputSendL10nPtSpms(Component):
 
     def send(self):
         invoice = self.exchange_record.record
-        data = self.exchange_record._get_file_content().encode()
+        document = self.exchange_record._get_file_content().encode()
+        envelope = self._prepare_envelope(invoice, document)
+        response = requests.post(
+            WSDL,
+            data=envelope.decode("utf-8"),
+            headers={
+                "Content-Type": "text/xml; charset=utf-8",
+                "SOAPAction": "submeterFacturaElectronicaCRD",
+            },
+        )
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            err.args = (f"{err.args[0]}\nSPMS response body:\n{response.text}",)
+            raise
+        response_xml = etree.fromstring(response.content)
+        aceite = response_xml.xpath("//aceite")
+        if not aceite or aceite[0].text != "S":
+            raise UserError(
+                _("Invoice not accepted: %s") % response.content.decode("utf-8")
+            )
+        return response.content.decode("utf-8")
+
+    def _prepare_envelope(self, invoice, document):
+        """Return the SOAP envelope that submits ``document``, the signed UBL
+        file of ``invoice``, to the CCF."""
         vat = invoice.company_id.vat
         if vat and len(vat) >= 11:
             vat = vat[-9:]
@@ -69,7 +94,8 @@ class EdiOutputSendL10nPtSpms(Component):
         )
         password.text = invoice.company_id.spms_password
         body = etree.SubElement(root, f"{{{SOAPENV_NS}}}Body")
-        if not invoice.reversed_entry_id:
+        note_type = invoice._spms_note_type()
+        if note_type is None:
             action = etree.SubElement(
                 body, f"{{{FACTURA_NS}}}submeterFacturaElectronicaCRD"
             )
@@ -78,45 +104,26 @@ class EdiOutputSendL10nPtSpms(Component):
             action = etree.SubElement(body, f"{{{FACTURA_NS}}}submeterNotaCredDebCRD")
             factura = etree.SubElement(action, "nota")
 
+        origin_invoice = invoice._spms_origin_invoice() or invoice
         etree.SubElement(factura, "areaConferencia").text = "3"
         etree.SubElement(
             factura, "codigoPrestador"
         ).text = invoice.partner_id.sudo().spms_assigned_id
         etree.SubElement(factura, "dataFactura").text = fields.Date.to_string(
-            (invoice.reversed_entry_id or invoice).invoice_date
+            origin_invoice.invoice_date
         )
         etree.SubElement(factura, "nif").text = vat
-        etree.SubElement(factura, "numeroFactura").text = (
-            invoice.reversed_entry_id or invoice
-        )._get_spms_invoice_number()
-        if not invoice.reversed_entry_id:
+        etree.SubElement(
+            factura, "numeroFactura"
+        ).text = origin_invoice._get_spms_invoice_number()
+        if note_type is None:
             etree.SubElement(factura, "ficheiroComprimido").text = "N"
         else:
-            etree.SubElement(factura, "tipoNota").text = "C"
+            etree.SubElement(factura, "tipoNota").text = note_type
             etree.SubElement(
                 factura, "numeroNota"
             ).text = invoice._get_spms_invoice_number()
-        etree.SubElement(factura, "documento").text = base64.b64encode(data).decode(
+        etree.SubElement(factura, "documento").text = base64.b64encode(document).decode(
             "ascii"
         )
-        xml = etree.tostring(root, encoding="utf-8", xml_declaration=False)
-        response = requests.post(
-            WSDL,
-            data=xml.decode("utf-8"),
-            headers={
-                "Content-Type": "text/xml; charset=utf-8",
-                "SOAPAction": "submeterFacturaElectronicaCRD",
-            },
-        )
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as err:
-            err.args = (f"{err.args[0]}\nSPMS response body:\n{response.text}",)
-            raise
-        response_xml = etree.fromstring(response.content)
-        aceite = response_xml.xpath("//aceite")
-        if not aceite or aceite[0].text != "S":
-            raise UserError(
-                _("Invoice not accepted: %s") % response.content.decode("utf-8")
-            )
-        return response.content.decode("utf-8")
+        return etree.tostring(root, encoding="utf-8", xml_declaration=False)

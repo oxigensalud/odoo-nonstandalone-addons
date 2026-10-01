@@ -5,7 +5,7 @@
 {
     "name": "L10n Pt Invoice Spms",
     "summary": """Send invoices to SPMS""",
-    "version": "14.0.1.3.1",
+    "version": "14.0.1.3.2",
     "license": "AGPL-3",
     "author": "Dixmit",
     "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
@@ -13,6 +13,7 @@
         "ptplus_edi",
         "edi_account_oca",
         "l10n_pt_spms",
+        "account_debit_note",
     ],
     "external_dependencies": {"python": ["OpenSSL", "xmlsig"]},
     "data": [
