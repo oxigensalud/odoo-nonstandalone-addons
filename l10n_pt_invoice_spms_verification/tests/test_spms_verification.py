@@ -588,14 +588,28 @@ class TestSpmsVerification(SpmsVerificationCase):
         with self.assertRaisesRegex(UserError, "exactly one tax line"):
             result._generate_note()
 
-    def test_generate_negative_claim_gets_own_negative_line(self):
-        # the verification allowed TESTP021 above the billed amount: its negative
-        # difference nets against the rejected TESTP020 inside the credit
-        # note, one line per prescription, and no tax adjustment is needed
+    def _set_regularization_product(self):
+        """The company's regularization product, as its form creates it."""
+        product = self.env["product.product"].create(
+            {
+                "name": "SPMS Regularization",
+                "type": "service",
+                "sale_ok": False,
+                "purchase_ok": False,
+                "company_id": self.company.id,
+            }
+        )
+        self.company.spms_regularization_product_id = product
+        return product
+
+    def _mixed_invoice(self):
+        """A rejected claim and one the verification allowed above the billed
+        amount: claims 31,00 - 2,00 = 29,00 + 6% global tax 1,74 = 30,74
+        official."""
         move = self._create_invoice(
             "FT 2026/00140", [("TESTP020", 31, 1.0), ("TESTP021", 10, 2.0)]
         )
-        lines = [
+        rows = [
             {
                 "prescription": "TESTP020",
                 "billed": 31.0,
@@ -611,27 +625,158 @@ class TestSpmsVerification(SpmsVerificationCase):
                 "errors": [{"code": "C012", "level": "linha"}],
             },
         ]
-        # claims 31,00 - 2,00 = 29,00 + 6% global tax 1,74 = 30,74 official
-        result = self._create_result(move, lines, credit_official=30.74)
+        return move, rows
+
+    def test_generate_mixed_claims_go_on_one_line(self):
+        # the certified note cannot carry lines of both signs: the rejected
+        # TESTP020 and the TESTP021 allowed above the billed amount go on
+        # one line with the net, on the regularization product
+        product = self._set_regularization_product()
+        move, rows = self._mixed_invoice()
+        result = self._create_result(move, rows, credit_official=30.74)
         self.assertAlmostEqual(result.amount_lines_untaxed, 29.0)
         self.assertAlmostEqual(result.amount_lines_negative_untaxed, -2.0)
         draft = result._generate_note()
-        self.assertEqual(len(draft.invoice_line_ids), 2)
-        negative = draft.invoice_line_ids.filtered(
-            lambda line: line.spms_prescription == "TESTP021"
-        )
-        self.assertEqual(negative.quantity, 1)
-        self.assertAlmostEqual(negative.price_unit, -2.0)
-        self.assertAlmostEqual(negative.price_subtotal, -2.0)
-        self.assertEqual(negative.spms_start_date, date(2026, 5, 1))
-        self.assertEqual(negative.spms_end_date, date(2026, 5, 31))
+        self.assertEqual(draft.move_type, "out_refund")
+        self.assertEqual(len(draft.invoice_line_ids), 1)
+        line = draft.invoice_line_ids
+        self.assertEqual(line.product_id, product)
+        self.assertEqual(line.name, "SPMS Regularization")
+        self.assertEqual(line.quantity, 1)
+        self.assertAlmostEqual(line.price_unit, 29.0)
+        self.assertEqual(line.account_id, move.invoice_line_ids.account_id)
+        self.assertEqual(line.tax_ids, self.tax6)
+        self.assertEqual(line.spms_prescription, "TESTP020, TESTP021")
+        self.assertFalse(line.spms_start_date)
+        self.assertFalse(line.spms_end_date)
         self.assertAlmostEqual(draft.amount_untaxed, 29.0)
         self.assertAlmostEqual(draft.amount_total, 30.74)
-        negative_claim = result.line_ids.filtered(
-            lambda line: line.prescription == "TESTP021"
-        )
-        self.assertEqual(negative_claim.note_move_line_id, negative)
+        self.assertEqual(result.line_ids.mapped("note_move_line_id"), line)
         self.assertEqual(result.state, "done")
+
+    def test_generate_mixed_claims_name_the_line_in_the_partner_language(self):
+        # Odoo names a line after its product, in the language of the partner
+        self.env["res.lang"]._activate_lang("pt_PT")
+        self.partner.lang = "pt_PT"
+        product = self._set_regularization_product()
+        product.with_context(lang="pt_PT").name = "Regularização SPMS"
+        move, rows = self._mixed_invoice()
+        result = self._create_result(move, rows, credit_official=30.74)
+        draft = result._generate_note()
+        self.assertEqual(draft.invoice_line_ids.name, "Regularização SPMS")
+
+    def test_generate_mixed_claims_keep_the_shared_spms_data(self):
+        # the user number and the context every prescription shares stay on
+        # the line; the prescription types differ, so the line has none
+        self._set_regularization_product()
+        context = self.env["spms.context"].create(
+            {"code": "TESTCC", "name": "Test context"}
+        )
+        type_i = self.env["spms.prescription.type"].create(
+            {"code": "TESTI", "name": "Test type I"}
+        )
+        type_c = self.env["spms.prescription.type"].create(
+            {"code": "TESTC", "name": "Test type C"}
+        )
+        move, rows = self._mixed_invoice()
+        move.invoice_line_ids.write(
+            {"spms_user_number": 123456789, "spms_context_id": context.id}
+        )
+        move.invoice_line_ids.filtered(
+            lambda line: line.spms_prescription == "TESTP020"
+        ).spms_prescription_type_id = type_i
+        move.invoice_line_ids.filtered(
+            lambda line: line.spms_prescription == "TESTP021"
+        ).spms_prescription_type_id = type_c
+        result = self._create_result(move, rows, credit_official=30.74)
+        draft = result._generate_note()
+        line = draft.invoice_line_ids
+        self.assertEqual(line.spms_user_number, 123456789)
+        self.assertEqual(line.spms_context_id, context)
+        self.assertFalse(line.spms_prescription_type_id)
+
+    def test_generate_mixed_claims_without_product_holds(self):
+        # the single line needs the company's regularization product: the
+        # result is held with the reason until the product is set
+        move, rows = self._mixed_invoice()
+        result = self._create_result(move, rows, credit_official=30.74)
+        with self.assertRaisesRegex(
+            UserError, "SPMS Regularization Product of company"
+        ), self.env.cr.savepoint():
+            result._generate_note()
+        with self.assertRaisesRegex(UserError, "SPMS Regularization Product"):
+            result._generate_note_or_hold()
+        self.assertEqual(result.state, "error")
+        self.assertFalse(result.note_move_id)
+        self._set_regularization_product()
+        result.generation_error = False
+        draft = result._generate_note()
+        self.assertEqual(len(draft.invoice_line_ids), 1)
+        self.assertEqual(result.state, "done")
+
+    def test_generate_mixed_claims_with_different_taxes_block(self):
+        # one line carries one set of taxes: claims billed with two rates
+        # cannot be merged, and the reason names what differs
+        self._set_regularization_product()
+        tax23 = self.env["account.tax"].create(
+            {
+                "name": "IVA 23% test",
+                "amount_type": "percent",
+                "amount": 23.0,
+                "type_tax_use": "sale",
+                "company_id": self.company.id,
+            }
+        )
+        move = self._create_invoice(
+            "FT 2026/00141", [("TESTP020", 31, 1.0), ("TESTP021", 10, 2.0, tax23)]
+        )
+        rows = [
+            {
+                "prescription": "TESTP020",
+                "billed": 31.0,
+                "allowed": 0.0,
+                "days_billed": 31.0,
+            },
+            {
+                "prescription": "TESTP021",
+                "billed": 20.0,
+                "allowed": 22.0,
+                "days_billed": 10.0,
+                "days_paid": 11.0,
+            },
+        ]
+        # claims 31,00 + 6% of 31,00 - 2,00 - 23% of 2,00 = 30,40
+        result = self._create_result(move, rows, credit_official=30.40)
+        with self.assertRaisesRegex(UserError, "differ in Taxes"):
+            result._generate_note()
+
+    def test_generate_mixed_claims_keep_the_sale_order_fully_invoiced(self):
+        # the single line nets prescriptions of several order lines, so it
+        # carries no link to them: the order keeps its quantities invoiced
+        # and does not list the note
+        self._set_regularization_product()
+        order, move = self._sale_order_invoice()
+        rows = [
+            {
+                "prescription": "TESTP001",
+                "billed": 31.0,
+                "allowed": 0.0,
+                "days_billed": 31.0,
+            },
+            {
+                "prescription": "TESTP002",
+                "billed": 62.0,
+                "allowed": 64.0,
+                "days_billed": 31.0,
+                "days_paid": 31.0,
+            },
+        ]
+        result = self._create_result(move, rows, credit_official=30.74)
+        draft = result._generate_note()
+        self.assertEqual(len(draft.invoice_line_ids), 1)
+        self.assertFalse(draft.invoice_line_ids.sale_line_ids)
+        self._assert_order_fully_invoiced(order)
+        self.assertEqual(order.invoice_ids, move)
 
     def test_generate_residual_beyond_limit_holds(self):
         # the natural credit note totals 38,16: an official value 0,06 away
@@ -960,9 +1105,9 @@ class TestSpmsVerification(SpmsVerificationCase):
 
     def test_generate_negative_official_mixed_claims(self):
         # an over-billed claim and a larger one the verification allowed above the
-        # billed amount: the net is negative, so the debit note carries
-        # both with their signs flipped, the same netting as the official
-        # value
+        # billed amount: the net is negative, so a debit note carries it, on
+        # one line with the sign flipped, as the official value nets them
+        product = self._set_regularization_product()
         move = self._create_invoice(
             "FT 2026/00151", [("TESTP010", 31, 1.0), ("TESTP011", 31, 2.0)]
         )
@@ -989,19 +1134,15 @@ class TestSpmsVerification(SpmsVerificationCase):
         self.assertAlmostEqual(result.amount_lines_negative_untaxed, -5.0)
         draft = result._generate_note()
         self.assertEqual(draft.move_type, "out_invoice")
-        by_prescription = {
-            line.spms_prescription: line for line in draft.invoice_line_ids
-        }
-        self.assertEqual(set(by_prescription), {"TESTP010", "TESTP011"})
-        over_billed = by_prescription["TESTP010"]
-        self.assertEqual(over_billed.quantity, 2)
-        self.assertAlmostEqual(over_billed.price_unit, -1.0)
-        self.assertAlmostEqual(over_billed.price_subtotal, -2.0)
-        allowed_above = by_prescription["TESTP011"]
-        self.assertEqual(allowed_above.quantity, 1)
-        self.assertAlmostEqual(allowed_above.price_unit, 5.0)
+        self.assertEqual(len(draft.invoice_line_ids), 1)
+        line = draft.invoice_line_ids
+        self.assertEqual(line.product_id, product)
+        self.assertEqual(line.quantity, 1)
+        self.assertAlmostEqual(line.price_unit, 3.0)
+        self.assertEqual(line.spms_prescription, "TESTP010, TESTP011")
         self.assertAlmostEqual(draft.amount_untaxed, 3.0)
         self.assertAlmostEqual(draft.amount_total, 3.18)
+        self.assertEqual(result.line_ids.mapped("note_move_line_id"), line)
         self.assertEqual(result.state, "done")
 
     def test_generate_negative_official_one_cent_imposes_tax(self):

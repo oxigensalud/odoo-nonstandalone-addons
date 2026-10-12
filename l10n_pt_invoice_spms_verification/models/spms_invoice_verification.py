@@ -554,9 +554,11 @@ class SpmsInvoiceVerification(models.Model):
 
         Goes through the standard reversal or debit-note path (Reis/SAF-T
         PT requirement), then edits the draft down to the affected
-        prescriptions, with the sign flipped on a debit note. Raises
-        UserError with the blocking reason; the caller runs each result in
-        its own savepoint, so a raise leaves this result untouched.
+        prescriptions, with the sign flipped on a debit note, or down to
+        one line when their claims mix positive and negative differences.
+        Raises UserError with the blocking reason; the caller runs each
+        result in its own savepoint, so a raise leaves this result
+        untouched.
         """
         self.ensure_one()
         # ptplus needs the invoice's company active to set the fiscal data
@@ -604,10 +606,10 @@ class SpmsInvoiceVerification(models.Model):
             )
         lines = self._get_creditable_lines()
         draft = self._create_debit_draft() if debit else self._create_reversal_draft()
-        draft_line_by_original = self.env[
-            "spms.invoice.verification.line"
-        ]._match_copied_lines(self.move_id, draft)
-        self._edit_note_draft(draft, lines, draft_line_by_original, debit)
+        if lines._mix_signs():
+            self._merge_note_draft(draft, lines, debit)
+        else:
+            self._edit_note_draft(draft, lines, debit)
         self._check_draft_consistency(draft, debit)
         difference = float_round(
             self._get_note_total() - draft.amount_total, precision_rounding=rounding
@@ -615,9 +617,6 @@ class SpmsInvoiceVerification(models.Model):
         if float_compare(difference, 0.0, precision_rounding=rounding) != 0:
             self._check_adjustment_limit(draft, difference)
             self._impose_official_tax(draft, difference)
-        for line in lines:
-            # every claim has its draft line: the edit raised otherwise
-            line.note_move_line_id = draft_line_by_original[line.move_line_id.id]
         self.note_move_id = draft
         return draft
 
@@ -720,11 +719,11 @@ class SpmsInvoiceVerification(models.Model):
             )
         return draft
 
-    def _edit_note_draft(self, draft, lines, draft_line_by_original, debit):
+    def _edit_note_draft(self, draft, lines, debit):
         """Cut the full-copy draft down to the affected claims: each claim
-        edits the draft's copy of its original invoice line
-        (`draft_line_by_original`, the line model's pairing), so a
-        prescription billed on several lines keeps one note line per claim.
+        edits the draft's copy of its original invoice line (the line
+        model's pairing), so a prescription billed on several lines keeps
+        one note line per claim, and is linked to it.
 
         The single write goes through the standard invoice business layer
         (`invoice_line_ids`), which recomputes subtotals, taxes and payment
@@ -734,6 +733,9 @@ class SpmsInvoiceVerification(models.Model):
         count its quantity as invoiced twice.
         """
         self.ensure_one()
+        draft_line_by_original = self.env[
+            "spms.invoice.verification.line"
+        ]._match_copied_lines(self.move_id, draft)
         commands = []
         kept_draft_line_ids = []
         for line in lines:
@@ -764,6 +766,44 @@ class SpmsInvoiceVerification(models.Model):
                 "invoice_line_ids": commands,
             }
         )
+        for line in lines:
+            # every claim has its draft line: the loop above raised otherwise
+            line.note_move_line_id = draft_line_by_original[line.move_line_id.id]
+
+    def _merge_note_draft(self, draft, lines, debit):
+        """Replace the lines of the full-copy draft with one line carrying
+        all the claims, which mix positive and negative differences, on the
+        company's regularization product (the line model's
+        `_prepare_merged_note_line_values`), and link every claim to it.
+
+        The single write goes through the standard invoice business layer,
+        as in `_edit_note_draft`. The line has no sale-order link: it nets
+        prescriptions of several order lines, and a refund line linked to
+        an order line counts its whole amount on each of them.
+        """
+        self.ensure_one()
+        product = self.company_id.spms_regularization_product_id
+        if not product:
+            raise UserError(
+                _(
+                    "The claims of %(invoice)s mix positive and negative "
+                    "differences, so they go on one note line, which needs the "
+                    "SPMS Regularization Product of company %(company)s: set "
+                    "it on the SPMS page of the company form before retrying."
+                )
+                % {
+                    "invoice": self.move_id.display_name,
+                    "company": self.company_id.display_name,
+                }
+            )
+        draft.write(
+            {
+                "invoice_origin": self.move_id.name,
+                "invoice_line_ids": [(2, line.id) for line in draft.invoice_line_ids]
+                + [(0, 0, lines._prepare_merged_note_line_values(product, debit))],
+            }
+        )
+        lines.write({"note_move_line_id": draft.invoice_line_ids.id})
 
     def _check_draft_consistency(self, draft, debit):
         """The single generation-time check (design §5): after cutting the

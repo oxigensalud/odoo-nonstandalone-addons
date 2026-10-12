@@ -240,11 +240,13 @@ class SpmsInvoiceVerificationLine(models.Model):
         return {originals[position].id: copy for position, copy in pairs.items()}
 
     def _is_creditable(self):
-        """A claim the credit note must carry: keyed by prescription and
-        with a difference in either direction. An over-billed claim
-        (positive difference) credits the customer; a claim the verification
-        allowed above the billed amount (negative difference) becomes a
-        negative line, because the official value nets both kinds."""
+        """A claim the note must carry: keyed by prescription and with a
+        difference in either direction. An over-billed claim (positive
+        difference) credits the customer; a claim the verification allowed
+        above the billed amount (negative difference) is charged back,
+        because the official value nets both kinds: on a debit note when
+        every claim is of that kind, on the single line of the note when
+        the claims mix both (`_mix_signs`)."""
         self.ensure_one()
         return bool(self.prescription) and (
             float_compare(
@@ -340,3 +342,97 @@ class SpmsInvoiceVerificationLine(models.Model):
                 "price_unit", self.move_line_id.price_unit
             )
         return values
+
+    def _mix_signs(self):
+        """Whether these claims carry positive and negative differences at
+        once. The Portuguese certification refuses a note with lines of both
+        signs and SPMS accepts one note per invoice, so such claims can only
+        go on a single note line with the net amount."""
+        return {1, -1} <= {
+            float_compare(
+                line.amount_difference,
+                0.0,
+                precision_rounding=line.currency_id.rounding or 0.01,
+            )
+            for line in self
+        }
+
+    def _get_shared_original_value(self, field_name):
+        """The value of `field_name` that every original invoice line of these
+        claims carries; the field's empty value when they differ."""
+        originals = self.move_line_id
+        values = {line[field_name] for line in originals}
+        # a field read on an empty recordset gives its empty value
+        return values.pop() if len(values) == 1 else originals.browse()[field_name]
+
+    def _prepare_merged_note_line_values(self, product, debit):
+        """Values of the single note line of these claims, which mix positive
+        and negative differences: the net amount on one unit of `product`,
+        with its sign flipped on a debit note, as `_get_note_line_values`
+        does. The line lists the prescriptions, has no dates, and keeps the
+        SPMS data that all the original invoice lines share. Their account,
+        taxes, unit of measure and analytics go on the line once, so they
+        must be the same on all of them.
+
+        The partner is given for the name: Odoo names a line after its
+        product, in the language of the line's partner.
+        """
+        originals = self.move_line_id
+        differing = [
+            field_name
+            for field_name in (
+                "account_id",
+                "tax_ids",
+                "product_uom_id",
+                "analytic_account_id",
+                "analytic_tag_ids",
+            )
+            if len({line[field_name] for line in originals}) > 1
+        ]
+        if differing:
+            labels = originals.fields_get(differing)
+            raise UserError(
+                _(
+                    "The claims of %(invoice)s mix positive and negative "
+                    "differences, so they go on one note line, but their "
+                    "invoice lines differ in %(fields)s, which one line "
+                    "cannot carry. Review those invoice lines before retrying."
+                )
+                % {
+                    "invoice": self.result_id.move_id.display_name,
+                    "fields": ", ".join(
+                        labels[field_name]["string"] for field_name in differing
+                    ),
+                }
+            )
+        net = float_round(
+            sum(self.mapped("amount_difference")),
+            precision_rounding=self.currency_id.rounding or 0.01,
+        )
+        # every original line carries the same accounting: checked above
+        original = originals[:1]
+        return {
+            "partner_id": self.result_id.move_id.commercial_partner_id.id,
+            "product_id": product.id,
+            "quantity": 1,
+            "price_unit": -net if debit else net,
+            "account_id": original.account_id.id,
+            "tax_ids": [(6, 0, original.tax_ids.ids)],
+            "product_uom_id": original.product_uom_id.id,
+            "analytic_account_id": original.analytic_account_id.id,
+            "analytic_tag_ids": [(6, 0, original.analytic_tag_ids.ids)],
+            "spms_prescription": ", ".join(dict.fromkeys(self.mapped("prescription"))),
+            "spms_start_date": False,
+            "spms_end_date": False,
+            "spms_user_number": self._get_shared_original_value("spms_user_number"),
+            "spms_beneficiary_number": self._get_shared_original_value(
+                "spms_beneficiary_number"
+            ),
+            "spms_context_id": self._get_shared_original_value("spms_context_id").id,
+            "spms_prescription_type_id": self._get_shared_original_value(
+                "spms_prescription_type_id"
+            ).id,
+            "spms_suspension_reason_id": self._get_shared_original_value(
+                "spms_suspension_reason_id"
+            ).id,
+        }

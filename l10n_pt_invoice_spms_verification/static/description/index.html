@@ -532,11 +532,12 @@ exchange record — the result form links to it — in <em>Error on process</em>
 with the same reason; fix the cause and press <em>Retry</em> on that record:
 the stored document is processed again at the next pass of the hourly
 input action of the EDI framework, and the note is generated then. The
-rest of the batch is never dragged along. A prescription the
-verification priced above the billed amount (a negative difference) gets
-its own negative line, so the credit note nets it against the rejected
-claims exactly as the official value does; the result form shows their
-sum as <em>Negative Claims</em>. The claim bases come from the verification
+rest of the batch is never dragged along. When the claims mix
+prescriptions cut and prescriptions the verification priced above the
+billed amount (negative differences, whose sum the result form shows as
+<em>Negative Claims</em>), the note is generated as a single line with the net
+amount instead, on the company’s <em>SPMS Regularization Product</em>: see
+<em>Known issues / Roadmap</em>. The claim bases come from the verification
 document itself, so the draft can only differ from the official value by
 the rounding of the tax, which the CCF computes once on the invoice
 total: that cent is written on the tax line of the draft, the same
@@ -553,10 +554,11 @@ them; the EDI circuit takes over from there.</p>
 <p>A negative official value — the verification computed more than the
 invoice billed — calls for a debit note instead. The module generates it
 through the standard debit-note flow, hanging from the invoice as its
-debit origin, with the same lines and the sign flipped, the same
-rounding cent on the tax line and the same adjustment limit; its lines
-carry no link to the sale order, which stays fully invoiced. Everything
-below applies to that debit note as it does to the credit note.</p>
+debit origin, with the same lines, or the same single line, and the sign
+flipped, the same rounding cent on the tax line and the same adjustment
+limit; its lines carry no link to the sale order, which stays fully
+invoiced. Everything below applies to that debit note as it does to the
+credit note.</p>
 <p>Once a note is generated and alive, the official totals of its result
 are locked; cancel the note first to change them. Cancelling or deleting
 a generated note releases its result immediately — no manual step: the
@@ -582,6 +584,21 @@ revisit if the stuck tail ever grows enough to matter.</li>
 <li>A prescription the parser cannot match to an original invoice line
 blocks the generation of its invoice, with no manual exclusion lever:
 revisit if a real case ever needs one.</li>
+<li>When the claims of one invoice mix positive and negative differences,
+two rules collide: the Portuguese certification refuses a note with
+lines of both signs, and SPMS accepts one note per invoice. Those
+claims fit neither in two notes nor in one note with a line each, so
+the module generates the note as one line with the net amount, on one
+unit of the company’s <em>SPMS Regularization Product</em> (see
+<em>Configuration</em>). This has side effects, only on such notes: the note
+shows no detail per prescription — the line lists the prescriptions in
+its prescription field, and the detail stays in the verification
+result —; the line has no dates, and keeps the user number,
+beneficiary number, context, prescription type and suspension reason
+only when all the prescriptions share them; and it has no link to the
+sale order lines, so the order neither lists the note nor counts its
+amount as credited. Notes whose claims share one sign keep one line
+per prescription.</li>
 </ul>
 </div>
 <div class="section" id="bug-tracker">

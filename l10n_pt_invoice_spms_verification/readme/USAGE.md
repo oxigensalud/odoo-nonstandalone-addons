@@ -57,11 +57,12 @@ its exchange record — the result form links to it — in *Error on
 process* with the same reason; fix the cause and press *Retry* on that
 record: the stored document is processed again at the next pass of the
 hourly input action of the EDI framework, and the note is generated
-then. The rest of the batch is never dragged along. A
-prescription the verification priced above the billed amount (a negative
-difference) gets its own negative line, so the credit note nets it
-against the rejected claims exactly as the official value does; the
-result form shows their sum as *Negative Claims*. The claim bases come
+then. The rest of the batch is never dragged along. When the claims
+mix prescriptions cut and prescriptions the verification priced above
+the billed amount (negative differences, whose sum the result form shows
+as *Negative Claims*), the note is generated as a single line with the
+net amount instead, on the company's *SPMS Regularization Product*: see
+*Known issues / Roadmap*. The claim bases come
 from the verification document itself, so the draft can only differ from the
 official value by the rounding of the tax, which the CCF computes once
 on the invoice total: that cent is written on the tax line of the draft,
@@ -80,8 +81,9 @@ there.
 A negative official value — the verification computed more than the invoice
 billed — calls for a debit note instead. The module generates it through
 the standard debit-note flow, hanging from the invoice as its debit
-origin, with the same lines and the sign flipped, the same rounding cent
-on the tax line and the same adjustment limit; its lines carry no link to
+origin, with the same lines, or the same single line, and the sign
+flipped, the same rounding cent on the tax line and the same adjustment
+limit; its lines carry no link to
 the sale order, which stays fully invoiced. Everything below applies to
 that debit note as it does to the credit note.
 

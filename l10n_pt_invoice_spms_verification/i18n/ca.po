@@ -1108,6 +1108,30 @@ msgid "The SPMS adjustment limit cannot be negative."
 msgstr "El límit d'ajust SPMS no pot ser negatiu."
 
 #. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification_line.py:0
+msgid ""
+"The claims of %(invoice)s mix positive and negative differences, so they go "
+"on one note line, but their invoice lines differ in %(fields)s, which one "
+"line cannot carry. Review those invoice lines before retrying."
+msgstr ""
+"Les prestacions de %(invoice)s barregen diferències positives i negatives, "
+"així que van en una sola línia de la nota, però les seves línies de factura "
+"difereixen en %(fields)s, que una sola línia no pot portar. Reviseu aquestes"
+" línies de factura abans de tornar-ho a provar."
+
+#. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
+msgid ""
+"The claims of %(invoice)s mix positive and negative differences, so they go "
+"on one note line, which needs the SPMS Regularization Product of company "
+"%(company)s: set it on the SPMS page of the company form before retrying."
+msgstr ""
+"Les prestacions de %(invoice)s barregen diferències positives i negatives, "
+"així que van en una sola línia de la nota, que necessita el Producte de "
+"regularització SPMS de l'empresa %(company)s: indiqueu-lo a la pestanya SPMS"
+" del formulari de l'empresa abans de tornar-ho a provar."
+
+#. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
 #, python-format
 msgid ""
