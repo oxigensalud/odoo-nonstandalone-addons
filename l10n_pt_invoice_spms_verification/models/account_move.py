@@ -22,18 +22,32 @@ class AccountMove(models.Model):
     )
 
     def action_view_spms_invoice_verification(self):
-        """Open the invoice's verification result form directly (1:1)."""
+        """Open the verification result of the move: the invoice's own, or
+        the one that generated the note. An invoice has one at most; a note
+        should have one, and several open as a list."""
         self.ensure_one()
-        result = self.spms_invoice_verification_ids[:1]
-        if not result:
-            return False
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Invoice Verification"),
-            "res_model": "spms.invoice.verification",
-            "res_id": result.id,
-            "view_mode": "form",
-        }
+        results = (
+            self.spms_invoice_verification_ids | self.spms_note_invoice_verification_ids
+        )
+        if not results:
+            action = False
+        elif len(results) == 1:
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Invoice Verification"),
+                "res_model": "spms.invoice.verification",
+                "res_id": results.id,
+                "view_mode": "form",
+            }
+        else:
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Invoice Verification"),
+                "res_model": "spms.invoice.verification",
+                "domain": [("id", "in", results.ids)],
+                "view_mode": "tree,form",
+            }
+        return action
 
     def _spms_verification_results(self):
         """Verification results these moves take part in: the ones whose

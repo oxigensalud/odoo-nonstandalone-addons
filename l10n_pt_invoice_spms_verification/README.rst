@@ -144,8 +144,9 @@ moment the verification resolves it (one result per invoice — once the
 CCF's definitive answer is received, the invoice is not asked about
 again). Once the invoice has its result, its form shows an *SPMS
 Verification* smart button that opens the result directly, with or
-without errors; before that there is no button. The *Invoice
-Verifications* list shows every result.
+without errors; before that there is no button. The credit or debit note
+generated from a result shows the same button, which opens that result.
+The *Invoice Verifications* list shows every result.
 
 The result form carries the verification state, the official totals and
 the official value. The *Lines* smart button opens the claim lines — one
@@ -245,12 +246,12 @@ Known issues / Roadmap
   *Configuration*). This has side effects, only on such notes: the note
   shows no detail per prescription — the line lists the prescriptions in
   its prescription field, and the detail stays in the verification
-  result —; the line has no dates, and keeps the user number,
-  beneficiary number, context, prescription type and suspension reason
-  only when all the prescriptions share them; and it has no link to the
-  sale order lines, so the order neither lists the note nor counts its
-  amount as credited. Notes whose claims share one sign keep one line
-  per prescription.
+  result, which the note's *SPMS Verification* button opens —; the line
+  has no dates, and keeps the user number, beneficiary number, context,
+  prescription type and suspension reason only when all the
+  prescriptions share them; and it has no link to the sale order lines,
+  so the order neither lists the note nor counts its amount as credited.
+  Notes whose claims share one sign keep one line per prescription.
 
 Bug Tracker
 ===========

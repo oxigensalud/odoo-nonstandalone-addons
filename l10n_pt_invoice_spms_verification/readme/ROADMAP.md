@@ -13,7 +13,8 @@
   of the company's *SPMS Regularization Product* (see *Configuration*).
   This has side effects, only on such notes: the note shows no detail per
   prescription — the line lists the prescriptions in its prescription
-  field, and the detail stays in the verification result —; the line has
+  field, and the detail stays in the verification result, which the
+  note's *SPMS Verification* button opens —; the line has
   no dates, and keeps the user number, beneficiary number, context,
   prescription type and suspension reason only when all the prescriptions
   share them; and it has no link to the sale order lines, so the order

@@ -165,6 +165,34 @@ class TestSpmsVerification(SpmsVerificationCase):
                 by_prescription[line.prescription],
             )
 
+    def test_note_opens_its_verification_result(self):
+        # the generated note opens the result it comes from, as the invoice
+        # it corrects does
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_note()
+        action = draft.action_view_spms_invoice_verification()
+        self.assertEqual(action["res_model"], "spms.invoice.verification")
+        self.assertEqual(action["res_id"], result.id)
+        self.assertEqual(
+            move.action_view_spms_invoice_verification()["res_id"], result.id
+        )
+
+    def test_note_of_several_results_opens_them_as_a_list(self):
+        # a note pointed at by two results opens both, never one at random
+        move = self._standard_invoice()
+        result = self._create_result(move, self._standard_rows(), credit_official=38.16)
+        draft = result._generate_note()
+        other_move = self._create_invoice("FT 2026/00129", [("TESTP040", 31, 1.0)])
+        other_result = self._create_result(other_move, [])
+        other_result.note_move_id = draft
+        action = draft.action_view_spms_invoice_verification()
+        self.assertEqual(action["view_mode"], "tree,form")
+        self.assertEqual(
+            self.env["spms.invoice.verification"].search(action["domain"]),
+            result + other_result,
+        )
+
     def test_generate_discounted_invoice_counts_the_discount_once(self):
         # the verification only sees net amounts: a 10 % discount bills 90
         # per line. Total rejection keeps the discounted copy (90); the
