@@ -70,6 +70,7 @@ Configuration
   and never from the screens: deletion is reserved to scripted
   clean-ups, and a result carried by a live credit or debit note refuses
   it until that note is cancelled.
+
 - The polling scheduled action (*SPMS: get verification results from the
   CCF*, under *Settings → Technical → Automation → Scheduled Actions*)
   runs hourly out of the box. It creates the expected result record of
@@ -82,6 +83,7 @@ Configuration
   and the next pass re-activates that same job rather than queueing
   another. To pause the polling, deactivate the scheduled action — never
   uninstall the module just to stop the calls.
+
 - Set the *SPMS Adjustment Limit* on the company (SPMS page of the
   company form, visible to users with *Administration / Settings*; 0.01
   by default): the largest difference, taxes included, between the
@@ -89,6 +91,25 @@ Configuration
   its tax line. A larger difference holds the result in *Error* for
   review instead of generating the note; raise the limit only when a
   larger difference is legitimate and strictly necessary.
+
+- Set the *SPMS Regularization Product* on the company (SPMS page of the
+  company form): the product of the single line of a generated credit or
+  debit note whose claims mix positive and negative differences. A
+  result that needs it while it is empty is held in *Error* with the
+  reason. Create it like any other product, with these values:
+
+  - *Product Type*: *Service*;
+  - *Can be Sold* and *Can be Purchased* unticked, so that it is never
+    offered on a sale or a purchase;
+  - *Company*: the company, or empty to share it;
+  - a short name, as it becomes the description of the note line, after
+    the internal reference when there is one, and the SAF-T accepts 200
+    characters at most: *Regularização SPMS*, for instance.
+
+  Created from the field itself (*Create and Edit…*), the product comes
+  with these values already set and the name *SPMS Regularization*, to
+  be changed at will.
+
 - Keep the tax rounding method of the company (*Accounting → Settings →
   Taxes → Rounding Method*) on *Round Globally*: the CCF computes the
   tax once on the invoice total, and per-line rounding drifts away from

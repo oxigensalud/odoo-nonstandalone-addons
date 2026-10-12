@@ -17,6 +17,15 @@ class ResCompany(models.Model):
         "total. A larger difference holds the result in error for review "
         "instead of generating the note.",
     )
+    spms_regularization_product_id = fields.Many2one(
+        comodel_name="product.product",
+        string="SPMS Regularization Product",
+        domain="[('company_id', 'in', [id, False])]",
+        help="Product of the single line that a generated credit or debit note "
+        "carries when its claims mix positive and negative differences. "
+        "Created from this field, it comes as a service of this company, "
+        "neither sold nor purchased.",
+    )
 
     _sql_constraints = [
         (

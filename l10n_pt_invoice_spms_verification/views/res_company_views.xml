@@ -12,6 +12,10 @@
             <xpath expr="//page[@name='spms']" position="inside">
                 <group>
                     <field name="spms_adjustment_limit" />
+                    <field
+                        name="spms_regularization_product_id"
+                        context="{'default_name': 'SPMS Regularization', 'default_type': 'service', 'default_sale_ok': False, 'default_purchase_ok': False, 'default_company_id': id}"
+                    />
                 </group>
             </xpath>
         </field>

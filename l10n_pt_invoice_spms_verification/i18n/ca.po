@@ -826,6 +826,18 @@ msgstr ""
 "Prescripcions sense parell un a un amb una línia de la factura original: %s."
 
 #. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_res_company__spms_regularization_product_id
+msgid ""
+"Product of the single line that a generated credit or debit note carries "
+"when its claims mix positive and negative differences. Created from this "
+"field, it comes as a service of this company, neither sold nor purchased."
+msgstr ""
+"Producte de la línia única que porta una nota de crèdit o de dèbit generada "
+"quan les seves prestacions barregen diferències positives i negatives. Creat"
+" des d'aquest camp, surt com un servei d'aquesta empresa, que no es ven ni "
+"es compra."
+
+#. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields.selection,name:l10n_pt_invoice_spms_verification.selection__spms_invoice_verification__state__ready
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.spms_invoice_verification_view_search
 msgid "Ready"
@@ -910,6 +922,11 @@ msgstr "Verificacions SPMS de factures"
 #: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_account_payment__spms_note_invoice_verification_ids
 msgid "SPMS Invoice Verifications (Credit/Debit Note)"
 msgstr "Verificacions SPMS de factures (nota de crèdit/dèbit)"
+
+#. module: l10n_pt_invoice_spms_verification
+#: model:ir.model.fields,field_description:l10n_pt_invoice_spms_verification.field_res_company__spms_regularization_product_id
+msgid "SPMS Regularization Product"
+msgstr "Producte de regularització SPMS"
 
 #. module: l10n_pt_invoice_spms_verification
 #: model_terms:ir.ui.view,arch_db:l10n_pt_invoice_spms_verification.account_move_view_form
