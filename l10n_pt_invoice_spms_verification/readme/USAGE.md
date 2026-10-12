@@ -49,7 +49,11 @@ standard reversal path, cut down to the affected prescriptions, and
 linked back to the result. Each claim edits the copy of its own invoice
 line: a prescription billed on several lines is paired with them by
 billed quantity and amount, one claim per line, and a claim that finds
-no distinct line of its own holds the result instead of guessing. When
+no distinct line of its own holds the result instead of guessing. A
+claim rejected in full keeps the line as invoiced, dates included; a
+claim paid in part carries the rejected days, or the difference on one
+unit, without SPMS dates, as the verification says how many days SPMS
+cut, never which ones. When
 the generation of a result fails (a prescription with no matching
 invoice line, a foreign note, a residual beyond the adjustment limit),
 that result alone is held in *Error* with the reason on its form, and
@@ -80,7 +84,8 @@ there.
 A negative official value — the verification computed more than the invoice
 billed — calls for a debit note instead. The module generates it through
 the standard debit-note flow, hanging from the invoice as its debit
-origin, with the same lines and the sign flipped, the same rounding cent
+origin, with the same lines as the credit note, their SPMS dates kept or
+left blank alike, and the sign flipped, the same rounding cent
 on the tax line and the same adjustment limit; its lines carry no link to
 the sale order, which stays fully invoiced. Everything below applies to
 that debit note as it does to the credit note.

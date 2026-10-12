@@ -1,10 +1,7 @@
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from datetime import timedelta
-
-from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo import api, fields, models
 from odoo.tools import float_compare, float_is_zero, float_round
 
 
@@ -269,14 +266,12 @@ class SpmsInvoiceVerificationLine(models.Model):
         come to exactly the difference (the CCF rounds the billed and the
         allowed amounts separately, so a price with more decimals than the
         currency can leave the rejected days one cent off the difference,
-        and then the days cannot carry it) — dated as the first rejected
-        days of the original period (the verification says how many days
-        SPMS cut, never which ones; the customer's hand-made notes use the
-        same convention); otherwise the whole difference goes on a single
-        unit over the original period, as a negative difference always
-        does: the line then carries the net amount on one unit, with no
-        discount to apply to it again. SPMS requires both dates on every
-        line of the note, so no shape leaves them blank.
+        and then the days cannot carry it); otherwise the whole difference
+        goes on a single unit, as a negative difference always does: the
+        line then carries the net amount on one unit, with no discount to
+        apply to it again. Both partial shapes leave the SPMS dates blank:
+        the verification says how many days SPMS cut, never which ones, and
+        the sender takes the period of a note from its original invoice.
         """
         self.ensure_one()
         original_line = self.move_line_id
@@ -304,27 +299,17 @@ class SpmsInvoiceVerificationLine(models.Model):
             )
             == 0
         ):
-            if not original_line.spms_start_date:
-                raise UserError(
-                    _(
-                        "The rejected days of prescription %(prescription)s "
-                        "cannot be dated: invoice line %(line)s has no SPMS "
-                        "start date."
-                    )
-                    % {
-                        "prescription": self.prescription,
-                        "line": original_line.display_name,
-                    }
-                )
             return {
                 "quantity": days_rejected,
-                "spms_end_date": original_line.spms_start_date
-                + timedelta(days=days_rejected - 1),
+                "spms_start_date": False,
+                "spms_end_date": False,
             }
         return {
             "quantity": 1,
             "price_unit": self.amount_difference,
             "discount": 0.0,
+            "spms_start_date": False,
+            "spms_end_date": False,
         }
 
     def _get_note_line_values(self, debit):
