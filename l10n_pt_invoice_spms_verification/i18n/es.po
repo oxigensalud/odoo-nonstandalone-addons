@@ -521,7 +521,9 @@ msgid "Invoice Verification"
 msgstr "Verificación de factura"
 
 #. module: l10n_pt_invoice_spms_verification
+#: code:addons/l10n_pt_invoice_spms_verification/models/account_move.py:0
 #: model:ir.ui.menu,name:l10n_pt_invoice_spms_verification.spms_invoice_verification_menu
+#, python-format
 msgid "Invoice Verifications"
 msgstr "Verificaciones de facturas"
 

@@ -125,8 +125,9 @@ moment the verification resolves it (one result per invoice — once the
 CCF's definitive answer is received, the invoice is not asked about
 again). Once the invoice has its result, its form shows an *SPMS
 Verification* smart button that opens the result directly, with or
-without errors; before that there is no button. The *Invoice
-Verifications* list shows every result.
+without errors; before that there is no button. The credit or debit note
+generated from a result shows the same button, which opens that result.
+The *Invoice Verifications* list shows every result.
 
 The result form carries the verification state, the official totals and
 the official value. The *Lines* smart button opens the claim lines — one
