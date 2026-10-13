@@ -1,9 +1,11 @@
 # Copyright 2025 Dixmit
 # Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+from collections import defaultdict
 from datetime import timedelta
 
 from odoo import models
+from odoo.tools import frozendict
 
 # Note required by the CCF CreditNote and DebitNote profiles
 RECTIFICATION_NOTE = (
@@ -200,6 +202,10 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
         billing_reference_vals = self._get_billing_reference_vals(
             invoice._spms_origin_invoice()
         )
+        tax_total_vals_list = [
+            self._get_note_tax_total_vals(invoice, tax_total_vals)
+            for tax_total_vals in vals["vals"]["tax_total_vals"]
+        ]
         return {
             "billing_reference_vals": billing_reference_vals,
             "note_vals": [
@@ -211,19 +217,54 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                     "date": billing_reference_vals["issue_date"],
                 }
             ],
-            "invoice_line_vals": [self._get_note_line_vals(vals)],
+            "tax_total_vals": tax_total_vals_list,
+            "invoice_line_vals": [
+                self._get_note_line_vals(
+                    vals["vals"]["legal_monetary_total_vals"], tax_total_vals_list
+                )
+            ],
         }
 
-    def _get_note_line_vals(self, vals):
+    def _get_note_line_vals(self, monetary_total_vals, tax_total_vals_list):
         # a note is one line holding its total, with no lot
-        monetary_total_vals = vals["vals"]["legal_monetary_total_vals"]
         return {
             "id": "1",
             "currency": monetary_total_vals["currency"],
             "currency_dp": monetary_total_vals["currency_dp"],
             "line_extension_amount": monetary_total_vals["tax_exclusive_amount"],
-            "tax_total_vals": vals["vals"]["tax_total_vals"],
+            "tax_total_vals": tax_total_vals_list,
         }
+
+    def _get_note_tax_total_vals(self, invoice, tax_total_vals):
+        # the tax as posted, per tax category like the subtotals: the tax item
+        # can hold the cent that matches the CCF, which the lines do not compute
+        balance_sign = -1 if invoice.is_inbound() else 1
+        posted_tax_amounts = defaultdict(float)
+        # a fixed tax has no subtotal: the base builder adds it to the base
+        tax_lines = invoice.line_ids.filtered(
+            lambda line: line.tax_line_id and line.tax_line_id.amount_type != "fixed"
+        )
+        for tax_line in tax_lines:
+            tax_category_vals = self._get_tax_category_list(
+                invoice, tax_line.tax_line_id
+            )[0]
+            posted_tax_amounts[frozendict(tax_category_vals)] += (
+                balance_sign * tax_line.amount_currency
+            )
+        tax_subtotal_vals_list = [
+            dict(
+                tax_subtotal_vals,
+                tax_amount=posted_tax_amounts[
+                    frozendict(tax_subtotal_vals["tax_category_vals"])
+                ],
+            )
+            for tax_subtotal_vals in tax_total_vals["tax_subtotal_vals"]
+        ]
+        return dict(
+            tax_total_vals,
+            tax_amount=sum(vals["tax_amount"] for vals in tax_subtotal_vals_list),
+            tax_subtotal_vals=tax_subtotal_vals_list,
+        )
 
     def _get_invoice_line_price_vals(self, line):
         result = super()._get_invoice_line_price_vals(line)
