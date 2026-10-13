@@ -5,19 +5,24 @@ from datetime import timedelta
 
 from odoo import models
 
-# Note required by the CCF DebitNote profile
-DEBIT_NOTE_NOTE = (
-    "Nota de Débito %(note)s para rectificação à fatura %(invoice)s de %(date)s"
+# Note required by the CCF CreditNote and DebitNote profiles
+RECTIFICATION_NOTE = (
+    "%(document)s %(note)s para rectificação à fatura %(invoice)s de %(date)s"
 )
 # the core builder renders no DebitNote, the module's templates do
 INVOICE_TEMPLATE_VALS = {
     "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
     "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
 }
+CREDIT_NOTE_TEMPLATE_VALS = {
+    "main_template": "account_edi_ubl_cii.ubl_20_CreditNote",
+    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteLine",
+}
 DEBIT_NOTE_TEMPLATE_VALS = {
     "main_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNote",
-    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNoteType",
-    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_DebitNoteLine",
+    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteLine",
 }
 
 
@@ -171,27 +176,16 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             template_vals = INVOICE_TEMPLATE_VALS
             document_vals = {"is_spms_invoice": True}
         elif note_type == "C":
-            template_vals = INVOICE_TEMPLATE_VALS
-            document_vals = {
-                "is_spms_invoice": False,
-                "billing_reference_vals": self._get_billing_reference_vals(
-                    invoice._spms_origin_invoice()
-                ),
-            }
+            template_vals = CREDIT_NOTE_TEMPLATE_VALS
+            document_vals = self._get_note_vals(invoice, "Nota de Crédito")
         elif note_type == "D":
-            billing_reference_vals = self._get_billing_reference_vals(
-                invoice._spms_origin_invoice()
-            )
             template_vals = DEBIT_NOTE_TEMPLATE_VALS
-            document_vals = {
-                "billing_reference_vals": billing_reference_vals,
-                "note_vals": self._get_debit_note_note_vals_list(
-                    invoice, billing_reference_vals
-                ),
-            }
+            document_vals = self._get_note_vals(invoice, "Nota de Débito")
         else:
             raise ValueError("unknown SPMS note type %r" % (note_type,))
         vals.update(template_vals)
+        # the note templates name their elements after the kind of note
+        vals["spms_note_type"] = note_type
         vals["vals"].update(document_vals)
         return vals
 
@@ -202,15 +196,22 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             "issue_date": origin_invoice.invoice_date.isoformat(),
         }
 
-    def _get_debit_note_note_vals_list(self, invoice, billing_reference_vals):
-        return [
-            DEBIT_NOTE_NOTE
-            % {
-                "note": invoice._get_spms_invoice_number(),
-                "invoice": billing_reference_vals["id"],
-                "date": billing_reference_vals["issue_date"],
-            }
-        ]
+    def _get_note_vals(self, invoice, document_name):
+        billing_reference_vals = self._get_billing_reference_vals(
+            invoice._spms_origin_invoice()
+        )
+        return {
+            "billing_reference_vals": billing_reference_vals,
+            "note_vals": [
+                RECTIFICATION_NOTE
+                % {
+                    "document": document_name,
+                    "note": invoice._get_spms_invoice_number(),
+                    "invoice": billing_reference_vals["id"],
+                    "date": billing_reference_vals["issue_date"],
+                }
+            ],
+        }
 
     def _get_invoice_line_price_vals(self, line):
         result = super()._get_invoice_line_price_vals(line)
