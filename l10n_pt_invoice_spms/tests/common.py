@@ -36,6 +36,16 @@ class SpmsInvoiceCase(SavepointComponentCase):
         cls.product = cls.env["product.product"].create(
             {"name": "SPMS test service", "type": "service", "spms_lot_id": cls.lot.id}
         )
+        cls.other_lot = cls.env["spms.lot"].create(
+            {"name": "SPMS other test lot", "code": "OTH"}
+        )
+        cls.other_product = cls.env["product.product"].create(
+            {
+                "name": "SPMS other test service",
+                "type": "service",
+                "spms_lot_id": cls.other_lot.id,
+            }
+        )
         cls.journals = {}
         cls.income_accounts = {}
         for company in cls.company + cls.spanish_company:
@@ -140,6 +150,30 @@ class SpmsInvoiceCase(SavepointComponentCase):
             )
         )
         return move
+
+    @classmethod
+    def _create_invoice_of_two_lot_types(cls, price_unit, other_price_unit, tax_rate):
+        invoice = cls._create_invoice(price_unit=price_unit, tax_rate=tax_rate)
+        invoice.write(
+            {
+                "invoice_line_ids": [
+                    (
+                        0,
+                        0,
+                        {
+                            "product_id": cls.other_product.id,
+                            "account_id": cls.income_accounts[cls.company.id].id,
+                            "quantity": 1,
+                            "price_unit": other_price_unit,
+                            "tax_ids": [(6, 0, invoice.invoice_line_ids.tax_ids.ids)],
+                            "spms_start_date": date(2026, 5, 1),
+                            "spms_end_date": date(2026, 5, 31),
+                        },
+                    )
+                ]
+            }
+        )
+        return invoice
 
     @classmethod
     def _create_credit_note(cls, invoice, note_date):

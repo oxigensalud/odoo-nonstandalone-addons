@@ -177,10 +177,10 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             document_vals = {"is_spms_invoice": True}
         elif note_type == "C":
             template_vals = CREDIT_NOTE_TEMPLATE_VALS
-            document_vals = self._get_note_vals(invoice, "Nota de Crédito")
+            document_vals = self._get_note_vals(invoice, vals, "Nota de Crédito")
         elif note_type == "D":
             template_vals = DEBIT_NOTE_TEMPLATE_VALS
-            document_vals = self._get_note_vals(invoice, "Nota de Débito")
+            document_vals = self._get_note_vals(invoice, vals, "Nota de Débito")
         else:
             raise ValueError("unknown SPMS note type %r" % (note_type,))
         vals.update(template_vals)
@@ -196,7 +196,7 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
             "issue_date": origin_invoice.invoice_date.isoformat(),
         }
 
-    def _get_note_vals(self, invoice, document_name):
+    def _get_note_vals(self, invoice, vals, document_name):
         billing_reference_vals = self._get_billing_reference_vals(
             invoice._spms_origin_invoice()
         )
@@ -211,6 +211,18 @@ class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
                     "date": billing_reference_vals["issue_date"],
                 }
             ],
+            "invoice_line_vals": [self._get_note_line_vals(vals)],
+        }
+
+    def _get_note_line_vals(self, vals):
+        # a note is one line holding its total, with no lot
+        monetary_total_vals = vals["vals"]["legal_monetary_total_vals"]
+        return {
+            "id": "1",
+            "currency": monetary_total_vals["currency"],
+            "currency_dp": monetary_total_vals["currency_dp"],
+            "line_extension_amount": monetary_total_vals["tax_exclusive_amount"],
+            "tax_total_vals": vals["vals"]["tax_total_vals"],
         }
 
     def _get_invoice_line_price_vals(self, line):
