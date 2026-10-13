@@ -226,6 +226,78 @@ class TestSpmsDocument(SpmsInvoiceCase):
         self.assertIsNone(line.find(CAC + "Item"))
         self.assertIsNone(line.find(CAC + "Price"))
 
+    def test_credit_note_document_of_two_lot_types_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        lines = document.findall(CAC + "CreditNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "150.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "34.50"
+        )
+
+    def test_debit_note_document_of_two_lot_types_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        lines = document.findall(CAC + "DebitNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "150.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "34.50"
+        )
+
+    def test_credit_note_document_of_lines_of_both_signs_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        other_line = credit_note.invoice_line_ids.filtered(
+            lambda line: line.product_id == self.other_product
+        )
+        credit_note.write(
+            {"invoice_line_ids": [(1, other_line.id, {"price_unit": -50.0})]}
+        )
+        credit_note.action_post()
+        document = self._document(credit_note)
+        lines = document.findall(CAC + "CreditNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "50.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "11.50"
+        )
+
+    def test_debit_note_document_of_lines_of_both_signs_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        other_line = debit_note.invoice_line_ids.filtered(
+            lambda line: line.product_id == self.other_product
+        )
+        debit_note.write(
+            {"invoice_line_ids": [(1, other_line.id, {"price_unit": -50.0})]}
+        )
+        debit_note.action_post()
+        document = self._document(debit_note)
+        lines = document.findall(CAC + "DebitNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "50.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "11.50"
+        )
+
     def test_document_with_two_origins_is_refused(self):
         invoice = self._create_invoice()
         invoice.action_post()
