@@ -3,6 +3,8 @@
 
 from datetime import date
 
+from lxml import etree
+
 from odoo.exceptions import UserError
 
 from .common import SpmsInvoiceCase
@@ -56,6 +58,74 @@ class TestSpmsDocument(SpmsInvoiceCase):
         )
         self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-30")
 
+    def test_credit_note_document_note_names_the_rectified_invoice(self):
+        invoice = self._create_invoice(invoice_date=date(2026, 5, 31))
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        self.assertEqual(
+            document.findtext(CBC + "Note"),
+            "Nota de Crédito RTSPMS202606-1 para rectificação à fatura "
+            "TSPMS202605-1 de 2026-05-31",
+        )
+
+    def test_credit_note_document_has_only_the_blocks_of_its_profile(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        self.assertEqual(
+            [etree.QName(child).localname for child in document],
+            [
+                "UBLVersionID",
+                "CustomizationID",
+                "ID",
+                "IssueDate",
+                "Note",
+                "DocumentCurrencyCode",
+                "BillingReference",
+                "AccountingSupplierParty",
+                "AccountingCustomerParty",
+                "TaxTotal",
+                "LegalMonetaryTotal",
+                "CreditNoteLine",
+            ],
+        )
+
+    def test_reconciled_credit_note_document_pays_the_total_of_the_note(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        (invoice + credit_note).line_ids.filtered(
+            lambda line: line.account_id.internal_type == "receivable"
+        ).reconcile()
+        document = self._document(credit_note)
+        total = document.find(CAC + "LegalMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.00")
+        self.assertIsNone(total.find(CBC + "PrepaidAmount"))
+
+    def test_credit_note_document_line_credits_the_amount_once(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        lines = document.findall(CAC + "CreditNoteLine")
+        self.assertEqual(len(lines), 1)
+        line = lines[0]
+        self.assertEqual(line.findtext(CBC + "ID"), "1")
+        self.assertEqual(line.findtext(CBC + "CreditedQuantity"), "1")
+        self.assertEqual(line.findtext(CBC + "LineExtensionAmount"), "100.00")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.00"
+        )
+        self.assertIsNone(line.find(CAC + "Item"))
+        self.assertIsNone(line.find(CAC + "Price"))
+
     def test_debit_note_document_is_a_debit_note_of_the_invoice(self):
         invoice = self._create_invoice(invoice_date=date(2026, 5, 31))
         invoice.action_post()
@@ -101,6 +171,30 @@ class TestSpmsDocument(SpmsInvoiceCase):
             document.findtext(CBC + "Note"),
             "Nota de Débito TSPMS202606-1 para rectificação à fatura "
             "TSPMS202605-1 de 2026-05-30",
+        )
+
+    def test_debit_note_document_has_only_the_blocks_of_its_profile(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        self.assertEqual(
+            [etree.QName(child).localname for child in document],
+            [
+                "UBLVersionID",
+                "CustomizationID",
+                "ID",
+                "IssueDate",
+                "Note",
+                "DocumentCurrencyCode",
+                "BillingReference",
+                "AccountingSupplierParty",
+                "AccountingCustomerParty",
+                "TaxTotal",
+                "RequestedMonetaryTotal",
+                "DebitNoteLine",
+            ],
         )
 
     def test_debit_note_document_requests_the_total_of_the_note(self):
