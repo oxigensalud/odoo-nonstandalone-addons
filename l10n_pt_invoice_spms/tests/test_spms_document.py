@@ -298,6 +298,166 @@ class TestSpmsDocument(SpmsInvoiceCase):
             lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "11.50"
         )
 
+    def test_credit_note_document_sends_the_tax_it_posted(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        # the cent the verification module writes on the tax item to match the CCF
+        tax_line = credit_note.line_ids.filtered("tax_line_id")
+        receivable_line = credit_note.line_ids.filtered(
+            lambda line: line.account_id.internal_type == "receivable"
+        )
+        credit_note.with_context(check_move_validity=False).write(
+            {
+                "line_ids": [
+                    (1, tax_line.id, {"debit": 23.01}),
+                    (1, receivable_line.id, {"credit": 123.01}),
+                ]
+            }
+        )
+        credit_note.action_post()
+        document = self._document(credit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "23.01")
+        subtotal = tax_total.find(CAC + "TaxSubtotal")
+        self.assertEqual(subtotal.findtext(CBC + "TaxableAmount"), "100.00")
+        self.assertEqual(subtotal.findtext(CBC + "TaxAmount"), "23.01")
+        line = document.find(CAC + "CreditNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.01"
+        )
+        total = document.find(CAC + "LegalMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.01")
+
+    def test_debit_note_document_sends_the_tax_it_posted(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        # the cent the verification module writes on the tax item to match the CCF
+        tax_line = debit_note.line_ids.filtered("tax_line_id")
+        receivable_line = debit_note.line_ids.filtered(
+            lambda line: line.account_id.internal_type == "receivable"
+        )
+        debit_note.with_context(check_move_validity=False).write(
+            {
+                "line_ids": [
+                    (1, tax_line.id, {"credit": 23.01}),
+                    (1, receivable_line.id, {"debit": 123.01}),
+                ]
+            }
+        )
+        debit_note.action_post()
+        document = self._document(debit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "23.01")
+        subtotal = tax_total.find(CAC + "TaxSubtotal")
+        self.assertEqual(subtotal.findtext(CBC + "TaxableAmount"), "100.00")
+        self.assertEqual(subtotal.findtext(CBC + "TaxAmount"), "23.01")
+        line = document.find(CAC + "DebitNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.01"
+        )
+        total = document.find(CAC + "RequestedMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.01")
+
+    def test_credit_note_document_leaves_a_fixed_tax_in_the_base(self):
+        invoice = self._create_invoice(price_unit=94.0)
+        fixed_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test fixed tax",
+                "type_tax_use": "sale",
+                "amount_type": "fixed",
+                "amount": 5.0,
+                "company_id": self.company.id,
+            }
+        )
+        division_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test division tax",
+                "type_tax_use": "sale",
+                "amount_type": "division",
+                "amount": 6.0,
+                "company_id": self.company.id,
+            }
+        )
+        invoice.write(
+            {
+                "invoice_line_ids": [
+                    (
+                        1,
+                        invoice.invoice_line_ids.id,
+                        {"tax_ids": [(6, 0, (fixed_tax + division_tax).ids)]},
+                    )
+                ]
+            }
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "6.00")
+        subtotals = tax_total.findall(CAC + "TaxSubtotal")
+        self.assertEqual(len(subtotals), 1)
+        self.assertEqual(subtotals[0].findtext(CBC + "TaxAmount"), "6.00")
+        line = document.find(CAC + "CreditNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "6.00"
+        )
+        total = document.find(CAC + "LegalMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "99.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "105.00")
+
+    def test_debit_note_document_leaves_a_fixed_tax_in_the_base(self):
+        invoice = self._create_invoice(price_unit=94.0)
+        fixed_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test fixed tax",
+                "type_tax_use": "sale",
+                "amount_type": "fixed",
+                "amount": 5.0,
+                "company_id": self.company.id,
+            }
+        )
+        division_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test division tax",
+                "type_tax_use": "sale",
+                "amount_type": "division",
+                "amount": 6.0,
+                "company_id": self.company.id,
+            }
+        )
+        invoice.write(
+            {
+                "invoice_line_ids": [
+                    (
+                        1,
+                        invoice.invoice_line_ids.id,
+                        {"tax_ids": [(6, 0, (fixed_tax + division_tax).ids)]},
+                    )
+                ]
+            }
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "6.00")
+        subtotals = tax_total.findall(CAC + "TaxSubtotal")
+        self.assertEqual(len(subtotals), 1)
+        self.assertEqual(subtotals[0].findtext(CBC + "TaxAmount"), "6.00")
+        line = document.find(CAC + "DebitNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "6.00"
+        )
+        total = document.find(CAC + "RequestedMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "99.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "105.00")
+
     def test_document_with_two_origins_is_refused(self):
         invoice = self._create_invoice()
         invoice.action_post()
