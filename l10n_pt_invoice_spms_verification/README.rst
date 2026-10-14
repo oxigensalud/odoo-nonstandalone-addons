@@ -80,7 +80,9 @@ Configuration
   including a transport failure — is written on the result record; a job
   fails only on a software failure, stays visible under *Queue → Jobs*,
   and the next pass re-activates that same job rather than queueing
-  another. To pause the polling, deactivate the scheduled action — never
+  another. These jobs go behind every other waiting job, so a CCF that
+  does not answer holds up the rest of the queue for one question at
+  most. To pause the polling, deactivate the scheduled action — never
   uninstall the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page of the
   company form, visible to users with *Administration / Settings*; 0.01

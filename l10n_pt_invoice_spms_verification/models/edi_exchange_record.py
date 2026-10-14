@@ -15,6 +15,9 @@ from odoo import _, api, fields, models
 from odoo.modules.module import get_resource_path
 
 REQUEST_TIMEOUT = 60
+# behind queue_job's default priority (10): a CCF that does not answer
+# holds up any other waiting job for one poll at most
+POLL_PRIORITY = 20
 
 
 class SpmsVerificationTransport(Transport):
@@ -137,9 +140,12 @@ class EdiExchangeRecord(models.Model):
                 continue
             failed = failed_polls.get(result.id)
             if failed:
+                failed.write({"priority": POLL_PRIORITY})
                 failed.requeue()
             else:
-                result.with_delay().action_l10n_pt_spms_verification_poll()
+                result.with_delay(
+                    priority=POLL_PRIORITY
+                ).action_l10n_pt_spms_verification_poll()
 
     def _l10n_pt_spms_verification_failed_polls(self):
         """The poll jobs that ran out of retries, by result record.

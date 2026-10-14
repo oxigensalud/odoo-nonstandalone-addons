@@ -14,7 +14,7 @@ from odoo.addons.component.tests.common import SavepointComponentCase
 from odoo.addons.l10n_pt_invoice_spms_verification.models.edi_exchange_record import (
     SpmsVerificationTransport,
 )
-from odoo.addons.queue_job.job import Job
+from odoo.addons.queue_job.job import DEFAULT_PRIORITY, Job
 from odoo.addons.queue_job.tests.common import trap_jobs
 
 MODULE = "odoo.addons.l10n_pt_invoice_spms_verification.models.edi_exchange_record"
@@ -695,6 +695,30 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         self.assertEqual(jobs, record)
         self.assertEqual(record.state, "pending")
         self.assertEqual(record.retry, 0)
+
+    def test_polls_go_behind_other_jobs(self):
+        # a CCF that does not answer makes every poll wait: behind each job
+        # of the default priority, the polls hold up other work for one poll
+        # at most
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_verification_update()
+        factory.assert_not_called()
+        jobs = self.env["queue.job"].search(
+            [("method_name", "=", "action_l10n_pt_spms_verification_poll")]
+        )
+        self.assertEqual(len(jobs), 1)
+        self.assertGreater(jobs.priority, DEFAULT_PRIORITY)
+
+    def test_requeued_poll_goes_behind_other_jobs(self):
+        # a failed poll queued with the default priority goes behind the
+        # other jobs too once the next pass re-activates it
+        record = self._fail_queued_poll()
+        record.priority = DEFAULT_PRIORITY
+        with mock.patch(CLIENT_PATH) as factory:
+            self.env["edi.exchange.record"]._cron_l10n_pt_spms_verification_update()
+        factory.assert_not_called()
+        self.assertEqual(record.state, "pending")
+        self.assertGreater(record.priority, DEFAULT_PRIORITY)
 
     def test_failed_poll_of_settled_invoice_left_alone(self):
         # the failed job of an invoice verified meanwhile is not revived
