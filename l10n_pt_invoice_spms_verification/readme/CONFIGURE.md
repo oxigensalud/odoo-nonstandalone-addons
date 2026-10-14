@@ -14,7 +14,9 @@
   was sent makes no calls. Every answer of the CCF — including a
   transport failure — is written on the result record; a job fails only
   on a software failure, stays visible under *Queue → Jobs*, and the
-  next pass re-activates that same job rather than queueing another. To
+  next pass re-activates that same job rather than queueing another.
+  These jobs go behind every other waiting job, so a CCF that does not
+  answer holds up the rest of the queue for one question at most. To
   pause the polling, deactivate the scheduled action — never uninstall
   the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page of the
