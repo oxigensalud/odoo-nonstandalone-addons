@@ -85,12 +85,12 @@ Configuration
   question at most. To pause the polling, deactivate the scheduled
   action — never uninstall the module just to stop the calls.
 - Set the *SPMS Adjustment Limit* on the company (SPMS page of the
-  company form, visible to users with *Administration / Settings*; 0.01
-  by default): the largest difference, taxes included, between the
-  official value and the draft credit or debit note that is written on
-  its tax line. A larger difference holds the result in *Error* for
-  review instead of generating the note; raise the limit only when a
-  larger difference is legitimate and strictly necessary.
+  company form, visible to users with *Administration / Settings*): the
+  largest difference, taxes included, between the official value and the
+  draft credit or debit note that is written on its tax line. A larger
+  difference holds the result in *Error* for review instead of
+  generating the note; raise the limit only when a larger difference is
+  legitimate and strictly necessary.
 - Keep the tax rounding method of the company (*Accounting → Settings →
   Taxes → Rounding Method*) on *Round Globally*: the CCF computes the
   tax once on the invoice total, and per-line rounding drifts away from
@@ -174,14 +174,14 @@ the rounding of the tax, which the CCF computes once on the invoice
 total: that cent is written on the tax line of the draft, the same
 correction an accountant would pencil on the tax journal item, with no
 extra line, so the total matches the official value exactly. A residual
-beyond the *SPMS Adjustment Limit* of the company (0.01 by default)
-holds the result in *Error* with the reason, because it reveals a
-discrepancy to review rather than rounding noise: a claim priced
-differently (the *Claims Amount* of the result then differs from its
-official totals before tax), or a company rounding its taxes per line;
-raise the limit only when the difference is legitimate and strictly
-necessary. Drafts stay drafts: the accounting team reviews and posts
-them; the EDI circuit takes over from there.
+beyond the *SPMS Adjustment Limit* of the company holds the result in
+*Error* with the reason, because it reveals a discrepancy to review
+rather than rounding noise: a claim priced differently (the *Claims
+Amount* of the result then differs from its official totals before tax),
+or a company rounding its taxes per line; raise the limit only when the
+difference is legitimate and strictly necessary. Drafts stay drafts: the
+accounting team reviews and posts them; the EDI circuit takes over from
+there.
 
 A negative official value — the verification computed more than the
 invoice billed — calls for a debit note instead. The module generates it
