@@ -843,9 +843,9 @@ msgid ""
 "action processes the document again at its next pass and generates the note "
 "then."
 msgstr ""
-"Listo para generar: pulse Retry en el registro de intercambio; la acción de "
-"entrada EDI vuelve a procesar el documento en la siguiente pasada y entonces"
-" genera la nota."
+"Listo para generar: pulse Reintentar en el registro de intercambio; la "
+"acción de entrada EDI vuelve a procesar el documento en la siguiente pasada "
+"y entonces genera la nota."
 
 #. module: l10n_pt_invoice_spms_verification
 #: model:ir.model.fields,help:l10n_pt_invoice_spms_verification.field_spms_invoice_verification__state
@@ -1089,7 +1089,7 @@ msgid ""
 msgstr ""
 "El registro de intercambio EDI que recibió el documento de verificación del "
 "que procede este resultado y lo procesó. Un resultado retenido en Error, o "
-"reabierto por contabilidad, se vuelve a generar pulsando Retry en ese "
+"reabierto por contabilidad, se vuelve a generar pulsando Reintentar en ese "
 "registro: la acción de entrada EDI vuelve a procesar el documento en la "
 "siguiente pasada."
 
@@ -1376,8 +1376,8 @@ msgid ""
 "pass."
 msgstr ""
 "El resultado de verificación de %s vuelve a estar listo para generar: pulse "
-"Retry en su registro de intercambio; la acción de entrada EDI genera la nota"
-" en la siguiente pasada."
+"Reintentar en su registro de intercambio; la acción de entrada EDI genera la"
+" nota en la siguiente pasada."
 
 #. module: l10n_pt_invoice_spms_verification
 #: code:addons/l10n_pt_invoice_spms_verification/models/spms_invoice_verification.py:0
@@ -1513,7 +1513,7 @@ msgid ""
 msgstr ""
 "Por qué falló la generación automática de la nota de este resultado; el "
 "resultado queda retenido en Error hasta que se corrige la causa y se pulsa "
-"Retry en su registro de intercambio: la acción de entrada EDI vuelve a "
+"Reintentar en su registro de intercambio: la acción de entrada EDI vuelve a "
 "procesar el documento en la siguiente pasada. Los demás resultados del mismo"
 " lote nunca se arrastran."
 
@@ -1530,7 +1530,7 @@ msgstr ""
 " la factura ya tiene una nota de crédito o de débito que este módulo no "
 "creó, o el desenlace de la verificación es uno que este módulo no reconoce. "
 "Una nota ajena cancelada lo limpia por sí solo; un fallo de generación se "
-"limpia cuando Retry en el registro de intercambio vuelve a procesar el "
+"limpia cuando Reintentar en el registro de intercambio vuelve a procesar el "
 "documento."
 
 #. module: l10n_pt_invoice_spms_verification
