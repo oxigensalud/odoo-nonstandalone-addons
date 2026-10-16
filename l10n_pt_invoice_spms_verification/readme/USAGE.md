@@ -73,8 +73,8 @@ official value by the rounding of the tax, which the CCF computes once
 on the invoice total: that cent is written on the tax line of the draft,
 the same correction an accountant would pencil on the tax journal item,
 with no extra line, so the total matches the official value exactly. A
-residual beyond the *SPMS Adjustment Limit* of the company (0.01 by
-default) holds the result in *Error* with the reason, because it reveals
+residual beyond the *SPMS Adjustment Limit* of the company holds the
+result in *Error* with the reason, because it reveals
 a discrepancy to review rather than rounding noise: a claim priced
 differently (the *Claims Amount* of the result then differs from its
 official totals before tax), or a company rounding its taxes per line;
