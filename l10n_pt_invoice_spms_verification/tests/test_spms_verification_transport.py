@@ -218,7 +218,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
             trap.perform_enqueued_jobs()
 
     def _queued_polls(self):
-        """How many polls one pass of the scheduled action queues."""
+        """How many polls one run of the scheduled action queues."""
         with trap_jobs() as trap:
             self.env["edi.exchange.record"]._cron_l10n_pt_spms_verification_update()
         return trap.jobs_count()
@@ -269,7 +269,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         )
 
     def test_result_record_expected_from_the_first_pass(self):
-        # the first pass after the sending creates the result record,
+        # the first run after the sending creates the result record,
         # waiting and empty, as the ACK the sent invoice expects: the
         # sent record knows what it is waiting for from the start
         transport = _FakeTransport(_fault_response(NOT_VERIFIED_YET))
@@ -287,7 +287,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
 
     def test_not_verified_yet_keeps_waiting(self):
         # "not verified yet" is the normal answer for weeks: the record
-        # keeps waiting, asked again at every pass, and every question
+        # keeps waiting, asked again at every run, and every question
         # writes the CCF's words on it (so its last modification is the
         # time of the last question) — nothing else
         transport = _FakeTransport(
@@ -310,7 +310,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
     def test_service_illness_is_an_error_on_reception(self):
         # the real July-2026 outage answered this exact fault for weeks:
         # the record says so, with the reason, and is asked again at the
-        # next pass — the job itself stays green; the next "not verified
+        # next run — the job itself stays green; the next "not verified
         # yet" clears the error by itself
         transport = _FakeTransport(
             _fault_response("999 - Erro desconhecido."),
@@ -683,7 +683,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
         return record
 
     def test_failed_poll_is_requeued_not_duplicated(self):
-        # a poll that failed is final for queue_job: the next pass
+        # a poll that failed is final for queue_job: the next run
         # re-activates that job instead of queueing a second
         record = self._fail_queued_poll()
         with mock.patch(CLIENT_PATH) as factory:
@@ -711,7 +711,7 @@ class TestSpmsVerificationTransport(SavepointComponentCase):
 
     def test_requeued_poll_goes_behind_other_jobs(self):
         # a failed poll queued with the default priority goes behind the
-        # other jobs too once the next pass re-activates it
+        # other jobs too once the next run re-activates it
         record = self._fail_queued_poll()
         record.priority = DEFAULT_PRIORITY
         with mock.patch(CLIENT_PATH) as factory:

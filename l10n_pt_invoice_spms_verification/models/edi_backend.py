@@ -17,7 +17,7 @@ class EdiBackend(models.Model):
         invoice at every attempt), so its "EDI exchange check input
         sync" would queue action_exchange_receive() on every waiting
         result — a NotImplementedError, a red job per record and per
-        pass. The scheduled action of the module asks the CCF instead.
+        run. The scheduled action of the module asks the CCF instead.
         The process step (input_received) stays with edi_oca as a
         safety net.
         """

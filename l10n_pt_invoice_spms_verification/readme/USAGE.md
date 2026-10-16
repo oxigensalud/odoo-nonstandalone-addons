@@ -2,16 +2,16 @@ Results arrive on their own: the EDI record of every invoice sent to
 SPMS expects the verification result as its answer (its ACK); the credit
 and debit notes the same circuit sends expect nothing. A
 scheduled action (*SPMS: get verification results from the CCF*) creates
-that result record — *Waiting to be received* — at its first pass after
-the sending and asks the CCF about it at every pass, in its own queue job
+that result record — *Waiting to be received* — at its first run after
+the sending and asks the CCF about it at every run, in its own queue job
 (*Queue → Jobs* lists them). *Not verified yet* (302) keeps it waiting; a
 verification document is received on it and processed from there (a
 document naming another invoice than the record's is rejected: *Error on
 process* with the reason, *Retry* after looking into it). The CCF being
 unavailable (999), a transport failure, an unknown answer or the CCF not
 recognising the invoice (301) put the record in *Error on reception*
-with the reason, and it is asked again at the next pass until the CCF
-answers; *Retry* on it asks again at the next pass. The record keeps the
+with the reason, and it is asked again at the next run until the CCF
+answers; *Retry* on it asks again at the next run. The record keeps the
 CCF's last answer in its own words (*Last CCF Answer*: «302 - Factura
 ainda não conferida.», «301 - Factura Inexistente.»; blank once the
 document arrives or after a failure that carried no verdict), and its
@@ -61,7 +61,7 @@ invoice line, a foreign note, a residual beyond the adjustment limit),
 that result alone is held in *Error* with the reason on its form, and
 its exchange record — the result form links to it — in *Error on
 process* with the same reason; fix the cause and press *Retry* on that
-record: the stored document is processed again at the next pass of the
+record: the stored document is processed again at the next run of the
 input action of the EDI framework, and the note is generated
 then. The rest of the batch is never dragged along. A
 prescription the verification priced above the billed amount (a negative

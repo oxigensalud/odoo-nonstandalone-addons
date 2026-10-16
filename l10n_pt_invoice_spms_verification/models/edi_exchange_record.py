@@ -96,7 +96,7 @@ class EdiExchangeRecord(models.Model):
 
         FACE-style polling (precedent: l10n_es_facturae_face) on the
         answer edi_oca already models: the verification result is the ACK the
-        sent invoice expects. The first pass after the sending creates
+        sent invoice expects. The first run after the sending creates
         the result record, waiting, as the child of the sent record;
         from then on the waiting result records are the queue. The
         scheduled action only queues one job per record, the way
@@ -153,7 +153,7 @@ class EdiExchangeRecord(models.Model):
 
         A failed job is final for queue_job: nothing re-runs it, and
         the identity key of a poll job only stops duplicates of a live
-        one, so the next pass would queue a second poll of the same
+        one, so the next run would queue a second poll of the same
         result and leave the failed one behind. The scheduled action
         re-activates that job instead — what the Requeue button does —
         so a result keeps one poll job whatever the CCF answers.
@@ -180,7 +180,7 @@ class EdiExchangeRecord(models.Model):
 
         A posted invoice with no definitive verification result and no ACK
         yet: an existing verification child, whatever its state, is the ACK,
-        so the first pass backfills every already-sent invoice without
+        so the first run backfills every already-sent invoice without
         duplicating anything.
         """
         self.ensure_one()
@@ -247,7 +247,7 @@ class EdiExchangeRecord(models.Model):
         """Fetch the CCF answer for one waiting result and write it on
         the record: a document is received and processed, "not verified
         yet" keeps it waiting, anything else is an error on reception
-        with its reason, asked again at the next pass. Every question
+        with its reason, asked again at the next run. Every question
         leaves the CCF's own words (a coded fault) or a blank on the
         record, and its time as the record's last modification."""
         try:
@@ -257,7 +257,7 @@ class EdiExchangeRecord(models.Model):
             self._l10n_pt_spms_verification_receive_error(
                 _(
                     "The CCF did not answer within %(seconds)s seconds. This "
-                    "says nothing about the invoice or its data; the next pass "
+                    "says nothing about the invoice or its data; the next run "
                     "of the scheduled action asks again on its own. Technical "
                     "detail: %(detail)s"
                 )
@@ -272,7 +272,7 @@ class EdiExchangeRecord(models.Model):
                 _(
                     "The CCF web service could not be reached (connection "
                     "problem). This says nothing about the invoice or its "
-                    "data; the next pass of the scheduled action asks again on "
+                    "data; the next run of the scheduled action asks again on "
                     "its own. Technical detail: %(detail)s"
                 )
                 % {"detail": type(err).__name__},
@@ -296,7 +296,7 @@ class EdiExchangeRecord(models.Model):
                 message = _(
                     "The CCF answered with a server error (%(status)s) and no "
                     "usable content. This says nothing about the invoice or "
-                    "its data; the next pass of the scheduled action asks again "
+                    "its data; the next run of the scheduled action asks again "
                     "on its own. Technical detail: %(detail)s."
                 )
             else:
@@ -383,7 +383,7 @@ class EdiExchangeRecord(models.Model):
     def _l10n_pt_spms_verification_receive_error(
         self, message, exception=None, answer=False
     ):
-        """Error on reception with its reason: asked again next pass,
+        """Error on reception with its reason: asked again next run,
         cleared by the next "not verified yet" or by the document. The
         answer is the CCF's own words when it gave a verdict (a coded
         fault), blank after a failure that carried none.
