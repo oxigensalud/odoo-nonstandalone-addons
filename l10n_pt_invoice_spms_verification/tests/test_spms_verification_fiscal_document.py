@@ -8,8 +8,10 @@ class TestSpmsVerificationFiscalDocument(SpmsVerificationCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # ptplus on, and posting needs a tax of one of its VAT groups
+        # ptplus on, and posting needs its document types and a tax of one of
+        # its VAT groups
         cls.company.pt_invoicing = True
+        cls.company.l10n_pt_create_default_fiscal_doc_types(["invoice"])
         cls.tax6.tax_group_id = cls.env.ref("ptplus.tax_group_iva_6")
 
     def test_generate_from_another_company_creates_fiscal_credit_note(self):
