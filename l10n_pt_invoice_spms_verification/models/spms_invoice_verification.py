@@ -144,7 +144,7 @@ class SpmsInvoiceVerification(models.Model):
         "document this result comes from and processed it. A result held "
         "in Error, or reopened by accounting, is generated again by "
         "pressing Retry on that record: the EDI input action processes "
-        "the stored document again at its next pass.",
+        "the stored document again at its next run.",
     )
     state = fields.Selection(
         selection=[
@@ -246,7 +246,7 @@ class SpmsInvoiceVerification(models.Model):
         help="Why the automatic note generation of this result failed; the "
         "result is held in Error until the cause is fixed and Retry is "
         "pressed on its exchange record: the EDI input action processes "
-        "the document again at its next pass. Other results of the "
+        "the document again at its next run. Other results of the "
         "same batch are never dragged along.",
     )
 
@@ -535,7 +535,7 @@ class SpmsInvoiceVerification(models.Model):
                     _(
                         "The verification result of %s is ready for generation "
                         "again: press Retry on its exchange record; the EDI "
-                        "input action generates the note at its next pass."
+                        "input action generates the note at its next run."
                     )
                     % rec.move_id.display_name
                 )
