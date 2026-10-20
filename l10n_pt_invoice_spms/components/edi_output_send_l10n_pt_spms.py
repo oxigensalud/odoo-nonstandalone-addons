@@ -42,6 +42,12 @@ class EdiOutputSendL10nPtSpms(Component):
 
     def send(self):
         invoice = self.exchange_record.record
+        name = invoice._get_move_display_name()
+        if invoice.state != "posted":
+            raise UserError(
+                _("%(name)s is not posted, so it cannot be sent to SPMS.")
+                % {"name": name}
+            )
         document = self.exchange_record._get_file_content().encode()
         envelope = self._prepare_envelope(invoice, document)
         response = requests.post(
