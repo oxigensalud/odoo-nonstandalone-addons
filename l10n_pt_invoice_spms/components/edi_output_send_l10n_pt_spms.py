@@ -5,6 +5,7 @@
 
 import base64
 import logging
+from http.client import responses as HTTP_REASONS
 from uuid import uuid4
 
 import requests
@@ -25,6 +26,14 @@ WSSE_NS = (
 )
 SOAPENV_NS = "http://schemas.xmlsoap.org/soap/envelope/"
 FACTURA_NS = "http://facturaElectronica.service.cc.ccf/"
+UBL_NAMESPACES = {
+    "cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+    "cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+}
+APPLICATION_RESPONSE_TAG = (
+    "{urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2}"
+    "ApplicationResponse"
+)
 
 
 WSDL = "https://www.ccf.min-saude.pt/WSExternoBroker/ProxyService/FacturaCRDWS"
@@ -42,6 +51,12 @@ class EdiOutputSendL10nPtSpms(Component):
 
     def send(self):
         invoice = self.exchange_record.record
+        name = invoice._get_move_display_name()
+        if invoice.state != "posted":
+            raise UserError(
+                _("%(name)s is not posted, so it cannot be sent to SPMS.")
+                % {"name": name}
+            )
         document = self.exchange_record._get_file_content().encode()
         envelope = self._prepare_envelope(invoice, document)
         response = requests.post(
@@ -52,18 +67,142 @@ class EdiOutputSendL10nPtSpms(Component):
                 "SOAPAction": "submeterFacturaElectronicaCRD",
             },
         )
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as err:
-            err.args = (f"{err.args[0]}\nSPMS response body:\n{response.text}",)
-            raise
-        response_xml = etree.fromstring(response.content)
-        aceite = response_xml.xpath("//aceite")
-        if not aceite or aceite[0].text != "S":
-            raise UserError(
-                _("Invoice not accepted: %s") % response.content.decode("utf-8")
+        answer = self._spms_parse(response.content)
+        if response.status_code >= 400:
+            # SPMS answers most errors with our own request, credentials included
+            reason = HTTP_REASONS.get(response.status_code)
+            status = (
+                "HTTP %s %s" % (response.status_code, reason)
+                if reason is not None
+                else "HTTP %s" % response.status_code
             )
-        return response.content.decode("utf-8")
+            message = _(
+                "SPMS answered with an error (%(status)s); "
+                "sending %(name)s will be retried automatically."
+            ) % {"status": status, "name": name}
+            fault = self._spms_fault_text(answer)
+            if fault is not None:
+                message += " " + _("SPMS message: %(fault)s") % {"fault": fault}
+            raise requests.HTTPError(
+                self._spms_masked(message, invoice.company_id), response=response
+            )
+        verdict = (
+            self._spms_single_text(answer.xpath("//aceite"))
+            if answer is not None
+            else None
+        )
+        if verdict == "S":
+            return response.content.decode("utf-8")
+        elif verdict == "N":
+            message = "\n".join(
+                [_("SPMS did not accept %(name)s.") % {"name": name}]
+                + self._spms_refusal_reasons(answer)
+            )
+            raise UserError(self._spms_masked(message, invoice.company_id))
+        else:
+            raise UserError(
+                _(
+                    "The answer from SPMS could not be read, so it is not known "
+                    "whether %(name)s was accepted."
+                )
+                % {"name": name}
+            )
+
+    def _spms_parse(self, content):
+        """The root element of an XML content, or None when it is not XML."""
+        try:
+            # no entity is resolved: an answer cannot bring a local file in
+            root = etree.fromstring(
+                content, parser=etree.XMLParser(resolve_entities=False, no_network=True)
+            )
+        except etree.XMLSyntaxError:
+            # None, so that the callers raise outside this except block
+            root = None
+        return root
+
+    def _spms_fault_text(self, answer):
+        """The text of the SOAP 1.1 faults of the parsed answer, or None."""
+        faultstrings = (
+            answer.xpath(
+                "/soapenv:Envelope/soapenv:Body/soapenv:Fault/faultstring",
+                namespaces={"soapenv": SOAPENV_NS},
+            )
+            if answer is not None
+            else []
+        )
+        return self._spms_joined_text(faultstrings)
+
+    def _spms_refusal_reasons(self, answer):
+        """SPMS's reasons for a refusal, one line each, from its documento."""
+        encoded = self._spms_single_text(answer.xpath("//documento"))
+        try:
+            content = (
+                base64.b64decode("".join(encoded.split()), validate=True)
+                if encoded is not None
+                else None
+            )
+        except ValueError:
+            content = None
+        reply = self._spms_parse(content) if content is not None else None
+        responses = (
+            reply.xpath(
+                "cac:DocumentResponse/cac:Response"
+                " | cac:DocumentResponse/cac:LineResponse/cac:Response",
+                namespaces=UBL_NAMESPACES,
+            )
+            if reply is not None and reply.tag == APPLICATION_RESPONSE_TAG
+            else []
+        )
+        texts = [self._spms_response_text(response) for response in responses]
+        return [text for text in texts if text is not None]
+
+    def _spms_response_text(self, response):
+        """The text of a response: code and description, the code alone, or None."""
+        code = self._spms_single_text(
+            response.xpath("cbc:ResponseCode", namespaces=UBL_NAMESPACES)
+        )
+        description = self._spms_joined_text(
+            response.xpath("cbc:Description", namespaces=UBL_NAMESPACES)
+        )
+        if code is not None:
+            text = (
+                "%(code)s: %(description)s" % {"code": code, "description": description}
+                if description is not None
+                else code
+            )
+        else:
+            text = None
+        return text
+
+    def _spms_joined_text(self, elements):
+        """The readable texts of the elements, joined, or None."""
+        texts = [self._spms_text(element) for element in elements]
+        kept = [text for text in texts if text is not None]
+        return "; ".join(kept) if kept else None
+
+    def _spms_single_text(self, elements):
+        """The text of the only element, or None for none or several."""
+        return self._spms_text(elements[0]) if len(elements) == 1 else None
+
+    def _spms_text(self, element):
+        """The stripped text of an element without children, or None."""
+        if len(element) == 0:
+            text = (element.text or "").strip() or None
+        else:
+            text = None
+        return text
+
+    def _spms_masked(self, text, company):
+        """The text with our SPMS username and password replaced by ***."""
+        secrets = [
+            secret
+            for secret in (company.spms_username, company.spms_password)
+            if secret
+        ]
+        # the longer first, so that neither leaves part of the other visible
+        for secret in sorted(secrets, key=len, reverse=True):
+            text = text.replace(secret, "***")
+        return text
 
     def _prepare_envelope(self, invoice, document):
         vat = invoice.company_id.vat

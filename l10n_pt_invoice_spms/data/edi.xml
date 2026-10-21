@@ -33,7 +33,7 @@
         <field name="model_id" ref="account.model_account_move" />
         <field
             name="enable_domain"
-        >[('state', '!=', 'draft'), ('partner_id', '!=', False), ('partner_id.spms_information', '=', True),('move_type', 'in', ['out_invoice', 'out_refund'])]</field>
+        >[('state', '=', 'posted'), ('partner_id', '!=', False), ('partner_id.spms_information', '=', True),('move_type', 'in', ['out_invoice', 'out_refund'])]</field>
         <field
             name="enable_snippet"
         >result = record.company_id._is_spms_company() and not record._has_exchange_record(exchange_type)</field>

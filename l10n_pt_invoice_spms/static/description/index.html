@@ -373,6 +373,9 @@ ul.auto-toc {
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -->
 <p><a class="reference external image-reference" href="https://odoo-community.org/page/development-status"><img alt="Beta" src="https://img.shields.io/badge/maturity-Beta-yellow.png" /></a> <a class="reference external image-reference" href="http://www.gnu.org/licenses/agpl-3.0-standalone.html"><img alt="License: AGPL-3" src="https://img.shields.io/badge/license-AGPL--3-blue.png" /></a> <a class="reference external image-reference" href="https://github.com/oxigensalud/odoo-nonstandalone-addons/tree/14.0/l10n_pt_invoice_spms"><img alt="oxigensalud/odoo-nonstandalone-addons" src="https://img.shields.io/badge/github-oxigensalud%2Fodoo--nonstandalone--addons-lightgray.png?logo=github" /></a></p>
 <p>Generate invoice for SPMS</p>
+<p>Only a posted invoice or note is sent to SPMS: the button that sends it
+is shown on posted ones only, and sending one that has since been
+cancelled or reset to draft is refused.</p>
 <p>Once SPMS has accepted an invoice, it can no longer be cancelled or
 reset to draft; corrections go through a credit or debit note.</p>
 <p>A credit or debit note is sent as a single line with its total, as SPMS
