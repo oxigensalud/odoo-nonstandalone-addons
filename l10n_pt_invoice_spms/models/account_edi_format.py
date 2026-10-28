@@ -1,0 +1,284 @@
+# Copyright 2025 Dixmit
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# Copyright 2025 NuoBiT Solutions - Deniz Gallo <dgallo@nuobit.com>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+from collections import defaultdict
+from datetime import timedelta
+
+from odoo import models
+from odoo.tools import frozendict
+
+# Note required by the CCF CreditNote and DebitNote profiles
+RECTIFICATION_NOTE = (
+    "%(document)s %(note)s para rectificação à fatura %(invoice)s de %(date)s"
+)
+INVOICE_TEMPLATE_VALS = {
+    "InvoiceType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceLine",
+}
+CREDIT_NOTE_TEMPLATE_VALS = {
+    "main_template": "account_edi_ubl_cii.ubl_20_CreditNote",
+    "CreditNoteType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteLine",
+}
+DEBIT_NOTE_TEMPLATE_VALS = {
+    "main_template": "account_edi_ubl_cii.ubl_20_DebitNote",
+    "DebitNoteType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteType",
+    "InvoiceLineType_template": "l10n_pt_invoice_spms.spms_cius_pt_211_NoteLine",
+}
+
+
+class AccountEdiXmlSpmsCiusPt211(models.AbstractModel):
+    _name = "account.edi.xml.spms_cius_pt_211"
+    _inherit = "account.edi.xml.ubl_20"
+    _description = "SPMS CIUS PT 2.11 XML Builder"
+
+    def _get_invoice_period_vals_list(self, invoice):
+        origin_invoice = invoice._spms_origin_invoice() or invoice
+        start_date = min(origin_invoice.invoice_line_ids.mapped("spms_start_date"))
+        start_date = start_date.replace(day=1)
+        if start_date:
+            start_date = start_date.isoformat()
+        end_date = max(origin_invoice.invoice_line_ids.mapped("spms_end_date"))
+        end_date = end_date.replace(day=28)
+        end_date += timedelta(days=4)
+        end_date = end_date - timedelta(days=end_date.day)
+        if end_date:
+            end_date = end_date.isoformat()
+        return [{"start_date": start_date, "end_date": end_date}]
+
+    def _get_partner_party_vals(self, partner, role):
+        vals = super()._get_partner_party_vals(partner, role)
+        if role == "customer":
+            vals.update(
+                {
+                    "party_legal_entity_vals": [],
+                }
+            )
+        return vals
+
+    def _export_invoice_vals(self, invoice):
+        # EXTENDS account.edi.xml.ubl_20
+        vals = super()._export_invoice_vals(invoice)
+
+        vals.update(
+            {
+                "InvoiceExtension_spms": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_InvoiceExtension_spms"
+                ),
+                "PartyType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_PartyType"
+                ),
+                "AddressType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_AddressType"
+                ),
+                "TaxCategoryType_template": (
+                    "l10n_pt_invoice_spms.spms_cius_pt_211_TaxCategoryType"
+                ),
+            }
+        )
+        vals["vals"].update(
+            {
+                "id": invoice._get_spms_invoice_number(),
+            }
+        )
+        aggregated_vals = {}
+        unmerged_vals = []
+        for line in vals["vals"]["line_vals"]:
+            if line["price_vals"]["spms_tipo"]:
+                if line["price_vals"]["spms_tipo"] not in aggregated_vals:
+                    aggregated_vals[line["price_vals"]["spms_tipo"]] = line
+                else:
+                    aggregated_vals[line["price_vals"]["spms_tipo"]][
+                        "line_quantity"
+                    ] += line["line_quantity"]
+                    aggregated_vals[line["price_vals"]["spms_tipo"]][
+                        "line_extension_amount"
+                    ] += line["line_extension_amount"]
+                    i = 0
+                    for tax in line["tax_total_vals"]:
+                        aggregated_vals[line["price_vals"]["spms_tipo"]][
+                            "tax_total_vals"
+                        ][i]["tax_amount"] += tax["tax_amount"]
+                        j = 0
+                        for tax_subtotal in tax["tax_subtotal_vals"]:
+                            aggregated_vals[line["price_vals"]["spms_tipo"]][
+                                "tax_total_vals"
+                            ][i]["tax_subtotal_vals"][j]["tax_amount"] += tax_subtotal[
+                                "tax_amount"
+                            ]
+                            j += 1
+                        i += 1
+            else:
+                unmerged_vals.append(line)
+        line_vals = list(aggregated_vals.values()) + unmerged_vals
+        i = 1
+        for line in line_vals:
+            line["id"] = str(i)
+            i += 1
+        vals["vals"]["line_vals"] = line_vals
+        lots = invoice.invoice_line_ids.product_id.spms_lot_id
+        lotes = []
+        lot_number = 1
+        for lot in lots:
+            lines = invoice.invoice_line_ids.filtered(
+                lambda line, lot=lot: line.product_id.spms_lot_id == lot
+            )
+            lotes.append(
+                {
+                    "numero": lot_number,
+                    "tipo": lot.code,
+                    "amount": sum(lines.mapped("price_subtotal")),
+                    "total": len(lines),
+                    "dispensas": [
+                        {
+                            "prescription": line.spms_prescription,
+                            "user_number": line.spms_user_number,
+                            "beneficiary_number": line.spms_beneficiary_number,
+                            "prescription_type": line.spms_prescription_type_id.code,
+                            "price_subtotal": line.price_subtotal,
+                            "price_unit": line.price_unit,
+                            "quantity": int(line.quantity),
+                            "context": line.spms_context_id.code,
+                            "line_number": line.id,
+                            "system": line.product_id.default_code,
+                            "suspension_reason": line.spms_suspension_reason_id.code,
+                            "start_date": line.spms_start_date
+                            and line.spms_start_date.isoformat(),
+                            "end_date": line.spms_end_date
+                            and line.spms_end_date.isoformat(),
+                        }
+                        for line in lines
+                    ],
+                }
+            )
+            lot_number += 1
+        vals["vals"].update(
+            {
+                "spms_crd_vals": {
+                    "valor_total_prestacoes": invoice.amount_total,
+                    "currency_dp": invoice.currency_id.decimal_places,
+                    "quantidade_total_prestacoes": len(invoice.invoice_line_ids),
+                    "numero_lotes": len(lots),
+                    "lotes": lotes,
+                },
+                "profile_id": False,
+                "ubl_version_id": "UBL 2.0 CS (2006.10) + SIC (2007.03)",
+                "customization_id": "1.0",
+                "due_date": False,
+                "document_type_code": "FF",
+                "customer_assigned_account_id": invoice.partner_id.spms_assigned_id,
+            }
+        )
+        note_type = invoice._spms_note_type()
+        if note_type is None:
+            template_vals = INVOICE_TEMPLATE_VALS
+            document_vals = {"is_spms_invoice": True}
+        elif note_type == "C":
+            template_vals = CREDIT_NOTE_TEMPLATE_VALS
+            document_vals = self._get_note_vals(invoice, vals, "Nota de Crédito")
+        elif note_type == "D":
+            template_vals = DEBIT_NOTE_TEMPLATE_VALS
+            document_vals = self._get_note_vals(invoice, vals, "Nota de Débito")
+        else:
+            raise ValueError(f"unknown SPMS note type {note_type!r}")
+        vals.update(template_vals)
+        # the note templates name their elements after the kind of note
+        vals["spms_note_type"] = note_type
+        vals["vals"].update(document_vals)
+        return vals
+
+    def _get_billing_reference_vals(self, origin_invoice):
+        # the CCF holds the invoice under its invoice date
+        return {
+            "id": origin_invoice._get_spms_invoice_number(),
+            "issue_date": origin_invoice.invoice_date.isoformat(),
+        }
+
+    def _get_note_vals(self, invoice, vals, document_name):
+        billing_reference_vals = self._get_billing_reference_vals(
+            invoice._spms_origin_invoice()
+        )
+        tax_total_vals_list = [
+            self._get_note_tax_total_vals(invoice, tax_total_vals)
+            for tax_total_vals in vals["vals"]["tax_total_vals"]
+        ]
+        return {
+            "billing_reference_vals": billing_reference_vals,
+            "note_vals": [
+                RECTIFICATION_NOTE
+                % {
+                    "document": document_name,
+                    "note": invoice._get_spms_invoice_number(),
+                    "invoice": billing_reference_vals["id"],
+                    "date": billing_reference_vals["issue_date"],
+                }
+            ],
+            "tax_total_vals": tax_total_vals_list,
+            "line_vals": [
+                self._get_note_line_vals(
+                    vals["vals"]["monetary_total_vals"], tax_total_vals_list
+                )
+            ],
+        }
+
+    def _get_note_line_vals(self, monetary_total_vals, tax_total_vals_list):
+        # a note is one line holding its total, with no lot
+        return {
+            "id": "1",
+            "currency": monetary_total_vals["currency"],
+            "currency_dp": monetary_total_vals["currency_dp"],
+            "line_extension_amount": monetary_total_vals["tax_exclusive_amount"],
+            "tax_total_vals": tax_total_vals_list,
+        }
+
+    def _get_note_tax_total_vals(self, invoice, tax_total_vals):
+        # the tax as posted, per tax category like the subtotals: the tax item
+        # can hold the cent that matches the CCF, which the lines do not compute
+        balance_sign = -1 if invoice.is_inbound() else 1
+        posted_tax_amounts = defaultdict(float)
+        # a fixed tax has no subtotal: the base builder adds it to the base
+        tax_lines = invoice.line_ids.filtered(
+            lambda line: line.tax_line_id and line.tax_line_id.amount_type != "fixed"
+        )
+        # the parties the base builder takes the subtotal categories from
+        customer = invoice.commercial_partner_id
+        supplier = invoice.company_id.partner_id.commercial_partner_id
+        for tax_line in tax_lines:
+            tax_category_vals = self._get_tax_category_list(
+                customer, supplier, tax_line.tax_line_id
+            )[0]
+            posted_tax_amounts[frozendict(tax_category_vals)] += (
+                balance_sign * tax_line.amount_currency
+            )
+        tax_subtotal_vals_list = [
+            dict(
+                tax_subtotal_vals,
+                tax_amount=posted_tax_amounts[
+                    frozendict(tax_subtotal_vals["tax_category_vals"])
+                ],
+            )
+            for tax_subtotal_vals in tax_total_vals["tax_subtotal_vals"]
+        ]
+        return dict(
+            tax_total_vals,
+            tax_amount=sum(vals["tax_amount"] for vals in tax_subtotal_vals_list),
+            tax_subtotal_vals=tax_subtotal_vals_list,
+        )
+
+    def _get_invoice_line_price_vals(self, line):
+        result = super()._get_invoice_line_price_vals(line)
+        result.update(
+            {
+                "spms_tipo": line.product_id.spms_lot_id.code
+                if line.product_id.spms_lot_id
+                else "",
+            }
+        )
+        return result
+
+    def _get_partner_party_tax_scheme_vals_list(self, partner, role):
+        result = super()._get_partner_party_tax_scheme_vals_list(partner, role)
+        for line in result:
+            line["tax_scheme_vals"]["id"] = "PT IVA"
+        return result

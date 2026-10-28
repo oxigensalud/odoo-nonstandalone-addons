@@ -1,0 +1,494 @@
+# Copyright 2026 NuoBiT Solutions SL - Eric Antones <eantones@nuobit.com>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+from datetime import date
+
+from lxml import etree
+
+from odoo.exceptions import UserError
+
+from .common import SpmsInvoiceCase
+
+CAC = "{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}"
+CBC = "{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}"
+CRD = "{urn:acss:ccf:facturacaoelectronica:schema:xsd:CRD}"
+
+
+class TestSpmsDocument(SpmsInvoiceCase):
+    """The UBL document the sender builds for each kind of move."""
+
+    def test_invoice_document_is_an_invoice_with_the_crd_extension(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        document = self._document(invoice)
+        self.assertEqual(
+            document.tag,
+            "{urn:oasis:names:specification:ubl:schema:xsd:Invoice-2}Invoice",
+        )
+        self.assertEqual(len(document.findall(".//" + CRD + "CRDExtension")), 1)
+        self.assertIsNone(document.find(CAC + "BillingReference"))
+
+    def test_credit_note_document_is_a_credit_note_of_the_invoice(self):
+        invoice = self._create_invoice(invoice_date=date(2026, 5, 31))
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        self.assertEqual(
+            document.tag,
+            "{urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2}CreditNote",
+        )
+        self.assertIsNone(document.find(".//" + CRD + "CRDExtension"))
+        reference = document.find(
+            CAC + "BillingReference/" + CAC + "InvoiceDocumentReference"
+        )
+        self.assertEqual(
+            reference.findtext(CBC + "ID"), invoice._get_spms_invoice_number()
+        )
+        self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-31")
+
+    def test_credit_note_document_names_the_invoice_by_its_invoice_date(self):
+        invoice = self._create_invoice(
+            invoice_date=date(2026, 5, 30), accounting_date=date(2026, 5, 31)
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        reference = document.find(
+            CAC + "BillingReference/" + CAC + "InvoiceDocumentReference"
+        )
+        self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-30")
+
+    def test_credit_note_document_note_names_the_rectified_invoice(self):
+        invoice = self._create_invoice(invoice_date=date(2026, 5, 31))
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        self.assertEqual(
+            document.findtext(CBC + "Note"),
+            f"Nota de Crédito {credit_note._get_spms_invoice_number()} para "
+            f"rectificação à fatura {invoice._get_spms_invoice_number()} de 2026-05-31",
+        )
+
+    def test_credit_note_document_has_only_the_blocks_of_its_profile(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        self.assertEqual(
+            [etree.QName(child).localname for child in document],
+            [
+                "UBLVersionID",
+                "CustomizationID",
+                "ID",
+                "IssueDate",
+                "Note",
+                "DocumentCurrencyCode",
+                "BillingReference",
+                "AccountingSupplierParty",
+                "AccountingCustomerParty",
+                "TaxTotal",
+                "LegalMonetaryTotal",
+                "CreditNoteLine",
+            ],
+        )
+
+    def test_reconciled_credit_note_document_pays_the_total_of_the_note(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        receivable = (invoice + credit_note).line_ids.filtered(
+            lambda line: line.account_id.account_type == "asset_receivable"
+        )
+        # posting the note reconciles it with the invoice
+        self.assertTrue(all(receivable.mapped("reconciled")))
+        document = self._document(credit_note)
+        total = document.find(CAC + "LegalMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.00")
+        self.assertIsNone(total.find(CBC + "PrepaidAmount"))
+
+    def test_credit_note_document_line_credits_the_amount_once(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        lines = document.findall(CAC + "CreditNoteLine")
+        self.assertEqual(len(lines), 1)
+        line = lines[0]
+        self.assertEqual(line.findtext(CBC + "ID"), "1")
+        self.assertEqual(line.findtext(CBC + "CreditedQuantity"), "1")
+        self.assertEqual(line.findtext(CBC + "LineExtensionAmount"), "100.00")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.00"
+        )
+        self.assertIsNone(line.find(CAC + "Item"))
+        self.assertIsNone(line.find(CAC + "Price"))
+
+    def test_debit_note_document_is_a_debit_note_of_the_invoice(self):
+        invoice = self._create_invoice(invoice_date=date(2026, 5, 31))
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        self.assertEqual(
+            document.tag,
+            "{urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2}DebitNote",
+        )
+        self.assertIsNone(document.find(".//" + CRD + "CRDExtension"))
+        reference = document.find(
+            CAC + "BillingReference/" + CAC + "InvoiceDocumentReference"
+        )
+        self.assertEqual(
+            reference.findtext(CBC + "ID"), invoice._get_spms_invoice_number()
+        )
+        self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-31")
+
+    def test_debit_note_document_note_names_the_rectified_invoice(self):
+        invoice = self._create_invoice(invoice_date=date(2026, 5, 31))
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        self.assertEqual(
+            document.findtext(CBC + "Note"),
+            f"Nota de Débito {debit_note._get_spms_invoice_number()} para "
+            f"rectificação à fatura {invoice._get_spms_invoice_number()} de 2026-05-31",
+        )
+
+    def test_debit_note_document_names_the_invoice_by_its_invoice_date(self):
+        invoice = self._create_invoice(
+            invoice_date=date(2026, 5, 30), accounting_date=date(2026, 5, 31)
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        reference = document.find(
+            CAC + "BillingReference/" + CAC + "InvoiceDocumentReference"
+        )
+        self.assertEqual(reference.findtext(CBC + "IssueDate"), "2026-05-30")
+        self.assertEqual(
+            document.findtext(CBC + "Note"),
+            f"Nota de Débito {debit_note._get_spms_invoice_number()} para "
+            f"rectificação à fatura {invoice._get_spms_invoice_number()} de 2026-05-30",
+        )
+
+    def test_debit_note_document_has_only_the_blocks_of_its_profile(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        self.assertEqual(
+            [etree.QName(child).localname for child in document],
+            [
+                "UBLVersionID",
+                "CustomizationID",
+                "ID",
+                "IssueDate",
+                "Note",
+                "DocumentCurrencyCode",
+                "BillingReference",
+                "AccountingSupplierParty",
+                "AccountingCustomerParty",
+                "TaxTotal",
+                "RequestedMonetaryTotal",
+                "DebitNoteLine",
+            ],
+        )
+
+    def test_debit_note_document_requests_the_total_of_the_note(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        total = document.find(CAC + "RequestedMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.00")
+        self.assertIsNone(document.find(CAC + "LegalMonetaryTotal"))
+
+    def test_debit_note_document_line_debits_the_amount_once(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        lines = document.findall(CAC + "DebitNoteLine")
+        self.assertEqual(len(lines), 1)
+        line = lines[0]
+        self.assertEqual(line.findtext(CBC + "ID"), "1")
+        self.assertEqual(line.findtext(CBC + "DebitedQuantity"), "1")
+        self.assertEqual(line.findtext(CBC + "LineExtensionAmount"), "100.00")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.00"
+        )
+        self.assertIsNone(line.find(CAC + "Item"))
+        self.assertIsNone(line.find(CAC + "Price"))
+
+    def test_credit_note_document_of_two_lot_types_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        lines = document.findall(CAC + "CreditNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "150.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "34.50"
+        )
+
+    def test_debit_note_document_of_two_lot_types_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        lines = document.findall(CAC + "DebitNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "150.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "34.50"
+        )
+
+    def test_credit_note_document_of_lines_of_both_signs_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        other_line = credit_note.invoice_line_ids.filtered(
+            lambda line: line.product_id == self.other_product
+        )
+        credit_note.write(
+            {"invoice_line_ids": [(1, other_line.id, {"price_unit": -50.0})]}
+        )
+        credit_note.action_post()
+        document = self._document(credit_note)
+        lines = document.findall(CAC + "CreditNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "50.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "11.50"
+        )
+
+    def test_debit_note_document_of_lines_of_both_signs_is_one_line(self):
+        invoice = self._create_invoice_of_two_lot_types(
+            price_unit=100.0, other_price_unit=50.0, tax_rate=23
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        other_line = debit_note.invoice_line_ids.filtered(
+            lambda line: line.product_id == self.other_product
+        )
+        debit_note.write(
+            {"invoice_line_ids": [(1, other_line.id, {"price_unit": -50.0})]}
+        )
+        debit_note.action_post()
+        document = self._document(debit_note)
+        lines = document.findall(CAC + "DebitNoteLine")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0].findtext(CBC + "LineExtensionAmount"), "50.00")
+        self.assertEqual(
+            lines[0].find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "11.50"
+        )
+
+    def test_credit_note_document_sends_the_tax_it_posted(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        # the cent the verification module writes on the tax item to match the CCF
+        tax_line = credit_note.line_ids.filtered("tax_line_id")
+        receivable_line = credit_note.line_ids.filtered(
+            lambda line: line.account_id.account_type == "asset_receivable"
+        )
+        credit_note.with_context(skip_invoice_sync=True).write(
+            {
+                "line_ids": [
+                    (1, tax_line.id, {"debit": 23.01}),
+                    (1, receivable_line.id, {"credit": 123.01}),
+                ]
+            }
+        )
+        credit_note.action_post()
+        document = self._document(credit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "23.01")
+        subtotal = tax_total.find(CAC + "TaxSubtotal")
+        self.assertEqual(subtotal.findtext(CBC + "TaxableAmount"), "100.00")
+        self.assertEqual(subtotal.findtext(CBC + "TaxAmount"), "23.01")
+        line = document.find(CAC + "CreditNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.01"
+        )
+        total = document.find(CAC + "LegalMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.01")
+
+    def test_debit_note_document_sends_the_tax_it_posted(self):
+        invoice = self._create_invoice(price_unit=100.0, tax_rate=23)
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        # the cent the verification module writes on the tax item to match the CCF
+        tax_line = debit_note.line_ids.filtered("tax_line_id")
+        receivable_line = debit_note.line_ids.filtered(
+            lambda line: line.account_id.account_type == "asset_receivable"
+        )
+        debit_note.with_context(skip_invoice_sync=True).write(
+            {
+                "line_ids": [
+                    (1, tax_line.id, {"credit": 23.01}),
+                    (1, receivable_line.id, {"debit": 123.01}),
+                ]
+            }
+        )
+        debit_note.action_post()
+        document = self._document(debit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "23.01")
+        subtotal = tax_total.find(CAC + "TaxSubtotal")
+        self.assertEqual(subtotal.findtext(CBC + "TaxableAmount"), "100.00")
+        self.assertEqual(subtotal.findtext(CBC + "TaxAmount"), "23.01")
+        line = document.find(CAC + "DebitNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "23.01"
+        )
+        total = document.find(CAC + "RequestedMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "100.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "123.01")
+
+    def test_credit_note_document_leaves_a_fixed_tax_in_the_base(self):
+        invoice = self._create_invoice(price_unit=94.0)
+        fixed_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test fixed tax",
+                "type_tax_use": "sale",
+                "amount_type": "fixed",
+                "amount": 5.0,
+                "company_id": self.company.id,
+            }
+        )
+        division_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test division tax",
+                "type_tax_use": "sale",
+                "amount_type": "division",
+                "amount": 6.0,
+                "company_id": self.company.id,
+            }
+        )
+        invoice.write(
+            {
+                "invoice_line_ids": [
+                    (
+                        1,
+                        invoice.invoice_line_ids.id,
+                        {"tax_ids": [(6, 0, (fixed_tax + division_tax).ids)]},
+                    )
+                ]
+            }
+        )
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        document = self._document(credit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "6.00")
+        subtotals = tax_total.findall(CAC + "TaxSubtotal")
+        self.assertEqual(len(subtotals), 1)
+        self.assertEqual(subtotals[0].findtext(CBC + "TaxAmount"), "6.00")
+        line = document.find(CAC + "CreditNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "6.00"
+        )
+        total = document.find(CAC + "LegalMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "99.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "105.00")
+
+    def test_debit_note_document_leaves_a_fixed_tax_in_the_base(self):
+        invoice = self._create_invoice(price_unit=94.0)
+        fixed_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test fixed tax",
+                "type_tax_use": "sale",
+                "amount_type": "fixed",
+                "amount": 5.0,
+                "company_id": self.company.id,
+            }
+        )
+        division_tax = self.env["account.tax"].create(
+            {
+                "name": "SPMS test division tax",
+                "type_tax_use": "sale",
+                "amount_type": "division",
+                "amount": 6.0,
+                "company_id": self.company.id,
+            }
+        )
+        invoice.write(
+            {
+                "invoice_line_ids": [
+                    (
+                        1,
+                        invoice.invoice_line_ids.id,
+                        {"tax_ids": [(6, 0, (fixed_tax + division_tax).ids)]},
+                    )
+                ]
+            }
+        )
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        document = self._document(debit_note)
+        tax_total = document.find(CAC + "TaxTotal")
+        self.assertEqual(tax_total.findtext(CBC + "TaxAmount"), "6.00")
+        subtotals = tax_total.findall(CAC + "TaxSubtotal")
+        self.assertEqual(len(subtotals), 1)
+        self.assertEqual(subtotals[0].findtext(CBC + "TaxAmount"), "6.00")
+        line = document.find(CAC + "DebitNoteLine")
+        self.assertEqual(
+            line.find(CAC + "TaxTotal").findtext(CBC + "TaxAmount"), "6.00"
+        )
+        total = document.find(CAC + "RequestedMonetaryTotal")
+        self.assertEqual(total.findtext(CBC + "TaxExclusiveAmount"), "99.00")
+        self.assertEqual(total.findtext(CBC + "PayableAmount"), "105.00")
+
+    def test_document_with_two_origins_is_refused(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        debit_note.reversed_entry_id = invoice
+        with self.assertRaisesRegex(UserError, "credit or a debit note"):
+            self._document(debit_note)
+
+    def test_document_of_a_debit_note_of_a_credit_note_is_refused(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        credit_note = self._create_credit_note(invoice, date(2026, 6, 15))
+        credit_note.action_post()
+        debit_note = self._create_debit_note(credit_note, date(2026, 6, 20))
+        debit_note.action_post()
+        with self.assertRaisesRegex(UserError, "itself a note"):
+            self._document(debit_note)
+
+    def test_document_of_a_credit_note_of_a_debit_note_is_refused(self):
+        invoice = self._create_invoice()
+        invoice.action_post()
+        debit_note = self._create_debit_note(invoice, date(2026, 6, 15))
+        debit_note.action_post()
+        credit_note = self._create_credit_note(debit_note, date(2026, 6, 20))
+        credit_note.action_post()
+        with self.assertRaisesRegex(UserError, "itself a note"):
+            self._document(credit_note)
