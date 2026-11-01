@@ -1,0 +1,13 @@
+# Copyright 2025 NuoBiT Solutions - Deniz Gallo <dgallo@nuobit.com>
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl)
+{
+    "name": "L10n PT Sale Invoice SPMS",
+    "summary": "Portuguese SPMS Sale Invoice",
+    "version": "18.0.1.0.0",
+    "category": "Sales Management",
+    "author": "NuoBiT Solutions SL, Oxigen Salud SA",
+    "website": "https://github.com/oxigensalud/odoo-nonstandalone-addons",
+    "license": "AGPL-3",
+    "depends": ["l10n_pt_sale_spms", "l10n_pt_invoice_spms"],
+    "auto_install": True,
+}
